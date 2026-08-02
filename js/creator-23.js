@@ -5159,6 +5159,8 @@ function loadScript(scriptPath) {
 	var scriptSource = scriptPath;
 	if (/^\/js\/frames\/pack.+\.js$/.test(scriptPath)) {
 		scriptSource += '?v=20260802-regular-transform-7';
+	} else if (/^\/js\/frames\/version.+\.js$/.test(scriptPath)) {
+		scriptSource += '?v=20260802-card-specific-text-11';
 	}
 	script.setAttribute('src', scriptSource);
 	document.querySelectorAll('head')[0].appendChild(script);
