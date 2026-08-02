@@ -19,8 +19,6 @@ availableFrames = [
 document.querySelector('#loadFrameVersion').disabled = false;
 //defines process for loading this version, if applicable
 document.querySelector('#loadFrameVersion').onclick = async function() {
-	// Notification
-	notify('At this time, rotated set symbols are not an option, unless added manually with external software. Apologies for the inconvenience!', 10);
 	//resets things so that every frame doesn't have to
 	await resetCardIrregularities();
 	//sets card version
@@ -29,7 +27,9 @@ document.querySelector('#loadFrameVersion').onclick = async function() {
 	card.artBounds = {x:276/2010, y:133/2814, width:1115/2010, height:2428/2814};
 	autoFitArt();
 	//set symbol bounds
-	card.setSymbolBounds = {x:3195/2010, y:207/2814, width:0.12, height:0.0410, vertical:'center', horizontal: 'right'};
+	// Calibrated from DSK at 1070 / 197 / 25.5. Symbols keep their aspect ratio
+	// and align to the top of the rotated target.
+	card.setSymbolBounds = {x:1148/2010, y:234/2814, width:156/2010, height:74/2814, fitWidth:155.574633, fitHeight:73.87507335, vertical:'center', horizontal:'center', visualHorizontal:'right', visualVertical:'top', rotation:-90, fallback:{x:1070, y:197, zoom:25.5}};
 	resetSetSymbol();
 	//watermark bounds
 	card.watermarkBounds = {x:0.5, y:0.7762, width:0.75, height:0.2305};

@@ -72,29 +72,104 @@
 	            <input type='file' multiple accept='.png, .svg, .jpg, .jpeg, .bmp, .webp' placeholder='File Upload' class='input' oninput='uploadFiles(event.target.files, uploadMaskOption);' data-dropFunction='uploadMaskOption' data-otherParams=''>
 			</div>
 		</div>
-		<div id='textbox-editor' class='textbox-editor'>
-			<h2 class='textbox-editor-title'>Textbox Editor</h2>
-			<h2 class='textbox-editor-close' onclick='this.parentElement.classList.remove("opened");'>X</h2>
-			<div>
-				<h5 class='input-description'>X</h5>
-				<input id='textbox-editor-x' class='input' type='number' placeholder='X' step='1'>
+		<div id='textbox-editor' class='textbox-editor layout-drawer'>
+			<div class='textbox-editor-heading'>
+				<span class='creator-eyebrow'>Field Layout</span>
+				<h2 id='textbox-editor-title' class='textbox-editor-title'>Text Layout</h2>
+				<p>Position and size this text field on the card.</p>
 			</div>
-			<div>
-				<h5 class='input-description'>Y</h5>
-				<input id='textbox-editor-y' class='input' type='number' placeholder='X' step='1'>
-			</div>
-			<div>
-				<h5 class='input-description'>Width</h5>
-				<input id='textbox-editor-width' class='input' type='number' placeholder='X' step='1'>
-			</div>
-			<div>
-				<h5 class='input-description'>Height</h5>
-				<input id='textbox-editor-height' class='input' type='number' placeholder='X' step='1'>
+			<button type='button' class='textbox-editor-close' aria-label='Close text layout' onclick='this.parentElement.classList.remove("opened");'>×</button>
+			<div class='layout-drawer-body'>
+				<section class='layout-control-group'>
+					<div class='layout-control-heading'>
+						<h3>Position</h3>
+						<p>Coordinates from the card's top-left corner</p>
+					</div>
+					<div class='layout-control-grid'>
+						<label class='layout-control-field'>
+							<span>X position</span>
+							<span class='layout-input-shell'><input id='textbox-editor-x' class='input' type='number' placeholder='X' step='1' aria-label='Text field X position'><small>px</small></span>
+						</label>
+						<label class='layout-control-field'>
+							<span>Y position</span>
+							<span class='layout-input-shell'><input id='textbox-editor-y' class='input' type='number' placeholder='Y' step='1' aria-label='Text field Y position'><small>px</small></span>
+						</label>
+					</div>
+				</section>
+				<section class='layout-control-group'>
+					<div class='layout-control-heading'>
+						<h3>Size</h3>
+						<p>Maximum bounds available to this field</p>
+					</div>
+					<div class='layout-control-grid'>
+						<label class='layout-control-field'>
+							<span>Width</span>
+							<span class='layout-input-shell'><input id='textbox-editor-width' class='input' type='number' placeholder='Width' step='1' aria-label='Text field width'><small>px</small></span>
+						</label>
+						<label class='layout-control-field'>
+							<span>Height</span>
+							<span class='layout-input-shell'><input id='textbox-editor-height' class='input' type='number' placeholder='Height' step='1' aria-label='Text field height'><small>px</small></span>
+						</label>
+					</div>
+				</section>
+				<section class='layout-control-group'>
+					<div class='layout-control-heading'>
+						<h3>Typography</h3>
+						<p>Fine-tune the automatically fitted type size</p>
+					</div>
+					<label class='layout-control-field'>
+						<span>Font size adjustment</span>
+						<span class='layout-input-shell'><input id='textbox-editor-font-size' class='input' type='number' placeholder='0' value='0' step='1' aria-label='Text field font size adjustment'><small>px</small></span>
+					</label>
+				</section>
 			</div>
 		</div>
 		<!-- Regular stuff -->
-		<div class='creator-grid margin-bottom-large'>
-			<canvas class='creator-canvas box-shadow' id='previewCanvas' width='1005' height='1407'></canvas>
+		<div class='creator-workspace'>
+			<div class='creator-app-bar'>
+				<div class='creator-app-identity'>
+					<span class='creator-app-mark' aria-hidden='true'></span>
+					<div>
+						<strong>Card Conjurer</strong>
+						<span>Card Creator</span>
+					</div>
+				</div>
+				<div class='creator-app-context' aria-label='Workspace status'>
+					<span class='creator-status-dot' aria-hidden='true'></span>
+					<span>Local workspace</span>
+				</div>
+			</div>
+			<div class='creator-grid'>
+				<aside class='creator-library' aria-label='Future set and card workspace'>
+					<div class='creator-panel-heading'>
+						<div>
+							<span class='creator-eyebrow'>Library</span>
+							<h2>Sets &amp; Cards</h2>
+						</div>
+						<span class='creator-future-badge'>Future</span>
+					</div>
+					<div class='creator-library-empty'>
+						<div class='creator-empty-icon' aria-hidden='true'>
+							<span></span><span></span><span></span>
+						</div>
+						<h3>Workspace reserved</h3>
+						<p>This panel is intentionally empty and ready for a future set and card list.</p>
+					</div>
+					<div class='creator-library-foot'>No set data is created or stored here.</div>
+				</aside>
+				<section class='creator-stage' aria-label='Live card preview'>
+					<div class='creator-stage-heading'>
+						<div>
+							<span class='creator-eyebrow'>Canvas</span>
+							<h2>Live Preview</h2>
+						</div>
+						<span class='creator-canvas-size'>1005 &times; 1407</span>
+					</div>
+					<div class='creator-canvas-well'>
+						<canvas class='creator-canvas box-shadow' id='previewCanvas' width='1005' height='1407'></canvas>
+					</div>
+					<div class='creator-stage-foot'>Changes appear on the canvas as you edit.</div>
+				</section>
 			<div class='creator-menu box-shadow'>
 				<div id='creator-menu-tabs' class='creator-menu-tabs'>
 					<h3 class='selectable readable-background selected' onclick='toggleCreatorTabs(event, "frame")'>Frame</h3>
@@ -108,122 +183,122 @@
 				</div>
 				<div id='creator-menu-sections' class='margin-bottom'>
 					<div id='creator-menu-frame'>
-						<div class='readable-background margin-bottom padding'>
-							<h5 class='margin-bottom padding input-description'>
-								Select a Frame Group and a Frame Pack, or type to search. Then you may Load the selected Frame Version (loading the frame version configures text placement, art size, etc...)</h5>
-							<div class='input-grid margin-bottom'>
-								<select id='selectFrameGroup' onchange='loadScript("/js/frames/group" + this.value + ".js")' class='input' aria-label='Select Frame Group'>
-									<option disabled>Standard Frames</option>
-									<option value='Standard-3'>Regular</option>
-									<option value='Token-2'>Tokens</option>
-									<option value='Saga-1'>Sagas</option>
-									<option value='Planeswalker'>Planeswalkers</option>
-									<option value='Modal-1'>Modal DFC's</option>
-									<option value='DFC'>Transform</option>
-									<option disabled>Special Frames</option>
-									<option value='Showcase-5'>Showcase Frames</option>
-									<option value='UniversesBeyond'>Universes Beyond</option>
-									<option value='Promo-2'>Promos (Tall Art)</option>
-									<option value='Textless-4'>Textless/Fullart</option>
-									<option disabled>Other Frames</option>
-									<option value='Custom'>Custom</option>
-									<option value='Misc-2'>Old/Misc</option>
-									<option value='Accurate'>Accurate Frames</option>
-									<option value='Margin'>1/8th Inch Margin</option>
-									<option disabled>Other Games</option>
-									<option value='FleshAndBlood'>Flesh and Blood</option>
-								</select>
-								<select id='selectFramePack' onchange='loadScript("/js/frames/pack" + this.value + ".js")' class='input' aria-label='Select Frame Pack'></select>
-								<div class="autocomplete"><input id='frameSearch' onchange="frameSearch(this.value)" type='text' class='input' placeholder='Search Frames...'></div>
-							</div>
-							<div class='input-grid margin-bottom'>
-								<button id='loadFrameVersion' class='input'>Load Frame Version</button>
-							</div>
-							<h5 class='input-description margin-bottom'>Automatically load Frame Version when loading Frame Packs</h5>
-							<label class='checkbox-container input'>Auto load
-								<input id='autoLoadFrameVersion' type='checkbox' onchange='autoLoadFrameVersion();' checked>
-								<span class='checkmark'></span>
-							</label>
-						</div>
-						<div class='readable-background margin-bottom padding'>
-							<h5 class='margin-bottom padding input-description'>Select a Frame Image and a Mask, then add it to your card</h5>
-							<div class='split-grid margin-bottom'>
-								<div id='frame-picker' class='frame-picker'></div>
-								<div id='mask-picker' class='mask-picker'></div>
-							</div>
-							<div class='input-grid margin-bottom'>
-								<button id='addToFull' class='input' onclick='addFrame()'>Add Frame to Card</button>
-								<button id='addToRightHalf' class='input' onclick='addFrame([{src:"/img/frames/maskRightHalf.png", name:"Right Half"}])'>Add Frame to Card (Right Half)</button>
-							</div>
-							<h5 class='collapsible collapsed padding input-description' onclick='toggleCollapse(event);'>More options</h5>
+						<div class='frame-browser readable-background margin-bottom padding'>
+							<div class='frame-browser-heading margin-bottom'>
 								<div>
-									<div class='input-grid margin-bottom'>
-										<button id='addToLeftHalf' class='input' onclick='addFrame([{src:"/img/frames/maskLeftHalf.png", name:"Left Half"}])'>Add Frame to Card (Left Half)</button>
-										<button id='addToMiddleThird' class='input' onclick='addFrame([{src:"/img/frames/maskMiddleThird.png", name:"Middle Third"}])'>Add Frame to Card (Middle Third)</button>
-										<button id='addToTopHalf' class='input' onclick='addFrame([{src:"/img/frames/maskTopHalf.png", name:"Top Half"}])'>Add Frame to Card (Top Half)</button>
-										<button id='addToBottomHalf' class='input' onclick='addFrame([{src:"/img/frames/maskBottomHalf.png", name:"Bottom Half"}])'>Add Frame to Card (Bottom Half)</button>
-									</div>
-									<h5 class='padding input-description'>You can now double click frames and masks to add them to the card. You can do so while holding the shift, control, or alt keys to add to the right half, left half, or middle third, respectively.</h5>
+									<h4>Frame</h4>
 								</div>
-							<h5 id='selectedPreview' class='padding input-description'>(Selected: White Frame, No Mask)</h5>
-						</div>
-						<div class='readable-background padding margin-bottom'>
-							<h5 class='margin-bottom padding input-description'>Drag to reorder frame images</h5>
-							<div id='frame-list' class='frame-list margin-bottom'></div>
-							<h5 class='padding input-description'>You may also click to edit opacity, position, size, and more</h5>
-						</div>
-						<div class='readable-background padding margin-bottom'>
-							<h5 class='margin-bottom padding input-description'>Upload custom frame images</h5>
-							<div class='input-grid'>
-								<div class='padding drop-area'>
-						            <h5 class='margin-bottom padding input-description'>Drag and drop</h5>
-						            <input type='file' multiple accept='.png, .svg, .jpg, .jpeg, .bmp, .webp' placeholder='File Upload' class='input' oninput='uploadFiles(event.target.files, uploadFrameOption);' data-dropFunction='uploadFrameOption' data-otherParams=''>
-						        </div>
-						        <div>
-									<input type='url' placeholder='Via URL' class='input' onchange='imageURL(this.value, uploadFrameOption);'>
+								<span id='frameCatalogCount' class='frame-catalog-count'>All frames</span>
+							</div>
+							<div class='frame-search-wrap margin-bottom'>
+								<input id='frameSearch' oninput='filterFrameCatalog(this.value)' type='text' class='input' placeholder='Search every frame...' aria-label='Search every frame style'>
+								<button type='button' class='frame-search-clear' onclick='clearFrameCatalogSearch()' aria-label='Clear frame search' title='Clear search'>&times;</button>
+							</div>
+							<div id='frameCategoryFilters' class='frame-category-filters margin-bottom' aria-label='Frame categories'></div>
+							<div id='frameCatalog' class='frame-catalog margin-bottom' aria-label='All frame styles'></div>
+							<h5 class='frame-advanced-toggle collapsible collapsed input-description' onclick='toggleCollapse(event);'>Advanced</h5>
+							<div class='frame-advanced-settings'>
+								<label class='checkbox-container input frame-auto-load frame-auto-update'>Automatically Update Frame
+									<input id='automaticallyUpdateFrame' type='checkbox' onchange='setAutomaticallyUpdateFrame();' checked>
+									<span class='checkmark'></span>
+								</label>
+								<div class='frame-manual-layout-options'>
+									<p class='frame-advanced-description input-description'>Choose whether loading a frame pack also applies its matching card layout.</p>
+									<div class='frame-advanced-row'>
+										<label class='checkbox-container input frame-auto-load'>Auto-load layout
+											<input id='autoLoadFrameVersion' type='checkbox' onchange='autoLoadFrameVersion();' checked>
+											<span class='checkmark'></span>
+										</label>
+										<button id='loadFrameVersion' class='input'>Apply Frame Layout</button>
+									</div>
+								</div>
+								<div class='frame-advanced-options'>
+									<label class='checkbox-container input workspace-checkbox frame-advanced-option'>
+										<span class='frame-advanced-option-copy'><strong>Rounded Corners</strong><small>When downloaded</small></span>
+										<input id='rounded-corners' checked="true" type='checkbox' onchange='setRoundedCorners(this.checked);'>
+										<span class='checkmark'></span>
+									</label>
+									<label class='checkbox-container input workspace-checkbox frame-advanced-option'>
+										<span class='frame-advanced-option-copy'><strong>Guidelines</strong><small>Show placement guides</small></span>
+										<input id='show-guidelines' type='checkbox' onchange='drawCard();'>
+										<span class='checkmark'></span>
+									</label>
+									<label class='checkbox-container input workspace-checkbox frame-advanced-option'>
+										<span class='frame-advanced-option-copy'><strong>Transparencies</strong><small>Highlight transparent areas</small></span>
+										<input id='highlight-transparencies' type='checkbox' onchange='toggleCardBackgroundColor(this.checked);'>
+										<span class='checkmark'></span>
+									</label>
 								</div>
 							</div>
+							<input id='autoFrame' type='hidden' value='M15Regular-1' data-profile='M15Regular-1'>
+							<input id='autoframe-always-nyx' type='checkbox' hidden>
 						</div>
-						<div class='readable-background padding'>
-							<h5 class='input-description margin-bottom'>Rounded Corners (When Downloaded)</h5>
-							<label class='checkbox-container input margin-bottom'>Rounded Corners
-								<input id='rounded-corners' checked="true" type='checkbox' onchange='setRoundedCorners(this.checked);'>
-								<span class='checkmark'></span>
-							</label>
-							<h5 class='input-description margin-bottom'>Show guidelines for text, art, watermark, and set symbols</h5>
-							<label class='checkbox-container input margin-bottom'>Guidelines
-								<input id='show-guidelines' type='checkbox' onchange='drawCard();'>
-								<span class='checkmark'></span>
-							</label>
-							<h5 class='input-description margin-bottom'>Highlight transparencies in card</h5>
-							<label class='checkbox-container input'>Transparencies
-								<input id='highlight-transparencies' type='checkbox' onchange='toggleCardBackgroundColor(this.checked);'>
-								<span class='checkmark'></span>
-							</label>
+						<div id='frameCustomize' class='frame-customize readable-background margin-bottom padding' hidden>
+							<div class='frame-customize-heading'>
+								<h5>Customize</h5>
+							</div>
+							<div id='frameCustomizeControls' class='frame-customize-controls'></div>
+						</div>
+						<div class='frame-components-manual'>
+							<div class='readable-background margin-bottom padding'>
+								<div class='split-grid margin-bottom'>
+									<div id='frame-picker' class='frame-picker'></div>
+									<div id='mask-picker' class='mask-picker'></div>
+								</div>
+								<div class='input-grid margin-bottom'>
+									<button id='addToFull' class='input' onclick='addFrame()'>Add Frame to Card</button>
+									<button id='addToRightHalf' class='input' onclick='addFrame([{src:"/img/frames/maskRightHalf.png", name:"Right Half"}])'>Add Frame to Card (Right Half)</button>
+								</div>
+								<h5 class='collapsible collapsed padding input-description' onclick='toggleCollapse(event);'>More options</h5>
+									<div>
+										<div class='input-grid margin-bottom'>
+											<button id='addToLeftHalf' class='input' onclick='addFrame([{src:"/img/frames/maskLeftHalf.png", name:"Left Half"}])'>Add Frame to Card (Left Half)</button>
+											<button id='addToMiddleThird' class='input' onclick='addFrame([{src:"/img/frames/maskMiddleThird.png", name:"Middle Third"}])'>Add Frame to Card (Middle Third)</button>
+											<button id='addToTopHalf' class='input' onclick='addFrame([{src:"/img/frames/maskTopHalf.png", name:"Top Half"}])'>Add Frame to Card (Top Half)</button>
+											<button id='addToBottomHalf' class='input' onclick='addFrame([{src:"/img/frames/maskBottomHalf.png", name:"Bottom Half"}])'>Add Frame to Card (Bottom Half)</button>
+										</div>
+										<h5 class='padding input-description'>You can now double click frames and masks to add them to the card. You can do so while holding the shift, control, or alt keys to add to the right half, left half, or middle third, respectively.</h5>
+									</div>
+								<h5 id='selectedPreview' class='padding input-description'>(Selected: White Frame, No Mask)</h5>
+							</div>
+							<div class='readable-background padding margin-bottom'>
+								<h5 class='margin-bottom padding input-description'>Drag to reorder frame images</h5>
+								<div id='frame-list' class='frame-list margin-bottom'></div>
+								<h5 class='padding input-description'>You may also click to edit opacity, position, size, and more</h5>
+							</div>
+							<div class='readable-background padding margin-bottom'>
+								<h5 class='margin-bottom padding input-description'>Upload custom frame images</h5>
+								<div class='input-grid'>
+									<div class='padding drop-area'>
+							            <h5 class='margin-bottom padding input-description'>Drag and drop</h5>
+							            <input type='file' multiple accept='.png, .svg, .jpg, .jpeg, .bmp, .webp' placeholder='File Upload' class='input' oninput='uploadFiles(event.target.files, uploadFrameOption);' data-dropFunction='uploadFrameOption' data-otherParams=''>
+							        </div>
+							        <div>
+										<input type='url' placeholder='Via URL' class='input' onchange='imageURL(this.value, uploadFrameOption);'>
+									</div>
+								</div>
+							</div>
 						</div>
 					</div>
 					<div id='creator-menu-text' class='hidden'>
-						<div class='readable-background padding margin-bottom'>
-							<h5 class='margin-bottom padding input-description'>Select a text area to edit</h5>
-							<div id='text-options' class='input-grid'></div>
-						</div>
-						<div class='readable-background padding margin-bottom'>
-							<h5 class='margin-bottom padding input-description'>Enter card text</h5>
-							<textarea id='text-editor' class='input margin-bottom' oninput='textEdited();' aria-label='Card text editor'></textarea>
-							<div class='padding input-grid'>
-								<button class='input' onclick="toggleTextTag('i');">Italic</button>
-								<button class='input' onclick="toggleTextTag('bold');">Bold</button>
+						<div class='readable-background padding margin-bottom text-fields-panel'>
+							<div class='text-fields-heading'>
+								<h4>Card Text</h4>
+								<button type='button' class='text-field-layout-button' aria-controls='formatting-help-drawer' onclick='document.querySelector("#formatting-help-drawer").classList.add("opened");'>Formatting Help</button>
 							</div>
-							<h5 class='margin-bottom padding input-description'>Edit the placement and size of the selected textbox</h5>
-							<button class='input' onclick='textboxEditor();'>Edit Bounds</button>
-							<h5 class='margin-bottom padding input-description'>Adjust font size</h5>
-							<input id="text-editor-font-size" class="input" type="number" placeholder="0" value="0" step="1" oninput="fontSizedEdited();">
+							<div id='text-field-form' class='text-field-form'></div>
+							<div id='text-options' class='hidden' aria-hidden='true'></div>
+							<textarea id='text-editor' class='hidden' aria-hidden='true' tabindex='-1'></textarea>
+							<input id='text-editor-font-size' class='hidden' type='number' tabindex='-1'>
 						</div>
-						<div class='readable-background padding margin-bottom'>
-							<h5 class='collapsible collapsed padding input-description' onclick='toggleCollapse(event);'>
-								Text Code / Mana Symbol Code Reference
-							</h5>
-							<div class='padding'>
+						<div id='formatting-help-drawer' class='textbox-editor formatting-help-drawer' role='dialog' aria-labelledby='formatting-help-title'>
+							<div class='textbox-editor-heading'>
+								<span class='creator-eyebrow'>Text Reference</span>
+								<h2 id='formatting-help-title'>Formatting Help</h2>
+								<p>Codes for styling card text and inserting mana or game symbols.</p>
+							</div>
+							<button type='button' class='textbox-editor-close' aria-label='Close formatting help' onclick='this.parentElement.classList.remove("opened");'>×</button>
+							<div class='formatting-help-body'>
 								<h5 class='margin-top'>Text Codes:</h5>
 								<div class='text-codes margin-bottom padding'>
 									<h5>Code</h5><h5>Result</h5>
@@ -285,24 +360,21 @@
 								</div>
 							</div>
 						</div>
-						<div class='readable-background padding margin-bottom'>
-							<label class='checkbox-container input'>Hide reminder text
-								<input id='hide-reminder-text' type='checkbox' onchange='textEdited();'>
-								<span class='checkmark'></span>
-							</label>
-						</div>
-						<div class='readable-background padding margin-bottom'>
-							<label class='checkbox-container input'>Auto-italicize reminder text
-								<input id='italicize-reminder-text' type='checkbox' onchange='textEdited();'>
-								<span class='checkmark'></span>
-							</label>
-						</div>
-						<div class='readable-background padding'>
-							<h5 class='padding input-description'>Add a textbox to your card</h5>
-							<div class='padding input-grid'>
-								<button class='input' onclick='addTextbox("Nickname");'>Nickname</button>
-								<button class='input' onclick='addTextbox("Power/Toughness");'>Power/Toughness</button>
-								<button class='input' onclick='addTextbox("DateStamp");'>Date Stamp</button>
+						<div class='readable-background padding text-advanced-panel'>
+							<h5 class='frame-advanced-toggle collapsible collapsed input-description' onclick='toggleCollapse(event);'>Advanced</h5>
+							<div class='text-advanced-settings'>
+								<div class='text-reminder-options'>
+									<label class='checkbox-container input workspace-checkbox frame-advanced-option'>
+										<span class='frame-advanced-option-copy'><strong>Hide Reminder Text</strong><small>Remove parenthetical rules text</small></span>
+										<input id='hide-reminder-text' type='checkbox' onchange='reminderTextOptionChanged(this);'>
+										<span class='checkmark'></span>
+									</label>
+									<label class='checkbox-container input workspace-checkbox frame-advanced-option'>
+										<span class='frame-advanced-option-copy'><strong>Auto-Italicize Reminder Text</strong><small>Style parenthetical rules text</small></span>
+										<input id='italicize-reminder-text' type='checkbox' checked onchange='reminderTextOptionChanged(this);'>
+										<span class='checkmark'></span>
+									</label>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -385,6 +457,7 @@
 								<input id='set-symbol-code' type='text' placeholder='Set Code' class='input' onchange='fetchSetSymbol();'>
 								<input id='set-symbol-rarity' type='text' placeholder='Rarity' class='input' onchange='fetchSetSymbol();'>
 							</div>
+							<button type='button' class='input margin-bottom' onclick='fetchSetSymbol();'>Load Set Symbol</button>
 							<h5 class='margin-bottom padding input-description'>Load set symbols from:</h5>
 							<div class='input-grid margin-bottom'>
 								<select id='set-symbol-source' class='input' onchange='fetchSetSymbol();' aria-label='Set symbol source'>
@@ -404,11 +477,12 @@
 							</div>
 						</div>
 						<div class='readable-background padding margin-bottom'>
-							<h5 class='margin-bottom padding input-description'>Position/scale your Set Symbol (X, Y, Scale)</h5>
+							<h5 class='margin-bottom padding input-description'>Position, scale, and rotate your Set Symbol</h5>
 							<div class='input-grid margin-bottom'>
 								<input id='setSymbol-x' type='number' class='input' oninput='setSymbolEdited();' value=0 aria-label='Set Symbol X Position'>
 								<input id='setSymbol-y' type='number' class='input' oninput='setSymbolEdited();' value=0 aria-label='Set Symbol Y Position'>
 								<input id='setSymbol-zoom' type='number' class='input' oninput='setSymbolEdited();' value=100 step=0.1 min=0 aria-label='Set Symbol Scale'>
+								<input id='setSymbol-rotate' type='number' class='input' oninput='setSymbolEdited();' value=0 step=1 aria-label='Set Symbol Rotation'>
 							</div>
 							<div class='input-grid'>
 								<button class='input' onclick='resetSetSymbol();'>Reset Set Symbol</button>
@@ -419,7 +493,7 @@
 							<button class='input margin-bottom' onclick='uploadSetSymbol(blank.src);'>Remove Set Symbol</button>
 						</div>
 						<div class='readable-background padding margin-bottom'>
-							<h5 class='input-description margin-bottom'>Click and drag to move set symbol instead of art (hold shift to zoom)</h5>
+							<h5 class='input-description margin-bottom'>Click and drag to move the set symbol instead of art (hold Shift to zoom or Ctrl to rotate)</h5>
 							<label class='checkbox-container input margin-bottom'>Click and drag to move set symbol instead of art
 								<input id='drag-target-setSymbol' type='checkbox'>
 								<span class='checkmark'></span>
@@ -599,7 +673,7 @@
 							<h5 class='padding margin-bottom input-description'>Enter the card number, rarity, set code, language, and artist's name</h5>
 							<div class='padding input-grid'>
 								<input id='info-number' type='text' class='input' oninput='bottomInfoEdited();' placeholder='Number' value=''>
-								<input id='info-rarity' type='text' class='input' oninput='bottomInfoEdited();' placeholder='Rarity' value='P'>
+								<input id='info-rarity' type='text' class='input' oninput='bottomInfoEdited(); autoFrameBuffer();' placeholder='Rarity' value='P'>
 								<input id='info-note' type='text' class='input' oninput='bottomInfoEdited();' placeholder='Note' value=''>
 							</div>
 							<div class='padding input-grid'>
@@ -743,63 +817,25 @@
 						</div>
 					</div>
 				</div>
-				<div class='readable-background padding margin-bottom'>
-					<h5 class='padding input-description'>Automatically update frame</h5>
-					<div class='padding input-grid'>
-						<select id="autoFrame" class="input" onchange="setAutoFrame()" aria-label="Automatically update frame">
-							<option value="false">Disabled</option>
-							<option value="M15Regular-1">Regular</option>
-							<option value="M15BoxTopper">Extended Art</option>
-							<option value="M15ExtendedArtShort">Extended Art (Shorter Textbox)</option>
-							<option value="UB">Universes Beyond</option>
-							<option value="Etched">Etched</option>
-							<option value="Borderless">Borderless (Alt)</option>
-							<option value="BorderlessUB">Borderless (Alt) (Universes Beyond)</option>
-							<option value="Praetors">Phyrexian</option>
-							<option value="8th">Eighth Edition</option>
-							<option value="Seventh">Seventh Edition</option>
-
-							<option disabled>Showcase frames</option>
-							<option value="JapanShowcase">Japan Showcase</option>
-							<option value="Vault">Vault (BIG)</option>
-							
-							<option disabled>Alternative Layouts</option>
-							<option value="Adventure">Adventure</option>
-							<option value="Omen">Omen</option>
-							<option value="Prepare">Prepare</option>
-
-							<option disabled>Redone frames</option>
-							<option value="M15RegularNew">Regular (Accurate)</option>
-							<option value="FullArtNew">Full art (Accurate)</option>
-							<option value="UBNew">Universes Beyond (Accurate)</option>
-
-							<option disabled>Custom frames</option>
-							<option value="Circuit">Circuit</option>
-							<option value="M15Eighth">M15-Eighth</option>
-							<option value="M15EighthUB">M15-Eighth Universes Beyond</option>
-						</select>
-
-						
-						<!-- <button class='input' onclick='autoFrame("M15");'>M15</button>
-						<button class='input' onclick='autoFrame("UB");'>Universes Beyond</button> -->
+				<div class='readable-background padding creator-download-panel'>
+					<div class='creator-download-heading'>
+						<span class='creator-eyebrow'>Export</span>
+						<h3>Download your card</h3>
 					</div>
-					<div class='padding input-grid'>
-						<label class='checkbox-container input'>Use Nyx frame for all Enchantments (where applicable)
-							<input id='autoframe-always-nyx' type='checkbox' onchange='setAutoframeNyx(this.checked);'>
-							<span class='checkmark'></span>
-						</label>
-					</div>
-				</div>
-				<div class='readable-background padding'>
-					<h3 class='download padding' onclick='downloadCard();'>Download your card</h3>
-					<h5 onclick='downloadCard(false, true);' id='downloadJpg' href='' target='_blank' class='padding download input-description'>Click here to download as JPEG</h5>
-					<h5 onclick='downloadCard(true);' id='downloadAlt' href='' target='_blank' class='padding download input-description'>Click here for an alternative download</h5>
+					<label class='creator-field-label' for='download-format'>Download as...</label>
+					<select id='download-format' class='input creator-download-format'>
+						<option value='png'>PNG — best image quality</option>
+						<option value='jpeg'>JPEG — smaller file size</option>
+						<option value='preview'>PNG — open in a new tab</option>
+					</select>
+					<button type='button' class='input creator-download-button' onclick='downloadCardFromMenu();'>Download card</button>
 					<!-- <label class='checkbox-container input margin-bottom'>800 DPI
 						<input id='high-res' type='checkbox' onchange='toggleHighRes();'>
 						<span class='checkmark'></span>
 					</label> -->
 				</div>
 
+				</div>
 			</div>
 		</div>
 		<!--
@@ -979,7 +1015,8 @@
 	-->
 
 	</div>
-	<script defer src='/js/autoFrame.js'></script>
-	<script defer src='/js/creator-23.js'></script>
-	<script defer src='/js/frameSearch.js'></script>
+	<script defer src='/js/frameRegistry.js?v=20260802-regular-transform-8'></script>
+	<script defer src='/js/autoFrame.js?v=20260802-regular-transform-7'></script>
+	<script defer src='/js/creator-23.js?v=20260802-text-advanced-9'></script>
+	<script defer src='/js/frameSearch.js?v=20260802-dropdown-ui-11'></script>
 <!-- END OF CONTENT -->

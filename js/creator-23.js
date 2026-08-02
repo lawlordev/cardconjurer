@@ -145,7 +145,7 @@ window.FontLoadTracker = {
 };
 
 //card object
-var card = {width:getStandardWidth(), height:getStandardHeight(), marginX:0, marginY:0, frames:[], artSource:fixUri('/img/blank.png'), artX:0, artY:0, artZoom:1, artRotate:0, setSymbolSource:fixUri('/img/blank.png'), setSymbolX:0, setSymbolY:0, setSymbolZoom:1, watermarkSource:fixUri('/img/blank.png'), watermarkX:0, watermarkY:0, watermarkZoom:1, watermarkLeft:'none', watermarkRight:'none', watermarkOpacity:0.4, version:'', manaSymbols:[]};
+var card = {width:getStandardWidth(), height:getStandardHeight(), marginX:0, marginY:0, frames:[], artSource:fixUri('/img/blank.png'), artX:0, artY:0, artZoom:1, artRotate:0, setSymbolSource:fixUri('/img/blank.png'), setSymbolX:0, setSymbolY:0, setSymbolZoom:1, setSymbolRotate:0, watermarkSource:fixUri('/img/blank.png'), watermarkX:0, watermarkY:0, watermarkZoom:1, watermarkLeft:'none', watermarkRight:'none', watermarkOpacity:0.4, version:'', manaSymbols:[]};
 window.cardDrawingPromiseResolver = null;
 //core images/masks
 const black = new Image(); black.crossOrigin = 'anonymous'; black.src = fixUri('/img/black.png');
@@ -209,6 +209,10 @@ async function resetCardIrregularities({canvas = [getStandardWidth(), getStandar
 	card.margins = false;
 	card.bottomInfoTranslate = {x:0, y:0};
 	card.bottomInfoRotate = 0;
+	card.setSymbolRotate = 0;
+	card.setSymbolDefaults = null;
+	const setSymbolRotateInput = document.querySelector('#setSymbol-rotate');
+	if (setSymbolRotateInput) setSymbolRotateInput.value = 0;
 	card.bottomInfoZoom = 1;
 	card.bottomInfoColor = 'white';
 	replacementMasks = {};
@@ -555,7 +559,13 @@ function drawFrames() {
 	drawCard();
 }
 function loadFramePacks(framePackOptions = []) {
-	document.querySelector('#selectFramePack').innerHTML = null;
+	const framePackSelect = document.querySelector('#selectFramePack');
+	if (!framePackSelect) {
+		const firstFramePack = framePackOptions.find(item => item.value != 'disabled');
+		if (firstFramePack) loadScript("/js/frames/pack" + firstFramePack.value + ".js");
+		return;
+	}
+	framePackSelect.innerHTML = null;
 	framePackOptions.forEach(item => {
 		var framePackOption = document.createElement('option');
 		framePackOption.innerHTML = item.name;
@@ -564,9 +574,9 @@ function loadFramePacks(framePackOptions = []) {
 		} else {
 			framePackOption.value = item.value;
 		}
-		document.querySelector('#selectFramePack').appendChild(framePackOption);
+		framePackSelect.appendChild(framePackOption);
 	});
-	loadScript("/js/frames/pack" + document.querySelector('#selectFramePack').value + ".js");
+	loadScript("/js/frames/pack" + framePackSelect.value + ".js");
 }
 function loadFramePack(frameOptions = availableFrames) {
 	resetDoubleClick();
@@ -585,12 +595,17 @@ function loadFramePack(frameOptions = availableFrames) {
 		} else {
 			frameOptionImage.src = fixUri(item.src);
 		}
+		frameOptionImage.alt = '';
+		var frameOptionLabel = document.createElement('p');
+		frameOptionLabel.textContent = item.name;
+		frameOption.appendChild(frameOptionLabel);
 		document.querySelector('#frame-picker').appendChild(frameOption);
 
 	})
 	document.querySelector('#mask-picker').innerHTML = '';
 	document.querySelector('#frame-picker').children[0].click();
-	if (localStorage.getItem('autoLoadFrameVersion') == 'true') {
+	const automaticallyUpdateFrame = document.querySelector('#automaticallyUpdateFrame');
+	if (localStorage.getItem('autoLoadFrameVersion') == 'true' && (!automaticallyUpdateFrame || !automaticallyUpdateFrame.checked)) {
 		document.querySelector('#loadFrameVersion').click();
 	}
 }
@@ -789,7 +804,7 @@ function cardFrameProperties(colors, manaCost, typeLine, power, style) {
 	}
 
 	var pt;
-	if (power) {
+	if (power || typeLine.includes('Creature')) {
 		if (typeLine.includes('Vehicle')) {
 			pt = 'V';
 		} else if (typeTitle == 'L') {
@@ -1176,69 +1191,248 @@ function hslToRGB(h, s, l){
 //TEXT TAB
 var writingText;
 var autoFrameTimer;
+var manaInputState = {};
+var currentLayoutTextKeys = new Set();
+var userOptionalTextKeys = new Set();
+const optionalTextboxDefinitions = {
+	nickname: {name:'Nickname', text:'', x:0.14, y:0.1129, width:0.72, height:0.0243, oneLine:true, font:'mplantini', size:0.0229, color:'white', shadowX:0.0014, shadowY:0.001, align:'center'},
+	pt: {name:'Power/Toughness', text:'', x:0.7928, y:0.902, width:0.1367, height:0.0372, size:0.0372, font:'belerenbsc', oneLine:true, align:'center'},
+	dateStamp: {name:'Date Stamp', text:'', x:0.11, y:0.5072, width:0.78, height:0.0286, size:0.0286, font:'belerenb', oneLine:true, align:'right', color:'#ffd35b', shadowX:-0.0007, shadowY:-0.001}
+};
+
+function textFieldFocusState() {
+	var activeElement = document.activeElement;
+	if (!activeElement || !activeElement.classList.contains('text-field-input')) return null;
+	return {
+		key: activeElement.dataset.textKey,
+		start: activeElement.selectionStart,
+		end: activeElement.selectionEnd
+	};
+}
+
 function loadTextOptions(textObject, replace=true) {
+	var focusState = textFieldFocusState();
 	var oldCardText = card.text || {};
 	Object.entries(oldCardText).forEach(item => {
 		savedTextContents[item[0]] = oldCardText[item[0]].text;
 	});
 	if (replace) {
+		currentLayoutTextKeys = new Set(Object.keys(textObject));
 		card.text = textObject;
 	} else {
 		Object.keys(textObject).forEach(key => {
 			card.text[key] = textObject[key];
 		});
 	}
-	document.querySelector('#text-options').innerHTML = null;
 	Object.entries(card.text).forEach(item => {
 		if (oldCardText[item[0]]) {
 			card.text[item[0]].text = oldCardText[item[0]].text;
-		} else if (savedTextContents[item[0]]) {
+		} else if (savedTextContents[item[0]] !== undefined) {
 			card.text[item[0]].text = savedTextContents[item[0]];
 		}
-		var textOptionElement = document.createElement('h4');
-		textOptionElement.innerHTML = item[1].name;
-		textOptionElement.classList = 'selectable text-option'
-		textOptionElement.onclick = textOptionClicked;
-		document.querySelector('#text-options').appendChild(textOptionElement);
 	});
-	document.querySelector('#text-options').firstChild.click();
+	if (replace) {
+		Object.keys(optionalTextboxDefinitions).forEach(key => {
+			if (!card.text[key] && userOptionalTextKeys.has(key) && savedTextContents[key]) {
+				if (key === 'nickname') installNicknameTextbox(savedTextContents[key]);
+				else card.text[key] = {...optionalTextboxDefinitions[key], text:savedTextContents[key]};
+			}
+		});
+	}
+	renderTextFieldForm(focusState);
 	drawTextBuffer();
 	drawNewGuidelines();
 }
+
+function setSelectedTextKey(key) {
+	var index = Object.keys(card.text).indexOf(key);
+	if (index >= 0) selectedTextIndex = index;
+}
+
+function installNicknameTextbox(nicknameText='') {
+	if (card.text.nickname) return card.text.nickname;
+	if (!card.text.title) {
+		card.text.nickname = {...optionalTextboxDefinitions.nickname, text:nicknameText};
+		return card.text.nickname;
+	}
+	card.text.nickname = {
+		...optionalTextboxDefinitions.nickname,
+		name: 'Nickname',
+		text: nicknameText
+	};
+	return card.text.nickname;
+}
+
+function removeNicknameTextbox() {
+	if (!card.text.nickname) return;
+	delete card.text.nickname;
+}
+
+function ensureOptionalTextbox(key) {
+	if (!card.text[key] && optionalTextboxDefinitions[key]) {
+		if (key === 'nickname') installNicknameTextbox();
+		else card.text[key] = {...optionalTextboxDefinitions[key]};
+	}
+	userOptionalTextKeys.add(key);
+	setSelectedTextKey(key);
+	return card.text[key];
+}
+
+function manaEditorValue(key, textObject) {
+	var state = manaInputState[key];
+	var parsedText = textObject?.text || '';
+	return state && state.parsed === parsedText ? state.raw : parsedText;
+}
+
+function createTextFieldCard(key, textObject, optionalPlaceholder) {
+	var field = document.createElement('section');
+	field.className = 'text-field-card';
+	field.dataset.textKey = key;
+
+	var heading = document.createElement('div');
+	heading.className = 'text-field-card-heading';
+	var label = document.createElement('label');
+	label.textContent = textObject.name || key;
+	heading.appendChild(label);
+	if (optionalPlaceholder) {
+		var optionalLabel = document.createElement('span');
+		optionalLabel.className = 'text-field-optional';
+		optionalLabel.textContent = 'Optional';
+		heading.appendChild(optionalLabel);
+	}
+	var layoutButton = document.createElement('button');
+	layoutButton.type = 'button';
+	layoutButton.className = 'text-field-layout-button';
+	layoutButton.textContent = 'Layout';
+	layoutButton.onclick = () => textboxEditorForKey(key);
+	heading.appendChild(layoutButton);
+	field.appendChild(heading);
+
+	var input = document.createElement(textObject.oneLine ? 'input' : 'textarea');
+	if (textObject.oneLine) input.type = 'text';
+	input.className = 'input text-field-input';
+	input.dataset.textKey = key;
+	input.setAttribute('aria-label', textObject.name || key);
+	input.placeholder = optionalPlaceholder ? 'Leave empty to hide' : '';
+	input.value = optionalPlaceholder ? '' : (textObject.manaCost ? manaEditorValue(key, textObject) : (textObject.text || ''));
+	input.onfocus = () => setSelectedTextKey(key);
+	if (textObject.manaCost) {
+		input.oninput = () => {
+			const rawValue = input.value;
+			const parsedValue = typeof FRAME_REGISTRY !== 'undefined' && typeof FRAME_REGISTRY.normalizeManaCost === 'function'
+				? FRAME_REGISTRY.normalizeManaCost(rawValue)
+				: rawValue;
+			manaInputState[key] = {raw:rawValue, parsed:parsedValue};
+			textEdited(key, parsedValue, optionalPlaceholder);
+		};
+	} else {
+		input.oninput = () => textEdited(key, input.value, optionalPlaceholder);
+	}
+	field.appendChild(input);
+
+	return field;
+}
+
+function renderTextFieldForm(focusState) {
+	var form = document.querySelector('#text-field-form');
+	if (!form) return;
+	var fragment = document.createDocumentFragment();
+	Object.entries(card.text || {}).forEach(item => {
+		fragment.appendChild(createTextFieldCard(item[0], item[1], false));
+	});
+	Object.entries(optionalTextboxDefinitions).forEach(item => {
+		if (!card.text[item[0]]) fragment.appendChild(createTextFieldCard(item[0], item[1], true));
+	});
+	form.replaceChildren(fragment);
+
+	if (focusState) {
+		requestAnimationFrame(() => {
+			var input = form.querySelector(`.text-field-input[data-text-key="${focusState.key}"]`);
+			if (!input) return;
+			input.focus({preventScroll:true});
+			var length = input.value.length;
+			input.setSelectionRange(Math.min(focusState.start, length), Math.min(focusState.end, length));
+		});
+	}
+}
+
+function syncTextFieldValues() {
+	document.querySelectorAll('.text-field-input').forEach(input => {
+		var textObject = card.text && card.text[input.dataset.textKey];
+		var intendedValue = textObject?.manaCost
+			? manaEditorValue(input.dataset.textKey, textObject)
+			: (textObject?.text || '');
+		if (textObject && input.value !== intendedValue) {
+			input.value = intendedValue;
+		}
+	});
+}
+
 function textOptionClicked(event) {
 	selectedTextIndex = getElementIndex(event.target);
 	document.querySelector('#text-editor').value = Object.entries(card.text)[selectedTextIndex][1].text;
 	document.querySelector('#text-editor-font-size').value = Object.entries(card.text)[selectedTextIndex][1].fontSize;
 	selectSelectable(event);
 }
+function textboxEditorForKey(key) {
+	ensureOptionalTextbox(key);
+	setSelectedTextKey(key);
+	textboxEditor();
+}
 function textboxEditor() {
 	var selectedTextbox = card.text[Object.keys(card.text)[selectedTextIndex]];
+	if (!selectedTextbox) return;
+	document.querySelector('#textbox-editor-title').textContent = `${selectedTextbox.name || 'Text'} Layout`;
 	document.querySelector('#textbox-editor').classList.add('opened');
 	document.querySelector('#textbox-editor-x').value = scaleWidth(selectedTextbox.x || 0);
-	document.querySelector('#textbox-editor-x').onchange = (event) => {selectedTextbox.x = (event.target.value / card.width); textEdited();}
+	document.querySelector('#textbox-editor-x').onchange = (event) => {selectedTextbox.x = (event.target.value / card.width); drawTextBuffer();}
 	document.querySelector('#textbox-editor-y').value = scaleHeight(selectedTextbox.y || 0);
-	document.querySelector('#textbox-editor-y').onchange = (event) => {selectedTextbox.y = (event.target.value / card.height); textEdited();}
+	document.querySelector('#textbox-editor-y').onchange = (event) => {selectedTextbox.y = (event.target.value / card.height); drawTextBuffer();}
 	document.querySelector('#textbox-editor-width').value = scaleWidth(selectedTextbox.width || 1);
-	document.querySelector('#textbox-editor-width').onchange = (event) => {selectedTextbox.width = (event.target.value / card.width); textEdited();}
+	document.querySelector('#textbox-editor-width').onchange = (event) => {selectedTextbox.width = (event.target.value / card.width); drawTextBuffer();}
 	document.querySelector('#textbox-editor-height').value = scaleHeight(selectedTextbox.height || 1);
-	document.querySelector('#textbox-editor-height').onchange = (event) => {selectedTextbox.height = (event.target.value / card.height); textEdited();}
+	document.querySelector('#textbox-editor-height').onchange = (event) => {selectedTextbox.height = (event.target.value / card.height); drawTextBuffer();}
+	document.querySelector('#textbox-editor-font-size').value = selectedTextbox.fontSize || 0;
+	document.querySelector('#textbox-editor-font-size').oninput = (event) => {selectedTextbox.fontSize = event.target.value; drawTextBuffer();}
 }
-function textEdited() {
-	card.text[Object.keys(card.text)[selectedTextIndex]].text = curlyQuotes(document.querySelector('#text-editor').value);
+function textEdited(key, value, optionalPlaceholder=false) {
+	if (typeof key === 'string') {
+		var textObject = card.text[key];
+		if (!textObject && optionalTextboxDefinitions[key]) textObject = ensureOptionalTextbox(key);
+		if (textObject) {
+			textObject.text = curlyQuotes(value);
+			savedTextContents[key] = textObject.text;
+			setSelectedTextKey(key);
+			if (optionalPlaceholder && !value && !currentLayoutTextKeys.has(key)) {
+				if (key === 'nickname') removeNicknameTextbox();
+				else delete card.text[key];
+				userOptionalTextKeys.delete(key);
+			}
+		}
+	} else {
+		syncTextFieldValues();
+	}
+	const editedTextObject = typeof key === 'string' ? card.text[key] : null;
+	drawTextBuffer(editedTextObject?.manaCost ? 35 : 500);
+	if (typeof key !== 'string' || editedTextObject?.manaCost || key === 'type' || key === 'nickname') autoFrameBuffer(editedTextObject?.manaCost ? 120 : 500);
+	if ((key === 'type' || editedTextObject?.manaCost) && typeof renderFrameCustomize === 'function') renderFrameCustomize();
+}
+function textFieldFontSizeEdited(key, value) {
+	var textObject = card.text[key] || ensureOptionalTextbox(key);
+	textObject.fontSize = value;
 	drawTextBuffer();
-	autoFrameBuffer();
 }
 function fontSizedEdited() {
-	card.text[Object.keys(card.text)[selectedTextIndex]].fontSize = document.querySelector('#text-editor-font-size').value;
-	drawTextBuffer();
+	var key = Object.keys(card.text)[selectedTextIndex];
+	if (key) textFieldFontSizeEdited(key, document.querySelector('#text-editor-font-size').value);
 }
-function drawTextBuffer() {
+function drawTextBuffer(delay=500) {
 	clearTimeout(writingText);
-	writingText = setTimeout(drawText, 500);
+	writingText = setTimeout(drawText, delay);
 }
-function autoFrameBuffer() {
+function autoFrameBuffer(delay=500) {
 	clearTimeout(autoFrameTimer);
-	autoFrameTimer = setTimeout(autoFrame, 500);
+	autoFrameTimer = setTimeout(autoFrame, delay);
 }
 async function drawText() {
 	textContext.clearRect(0, 0, textCanvas.width, textCanvas.height);
@@ -1416,6 +1610,47 @@ function drawRubyHorizontal(base, annotation, ctx, paragraphCtx, lineCanvas, ann
 	ctx.fillText(base, state.currentX + opts.canvasMargin + baseOffsetX, baseY);
 	state.currentX += totalWidth;
 }
+function splitRulesAndFlavorText(rawText) {
+	const markers = ['{flavor}', '{oldflavor}', '///'];
+	const indices = markers.map(marker => rawText.indexOf(marker)).filter(index => index >= 0);
+	const flavorIndex = indices.length ? Math.min(...indices) : -1;
+	return flavorIndex < 0
+		? {rulesText:rawText, flavorText:''}
+		: {rulesText:rawText.substring(0, flavorIndex), flavorText:rawText.substring(flavorIndex)};
+}
+
+function removeReminderTextFromRules(rulesText) {
+	let text = rulesText
+		.replace(/\{i\}\s*(?=\()/gi, '')
+		.replace(/(\))\s*\{\/i\}/gi, '$1');
+	let output = '';
+	let depth = 0;
+	for (const character of text) {
+		if (character === '(') {
+			if (depth === 0) output = output.replace(/[ \t]+$/, '');
+			depth++;
+		} else if (character === ')' && depth > 0) {
+			depth--;
+		} else if (depth === 0) {
+			output += character;
+		}
+	}
+	return output.replace(/[ \t]{2,}/g, ' ').replace(/[ \t]+(?=\n|\{lns\}|\{line\})/g, '');
+}
+
+function italicizeReminderTextInRules(rulesText) {
+	return rulesText.replace(/\(([^)]+)\)/g, (match, contents, offset, source) => {
+		const before = source.substring(Math.max(0, offset - 3), offset).toLowerCase();
+		const after = source.substring(offset + match.length, offset + match.length + 4).toLowerCase();
+		return before === '{i}' && after === '{/i}' ? match : `{i}(${contents}){/i}`;
+	});
+}
+
+function reminderTextOptionChanged(input) {
+	localStorage.setItem(input.id, String(input.checked));
+	drawTextBuffer();
+}
+
 function writeText(textObject, targetContext) {
 	manaSymbolsToRender = [];
 	//Most bits of info about text loaded, with defaults when needed
@@ -1438,31 +1673,13 @@ function writeText(textObject, targetContext) {
 	lineCanvas.height = startingTextSize + 2 * canvasMargin;
 	//Preps the text string
 	var splitString = '6GJt7eL8';
-	var rawText = textObject.text
+	var rawText = String(textObject.text || '');
 	if (document.querySelector('#hide-reminder-text').checked && textObject.name && textObject.name != 'Title' && textObject.name != 'Type' && textObject.name != 'Mana Cost' && textObject.name != 'Power/Toughness') {
-		var rulesText = rawText;
-		var flavorText = '';
-		var flavorIndex = rawText.indexOf('{flavor}') || rawText.indexOf('///');
-		if (flavorIndex >= 0) {
-			flavorText = rawText.substring(flavorIndex);
-			rulesText = rawText.substring(0, flavorIndex);
-		}
-
-		rulesText = rulesText.replace(/ ?{i}\([^\)]+\){\/i}/g, '');
-
-		rawText = rulesText + flavorText;
+		var textParts = splitRulesAndFlavorText(rawText);
+		rawText = removeReminderTextFromRules(textParts.rulesText) + textParts.flavorText;
 	} else if (document.querySelector('#italicize-reminder-text').checked && textObject.name && textObject.name != 'Title' && textObject.name != 'Type' && textObject.name != 'Mana Cost' && textObject.name != 'Power/Toughness') {
-		var rulesText = rawText;
-		var flavorText = '';
-		var flavorIndex = rawText.indexOf('{flavor}') || rawText.indexOf('///');
-		if (flavorIndex >= 0) {
-			flavorText = rawText.substring(flavorIndex);
-			rulesText = rawText.substring(0, flavorIndex);
-		}
-
-		rulesText = rulesText.replace(/\(([^)]+)\)/g, '{i}($1){/i}');
-
-		rawText = rulesText + flavorText;
+		var textParts = splitRulesAndFlavorText(rawText);
+		rawText = italicizeReminderTextInRules(textParts.rulesText) + textParts.flavorText;
 	}
 	if (textAllCaps) {
 		rawText = rawText.toUpperCase();
@@ -2465,12 +2682,10 @@ function pinlineColors(color) {
 }
 async function addTextbox(textboxType) {
 	if (textboxType == 'Nickname' && !card.text.nickname && card.text.title) {
-		await loadTextOptions({nickname: {name:'Nickname', text:card.text.title.text, x:0.14, y:0.1129, width:0.72, height:0.0243, oneLine:true, font:'mplantini', size:0.0229, color:'white', shadowX:0.0014, shadowY:0.001, align:'center'}}, false);
-		var nickname = card.text.title;
-		nickname.name = 'Nickname';
-		card.text.title = card.text.nickname;
-		card.text.title.name = 'Title';
-		card.text.nickname = nickname;
+		installNicknameTextbox(card.text.title.text || '');
+		userOptionalTextKeys.add('nickname');
+		renderTextFieldForm(textFieldFocusState());
+		drawTextBuffer();
 	} else if (textboxType == 'Power/Toughness' && !card.text.pt) {
 		loadTextOptions({pt: {name:'Power/Toughness', text:'', x:0.7928, y:0.902, width:0.1367, height:0.0372, size:0.0372, font:'belerenbsc', oneLine:true, align:'center'}}, false);
 	} else if (textboxType == 'DateStamp' && !card.text.dateStamp) {
@@ -2630,7 +2845,7 @@ function artStartDrag(e) {
 }
 function artDrag(e) {
 	var target = document.querySelector('#drag-target-setSymbol').checked ? "setSymbol" : "art";
-	var canRotate = target == "art";
+	var canRotate = true;
 	var edited = target == "art" ? artEdited : setSymbolEdited;
 
 	e.preventDefault();
@@ -2676,13 +2891,15 @@ function artStopDrag(e) {
 //SET SYMBOL TAB
 function uploadSetSymbol(imageSource, otherParams) {
 	ImageLoadTracker.track(imageSource);
-	setSymbol.src = imageSource;
 	if (otherParams && otherParams == 'resetSetSymbol') {
 		setSymbol.onload = function() {
 			resetSetSymbol();
 			setSymbol.onload = setSymbolEdited;
 		};
+	} else {
+		setSymbol.onload = setSymbolEdited;
 	}
+	setSymbol.src = imageSource;
 }
 function setSymbolEdited() {
 	card.setSymbolSource = setSymbol.src;
@@ -2693,21 +2910,41 @@ function setSymbolEdited() {
 	card.setSymbolX = document.querySelector('#setSymbol-x').value / card.width;
 	card.setSymbolY = document.querySelector('#setSymbol-y').value / card.height;
 	card.setSymbolZoom = document.querySelector('#setSymbol-zoom').value / 100;
+	card.setSymbolRotate = parseFloat(document.querySelector('#setSymbol-rotate').value) || 0;
 	drawCard();
 }
 function resetSetSymbol() {
 	if (card.setSymbolBounds == undefined) {
 		return;
 	}
+	if (card.setSymbolBounds.fallback && (!setSymbol.naturalWidth || setSymbol.naturalWidth <= 1 || setSymbol.src.includes('/img/blank.png'))) {
+		document.querySelector('#setSymbol-x').value = card.setSymbolBounds.fallback.x;
+		document.querySelector('#setSymbol-y').value = card.setSymbolBounds.fallback.y;
+		document.querySelector('#setSymbol-zoom').value = card.setSymbolBounds.fallback.zoom;
+		document.querySelector('#setSymbol-rotate').value = card.setSymbolBounds.rotation || 0;
+		setSymbolEdited();
+		return;
+	}
+	if (card.setSymbolDefaults) {
+		document.querySelector('#setSymbol-x').value = card.setSymbolDefaults.x;
+		document.querySelector('#setSymbol-y').value = card.setSymbolDefaults.y;
+		document.querySelector('#setSymbol-zoom').value = card.setSymbolDefaults.zoom;
+		document.querySelector('#setSymbol-rotate').value = card.setSymbolDefaults.rotation || 0;
+		setSymbolEdited();
+		return;
+	}
 	document.querySelector('#setSymbol-x').value = Math.round(scaleX(card.setSymbolBounds.x));
 	document.querySelector('#setSymbol-y').value = Math.round(scaleY(card.setSymbolBounds.y));
+	const setSymbolTargetWidth = card.setSymbolBounds.fitWidth || scaleWidth(card.setSymbolBounds.width);
+	const setSymbolTargetHeight = card.setSymbolBounds.fitHeight || scaleHeight(card.setSymbolBounds.height);
 	var setSymbolZoom;
-	if (setSymbol.width / setSymbol.height > scaleWidth(card.setSymbolBounds.width) / scaleHeight(card.setSymbolBounds.height)) {
-		setSymbolZoom = (scaleWidth(card.setSymbolBounds.width) / setSymbol.width * 100).toFixed(1);
+	if (setSymbol.width / setSymbol.height > setSymbolTargetWidth / setSymbolTargetHeight) {
+		setSymbolZoom = (setSymbolTargetWidth / setSymbol.width * 100).toFixed(1);
 	} else {
-		setSymbolZoom = (scaleHeight(card.setSymbolBounds.height) / setSymbol.height * 100).toFixed(1);
+		setSymbolZoom = (setSymbolTargetHeight / setSymbol.height * 100).toFixed(1);
 	}
 	document.querySelector('#setSymbol-zoom').value = setSymbolZoom;
+	document.querySelector('#setSymbol-rotate').value = card.setSymbolBounds.rotation || 0;
 	if (card.setSymbolBounds.horizontal == 'center') {
 		document.querySelector('#setSymbol-x').value = Math.round(scaleX(card.setSymbolBounds.x) - (setSymbol.width * setSymbolZoom / 100) / 2 - scaleWidth(card.marginX));
 	} else if (card.setSymbolBounds.horizontal == 'right') {
@@ -2717,6 +2954,32 @@ function resetSetSymbol() {
 		document.querySelector('#setSymbol-y').value = Math.round(scaleY(card.setSymbolBounds.y) - (setSymbol.height * setSymbolZoom / 100) / 2 - scaleHeight(card.marginY));
 	} else if (card.setSymbolBounds.vertical == 'bottom') {
 		document.querySelector('#setSymbol-y').value = Math.round(scaleY(card.setSymbolBounds.y) - (setSymbol.height * setSymbolZoom / 100) - scaleHeight(card.marginY));
+	}
+	if (card.setSymbolBounds.visualHorizontal) {
+		const rotation = Math.PI * (card.setSymbolBounds.rotation || 0) / 180;
+		const cosine = Math.abs(Math.cos(rotation));
+		const sine = Math.abs(Math.sin(rotation));
+		const renderedWidth = setSymbol.width * setSymbolZoom / 100;
+		const renderedHeight = setSymbol.height * setSymbolZoom / 100;
+		const targetVisualWidth = setSymbolTargetWidth * cosine + setSymbolTargetHeight * sine;
+		const renderedVisualWidth = renderedWidth * cosine + renderedHeight * sine;
+		const availableVisualSpace = Math.max(0, targetVisualWidth - renderedVisualWidth);
+		const direction = card.setSymbolBounds.visualHorizontal === 'left' ? -1 : 1;
+		const alignedX = parseFloat(document.querySelector('#setSymbol-x').value) + direction * availableVisualSpace / 2;
+		document.querySelector('#setSymbol-x').value = Number(alignedX.toFixed(1));
+	}
+	if (card.setSymbolBounds.visualVertical) {
+		const rotation = Math.PI * (card.setSymbolBounds.rotation || 0) / 180;
+		const cosine = Math.abs(Math.cos(rotation));
+		const sine = Math.abs(Math.sin(rotation));
+		const renderedWidth = setSymbol.width * setSymbolZoom / 100;
+		const renderedHeight = setSymbol.height * setSymbolZoom / 100;
+		const targetVisualHeight = setSymbolTargetWidth * sine + setSymbolTargetHeight * cosine;
+		const renderedVisualHeight = renderedWidth * sine + renderedHeight * cosine;
+		const availableVisualSpace = Math.max(0, targetVisualHeight - renderedVisualHeight);
+		const direction = card.setSymbolBounds.visualVertical === 'top' ? -1 : 1;
+		const alignedY = parseFloat(document.querySelector('#setSymbol-y').value) + direction * availableVisualSpace / 2;
+		document.querySelector('#setSymbol-y').value = Number(alignedY.toFixed(1));
 	}
 	setSymbolEdited();
 }
@@ -2951,6 +3214,24 @@ function setAutoFrame() {
 
 	autoFrame();
 }
+function setAutomaticallyUpdateFrame() {
+	const toggle = document.querySelector('#automaticallyUpdateFrame');
+	localStorage.setItem('automaticallyUpdateFrame', toggle.checked);
+	if (!toggle.checked) {
+		autoFramePack = null;
+		return;
+	}
+	const selectedPack = typeof activeFramePack == 'undefined' ? 'M15Regular-1' : activeFramePack;
+	const engine = typeof FRAME_REGISTRY == 'undefined' ? selectedPack : (FRAME_REGISTRY.engine(selectedPack) || selectedPack);
+	document.querySelector('#autoFrame').value = engine;
+	document.querySelector('#autoFrame').dataset.profile = selectedPack;
+	localStorage.setItem('autoFrame', engine);
+	localStorage.setItem('selectedFrameProfile', selectedPack);
+	document.querySelector('#autoLoadFrameVersion').checked = true;
+	localStorage.setItem('autoLoadFrameVersion', 'true');
+	autoFramePack = engine;
+	autoFrame();
+}
 function setAutofit() {
 	localStorage.setItem('autoFit', document.querySelector('#art-update-autofit').checked);
 }
@@ -3024,15 +3305,27 @@ function drawSetSymbol(cardContext, setSymbol, bounds) {
         tempCtx.drawImage(setSymbol, outlineWidth, outlineWidth, symbolWidth, symbolHeight);
 
         // Draw to main canvas
-        cardContext.drawImage(tempCanvas, 
-            x - outlineWidth, 
+        drawRotatedSetSymbol(cardContext, tempCanvas,
+            x - outlineWidth,
             y - outlineWidth,
             tempCanvas.width,
-            tempCanvas.height);
+            tempCanvas.height,
+            card.setSymbolRotate);
     } else {
         // Draw main symbol without outline (simple path)
-        cardContext.drawImage(setSymbol, x, y, symbolWidth, symbolHeight);
+        drawRotatedSetSymbol(cardContext, setSymbol, x, y, symbolWidth, symbolHeight, card.setSymbolRotate);
     }
+}
+function drawRotatedSetSymbol(context, image, x, y, width, height, rotation = 0) {
+	if (!rotation) {
+		context.drawImage(image, x, y, width, height);
+		return;
+	}
+	context.save();
+	context.translate(x + width / 2, y + height / 2);
+	context.rotate(Math.PI * rotation / 180);
+	context.drawImage(image, -width / 2, -height / 2, width, height);
+	context.restore();
 }
 //DRAWING THE CARD (putting it all together)
 function drawCard() {
@@ -3160,6 +3453,17 @@ function drawCard() {
 	}
 }
 //DOWNLOADING
+function downloadCardFromMenu() {
+	const format = document.getElementById('download-format')?.value || 'png';
+	if (format === 'jpeg') {
+		downloadCard(false, true);
+	} else if (format === 'preview') {
+		downloadCard(true);
+	} else {
+		downloadCard();
+	}
+}
+
 function downloadCard(alt = false, jpeg = false) {
 	if (card.infoArtist.replace(/ /g, '') == '' && !card.artSource.includes('/img/blank.png') && !card.artZoom == 0) {
 		notify('You must credit an artist before downloading!', 5);
@@ -4388,8 +4692,6 @@ else if (cardToImport.oracle_text && cardToImport.oracle_text.includes('Station'
 	} else if (card.version.includes('battle')) {
 		card.text.defense.text = cardToImport.defense || '';
 	}
-	document.querySelector('#text-editor').value = card.text[Object.keys(card.text)[selectedTextIndex]].text;
-	document.querySelector('#text-editor-font-size').value = 0;
 	//font size
 	Object.keys(card.text).forEach(key => {
 			card.text[key].fontSize = 0;
@@ -4538,8 +4840,6 @@ async function loadCard(selectedCardKey) {
 		document.querySelector('#info-note').value = card.infoNote;
 		document.querySelector('#info-year').value = card.infoYear || date.getFullYear();
 		artistEdited(card.infoArtist);
-		document.querySelector('#text-editor').value = card.text[Object.keys(card.text)[selectedTextIndex]].text;
-		document.querySelector('#text-editor-font-size').value = card.text[Object.keys(card.text)[selectedTextIndex]].fontSize || 0;
 		loadTextOptions(card.text);
 		document.querySelector('#art-x').value = scaleX(card.artX) - scaleWidth(card.marginX);
 		document.querySelector('#art-y').value = scaleY(card.artY) - scaleHeight(card.marginY);
@@ -4549,6 +4849,7 @@ async function loadCard(selectedCardKey) {
 		document.querySelector('#setSymbol-x').value = scaleX(card.setSymbolX) - scaleWidth(card.marginX);
 		document.querySelector('#setSymbol-y').value = scaleY(card.setSymbolY) - scaleHeight(card.marginY);
 		document.querySelector('#setSymbol-zoom').value = card.setSymbolZoom * 100;
+		document.querySelector('#setSymbol-rotate').value = card.setSymbolRotate || 0;
 		uploadSetSymbol(card.setSymbolSource);
 		document.querySelector('#watermark-x').value = scaleX(card.watermarkX) - scaleWidth(card.marginX);
 		document.querySelector('#watermark-y').value = scaleY(card.watermarkY) - scaleHeight(card.marginY);
@@ -4673,7 +4974,11 @@ function drawNewGuidelines() {
 		setSymbolX -= setSymbolWidth;
 	}
 	guidelinesContext.fillStyle = 'red';
-	guidelinesContext.fillRect(setSymbolX, setSymbolY, setSymbolWidth, setSymbolHeight);
+	guidelinesContext.save();
+	guidelinesContext.translate(setSymbolX + setSymbolWidth / 2, setSymbolY + setSymbolHeight / 2);
+	guidelinesContext.rotate(Math.PI * (card.setSymbolBounds.rotation || 0) / 180);
+	guidelinesContext.fillRect(-setSymbolWidth / 2, -setSymbolHeight / 2, setSymbolWidth, setSymbolHeight);
+	guidelinesContext.restore();
 	// grid
 	guidelinesContext.globalAlpha = 1;
 	guidelinesContext.beginPath();
@@ -4741,12 +5046,20 @@ function loadScript(scriptPath) {
 	return new Promise((resolve, reject) => {
 	var script = document.createElement('script');
 	script.setAttribute('type', 'text/javascript');
-	script.onload = resolve;
+	script.onload = function() {
+		const framePackMatch = scriptPath.match(/\/js\/frames\/pack(.+)\.js(?:\?.*)?$/);
+		if (framePackMatch) window.loadedFramePack = framePackMatch[1];
+		resolve();
+	};
 	script.onerror = function(){
 		notify('A script failed to load, likely due to an update. Please reload your page. Sorry for the inconvenience.');
 		reject();
 	}
-	script.setAttribute('src', scriptPath);
+	var scriptSource = scriptPath;
+	if (/^\/js\/frames\/pack.+\.js$/.test(scriptPath)) {
+		scriptSource += '?v=20260802-regular-transform-7';
+	}
+	script.setAttribute('src', scriptSource);
 	document.querySelectorAll('head')[0].appendChild(script);
 	});
 }
@@ -4901,8 +5214,13 @@ function fetchScryfallData(cardName, callback = console.log, unique = '') {
 	}
 }
 
-function toggleTextTag(tag) {
-	var element = document.getElementById('text-editor');
+function toggleTextTag(tag, element, textKey) {
+	element = element || document.activeElement;
+	if (!element || !element.classList.contains('text-field-input')) {
+		element = document.getElementById('text-editor');
+	}
+	if (!element) return;
+	textKey = textKey || element.dataset.textKey;
 
 	var text = element.value;
 
@@ -4926,8 +5244,15 @@ function toggleTextTag(tag) {
 	}
 
 	element.value = prefix + selection + suffix;
-
-	textEdited();
+	if (textKey) {
+		textEdited(textKey, element.value, !currentLayoutTextKeys.has(textKey));
+	} else {
+		textEdited();
+	}
+	element.focus();
+	var selectionStart = prefix.length;
+	var selectionEnd = selectionStart + selection.length;
+	element.setSelectionRange(selectionStart, selectionEnd);
 }
 
 function toggleHighRes() {
@@ -4936,6 +5261,14 @@ function toggleHighRes() {
 }
 
 // INITIALIZATION
+
+const hideReminderTextInput = document.querySelector('#hide-reminder-text');
+const italicizeReminderTextInput = document.querySelector('#italicize-reminder-text');
+const savedHideReminderText = localStorage.getItem('hide-reminder-text');
+const savedItalicizeReminderText = localStorage.getItem('italicize-reminder-text');
+hideReminderTextInput.checked = savedHideReminderText === 'true';
+italicizeReminderTextInput.checked = savedItalicizeReminderText === null ? true : savedItalicizeReminderText === 'true';
+if (savedItalicizeReminderText === null) localStorage.setItem('italicize-reminder-text', 'true');
 
 // auto load frame version (user defaults)
 if (!localStorage.getItem('autoLoadFrameVersion')) {
@@ -4971,15 +5304,16 @@ if (!localStorage.getItem('enableCollectorInfo')) {
 } else {
 	document.querySelector('#enableCollectorInfo').checked = (localStorage.getItem('enableCollectorInfo') == 'true');
 }
-if (!localStorage.getItem('autoFrame')) {
-	localStorage.setItem('autoFrame', 'false');
-} else {
-	document.querySelector('#autoFrame').value = localStorage.getItem('autoFrame');
+localStorage.setItem('autoFrame', 'M15Regular-1');
+document.querySelector('#autoFrame').value = 'M15Regular-1';
+if (!localStorage.getItem('automaticallyUpdateFrame')) {
+	localStorage.setItem('automaticallyUpdateFrame', 'true');
 }
+document.querySelector('#automaticallyUpdateFrame').checked = localStorage.getItem('automaticallyUpdateFrame') == 'true';
 if (!localStorage.getItem('autoframe-always-nyx')) {
 	localStorage.setItem('autoframe-always-nyx', 'false');
 }
-document.querySelector('#autoframe-always-nyx').checked = localStorage.getItem('autoframe-always-nyx');
+document.querySelector('#autoframe-always-nyx').checked = localStorage.getItem('autoframe-always-nyx') == 'true';
 if (!localStorage.getItem('autoFit')) {
 	localStorage.setItem('autoFit', 'true');
 } else {
@@ -5015,7 +5349,6 @@ bindInputs('#frame-editor-hsl-lightness', '#frame-editor-hsl-lightness-slider');
 bindInputs('#show-guidelines', '#show-guidelines-2', true);
 
 // Load / init whatever
-loadScript('/js/frames/groupStandard-3.js');
 loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
 loadAvailableCards();
 initDraggableArt();

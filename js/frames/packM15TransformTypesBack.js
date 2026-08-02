@@ -1,5 +1,6 @@
 //Create objects for common properties across available frames
-var bounds = {x:1737/2010, y:0.0505, width:0.0734, height:0.0524};
+// Pixel-matched to Back - New's baked Down Arrow socket.
+var bounds = {x:1743/2010, y:144/2814, width:0.0734, height:0.0524};
 //defines available frames
 availableFrames = [
 	{name:'Up Arrow', src:'/img/frames/m15/transform/icons/default.png', bounds:bounds},

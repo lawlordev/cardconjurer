@@ -306,79 +306,861 @@ const frameNames = new Map ([
 	['Circuit', 'Circuit'],
 ]);
 
-frameSearch = (str) => {
-	if (frameNames.has(str)) loadScript("/js/frames/pack" + frameNames.get(str) + ".js");
+var activeFramePack = 'M15Regular-1';
+var activeFrameCustomizationPack = null;
+var activeFrameComponentOptions = {};
+var frameComponentPackCache = new Map();
+var frameCustomizeTypeDefaults = null;
+var frameCustomizeTypeObject = null;
+var activeFrameCategory = 'all';
+var frameCatalogPreviewObserver;
+var frameCatalogSelectionToken = 0;
+
+function frameSearch(str) {
+	const matchingFrame = Array.from(frameNames.entries()).find(item => item[0].toLowerCase() == str.toLowerCase());
+	if (!matchingFrame) return;
+	const matchingTile = Array.from(document.querySelectorAll('.frame-catalog-item')).find(item => item.dataset.pack == matchingFrame[1]);
+	selectFrameCatalogItem(matchingFrame[0], matchingFrame[1], matchingTile);
 }
 
-//Thank you to w3schools for providing the following quick-and-easy autocomplete code :)
-//(some modifications made)
+function renderFrameCatalog() {
+	const catalog = document.querySelector('#frameCatalog');
+	if (!catalog) return;
+	catalog.addEventListener('wheel', scrollFrameCatalogWithWheel, {passive: false});
+	renderFrameCategoryFilters();
 
-autocomplete(document.getElementById("frameSearch"), Array.from(frameNames.keys()));
+	frameCatalogPreviewObserver = new IntersectionObserver(entries => {
+		entries.forEach(entry => {
+			if (!entry.isIntersecting) return;
+			frameCatalogPreviewObserver.unobserve(entry.target);
+			loadFrameCatalogPreview(entry.target);
+		});
+	}, {root: catalog, rootMargin: '0px 240px'});
 
-function autocomplete(inp, arr) {
-	var currentFocus;
-	inp.addEventListener("input", function(e) {
-		var a, b, i, val = this.value;
-		closeAllLists();
-		if (!val) { return false;}
-		currentFocus = -1;
-		a = document.createElement("DIV");
-		a.setAttribute("id", this.id + "autocomplete-list");
-		a.setAttribute("class", "autocomplete-items");
-		this.parentNode.appendChild(a);
-		for (i = 0; i < arr.length; i++) {
-			if (arr[i].toUpperCase().includes(val.toUpperCase())) {
-				b = document.createElement("DIV");
-				b.setAttribute("class", "input")
-				b.innerHTML = arr[i];
-				b.addEventListener("click", function(e) {
-					inp.value = this.textContent;
-					frameSearch(inp.value);
-              		closeAllLists();
-          		});
-				a.appendChild(b);
+	frameNames.forEach((pack, name) => {
+		if (typeof FRAME_REGISTRY != 'undefined' && !FRAME_REGISTRY.isCatalogProfile(pack)) return;
+		const definition = typeof FRAME_REGISTRY == 'undefined' ? {category:'standard', family:pack} : FRAME_REGISTRY.definition(pack);
+		const tile = document.createElement('button');
+		tile.type = 'button';
+		tile.className = 'frame-catalog-item';
+		tile.dataset.name = name.toLowerCase();
+		tile.dataset.pack = pack;
+		tile.dataset.category = definition.category;
+		tile.dataset.family = definition.family;
+		tile.title = name;
+		tile.setAttribute('aria-label', 'Load ' + name);
+		tile.onclick = () => selectFrameCatalogItem(name, pack, tile);
+
+		const preview = document.createElement('span');
+		preview.className = 'frame-catalog-preview';
+		const image = document.createElement('img');
+		image.src = '/img/blackThumb.png';
+		image.alt = '';
+		image.dataset.pack = pack;
+		preview.appendChild(image);
+
+		const label = document.createElement('span');
+		label.className = 'frame-catalog-title';
+		label.textContent = name;
+
+		tile.appendChild(preview);
+		tile.appendChild(label);
+		const selected = pack == activeFramePack;
+		tile.classList.toggle('selected', selected);
+		tile.setAttribute('aria-pressed', selected ? 'true' : 'false');
+		catalog.appendChild(tile);
+		frameCatalogPreviewObserver.observe(image);
+	});
+
+	updateFrameCatalogCount(catalog.querySelectorAll('.frame-catalog-item').length);
+	const defaultTile = Array.from(catalog.querySelectorAll('.frame-catalog-item')).find(item => item.dataset.pack == activeFramePack);
+	const defaultFrame = Array.from(frameNames.entries()).find(item => item[1] == activeFramePack);
+	if (defaultTile && defaultFrame) selectFrameCatalogItem(defaultFrame[0], defaultFrame[1], defaultTile);
+}
+
+function renderFrameCategoryFilters() {
+	const container = document.querySelector('#frameCategoryFilters');
+	if (!container) return;
+	const labels = typeof FRAME_REGISTRY == 'undefined' ? {all:'All'} : FRAME_REGISTRY.categoryLabels;
+	Object.entries(labels).forEach(([category, label]) => {
+		const button = document.createElement('button');
+		button.type = 'button';
+		button.className = 'frame-category-filter' + (category == activeFrameCategory ? ' selected' : '');
+		button.dataset.category = category;
+		button.textContent = label;
+		button.onclick = () => selectFrameCategory(category);
+		container.appendChild(button);
+	});
+}
+
+function selectFrameCategory(category) {
+	activeFrameCategory = category;
+	document.querySelectorAll('.frame-category-filter').forEach(button => button.classList.toggle('selected', button.dataset.category == category));
+	const search = document.querySelector('#frameSearch');
+	filterFrameCatalog(search ? search.value : '');
+}
+
+function scrollFrameCatalogWithWheel(event) {
+	if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+	const catalog = event.currentTarget;
+	const maximumScroll = catalog.scrollWidth - catalog.clientWidth;
+	const nextScroll = Math.max(0, Math.min(maximumScroll, catalog.scrollLeft + event.deltaY));
+	if (nextScroll == catalog.scrollLeft) return;
+	catalog.scrollLeft = nextScroll;
+	event.preventDefault();
+}
+
+async function loadFrameCatalogPreview(image) {
+	try {
+		const response = await fetch('/js/frames/pack' + image.dataset.pack + '.js');
+		if (!response.ok) throw new Error('Preview source could not be loaded');
+		const source = await response.text();
+		const availableFramesIndex = source.search(/availableFrames\s*=/);
+		const frameSource = availableFramesIndex >= 0 ? source.slice(availableFramesIndex) : source;
+		const sourceMatch = frameSource.match(/\bsrc\s*:\s*(['"])([^'"]+)\1/);
+		if (!sourceMatch) throw new Error('Preview image could not be found');
+		setFrameCatalogPreview(image, sourceMatch[2]);
+	} catch (error) {
+		image.closest('.frame-catalog-item').classList.add('preview-unavailable');
+	}
+}
+
+function setFrameCatalogPreview(image, source) {
+	const thumbnail = source.replace(/\.png$/i, 'Thumb.png').replace(/\.svg$/i, 'Thumb.png');
+	image.dataset.fallbackStep = '0';
+	image.onerror = function() {
+		if (this.dataset.fallbackStep == '0' && thumbnail != source) {
+			this.dataset.fallbackStep = '1';
+			this.src = frameCatalogUri(source);
+			return;
+		}
+		this.onerror = null;
+		this.closest('.frame-catalog-item').classList.add('preview-unavailable');
+		this.src = '/img/blackThumb.png';
+	};
+	image.src = frameCatalogUri(thumbnail);
+}
+
+function frameCatalogUri(source) {
+	return typeof fixUri == 'function' ? fixUri(source) : source;
+}
+
+async function selectFrameCatalogItem(name, pack, tile) {
+	const selectionToken = ++frameCatalogSelectionToken;
+	activeFramePack = pack;
+	activeFrameCustomizationPack = null;
+	activeFrameComponentOptions = {};
+	renderFrameCustomize(pack);
+	document.querySelectorAll('.frame-catalog-item').forEach(item => {
+		const selected = item == tile;
+		item.classList.toggle('selected', selected);
+		item.setAttribute('aria-pressed', selected ? 'true' : 'false');
+	});
+
+	const catalog = document.querySelector('#frameCatalog');
+	const status = document.querySelector('#frameCatalogStatus');
+	if (catalog) catalog.classList.add('loading');
+	if (status) status.textContent = 'Loading ' + name + '...';
+
+	try {
+		await loadScript('/js/frames/pack' + pack + '.js');
+		if (selectionToken != frameCatalogSelectionToken) return;
+		await updateAutomaticFrameFromCatalog(pack);
+		if (status) status.textContent = name + ' loaded. Choose an image and mask below.';
+	} catch (error) {
+		if (selectionToken != frameCatalogSelectionToken) return;
+		if (tile) tile.classList.add('load-failed');
+		if (status) status.textContent = name + ' could not be loaded.';
+	} finally {
+		if (selectionToken == frameCatalogSelectionToken && catalog) catalog.classList.remove('loading');
+	}
+}
+
+function frameCustomizationDefaultLabel(control) {
+	if (control === 'Transform') return 'No';
+	if (control === 'Variant') return 'Default';
+	return 'Normal';
+}
+
+function framePackDisplayName(pack) {
+	return Array.from(frameNames.entries()).find(entry => entry[1] === pack)?.[0] || pack;
+}
+
+function renderFrameCustomize(basePack = activeFramePack) {
+	const section = document.querySelector('#frameCustomize');
+	const container = document.querySelector('#frameCustomizeControls');
+	if (!section || !container || typeof FRAME_REGISTRY === 'undefined') return;
+	container.innerHTML = '';
+
+	const roots = new Set([basePack]);
+	const typeLine = window.card?.text?.type?.text || '';
+	const manaCost = window.card?.text?.mana?.text || '';
+	if (manaCost.trim() && activeFrameComponentOptions['color-identity']) delete activeFrameComponentOptions['color-identity'];
+	const automaticPack = FRAME_REGISTRY.automaticVariant(basePack, typeLine);
+	if (automaticPack) roots.add(automaticPack);
+	if (activeFrameCustomizationPack) roots.add(activeFrameCustomizationPack);
+
+	const customizations = Object.entries(FRAME_REGISTRY.variants).filter(([, details]) =>
+		roots.has(details.parent) && (details.mode === 'select' || details.mode === 'checkbox')
+	);
+	const applicableFamilies = new Set(Array.from(roots).flatMap(pack => [pack.toLowerCase(), FRAME_REGISTRY.family(pack).toLowerCase()]));
+	if (Array.from(roots).some(pack => pack.startsWith('Modal'))) applicableFamilies.add('modal');
+	if (Array.from(roots).some(pack => pack.startsWith('Planeswalker'))) applicableFamilies.add('planeswalker');
+	const componentCustomizations = Object.entries(FRAME_REGISTRY.components).filter(([, details]) => {
+		if (details.review || !['select', 'checkbox'].includes(details.mode)) return false;
+		if (!applicableFamilies.has(String(details.family).toLowerCase())) return false;
+		if (details.whenNoMana && manaCost.trim()) return false;
+		return !details.whenPacks || details.whenPacks.some(pack => roots.has(pack));
+	});
+
+	const selectGroups = new Map();
+	customizations.forEach(([pack, details]) => {
+		if (details.mode !== 'select') return;
+		const control = details.control || 'Style';
+		const key = details.parent + '::' + control;
+		if (!selectGroups.has(key)) selectGroups.set(key, {parent:details.parent, control:control, options:[]});
+		selectGroups.get(key).options.push({pack:pack, value:details.value || framePackDisplayName(pack)});
+	});
+
+	selectGroups.forEach(group => {
+		const label = document.createElement('div');
+		label.className = 'frame-customize-field';
+		const title = document.createElement('span');
+		title.textContent = group.control;
+		const select = document.createElement('select');
+		select.className = 'input frame-customize-input';
+		select.setAttribute('aria-label', group.control);
+		const defaultOption = document.createElement('option');
+		defaultOption.value = group.parent;
+		defaultOption.textContent = frameCustomizationDefaultLabel(group.control);
+		select.appendChild(defaultOption);
+		group.options.forEach(option => {
+			const element = document.createElement('option');
+			element.value = option.pack;
+			element.textContent = option.value;
+			select.appendChild(element);
+		});
+		select.value = group.options.some(option => option.pack === activeFrameCustomizationPack) ? activeFrameCustomizationPack : group.parent;
+		select.onchange = () => applyFrameCustomization(select.value, select);
+		label.append(title, select);
+		container.appendChild(label);
+	});
+
+	customizations.forEach(([pack, details]) => {
+		if (details.mode !== 'checkbox') return;
+		container.appendChild(renderFrameCheckboxControl(
+			details.control || details.label || framePackDisplayName(pack),
+			details.option || 'Enabled',
+			activeFrameCustomizationPack === pack,
+			checkbox => applyFrameCustomization(checkbox.checked ? pack : details.parent, checkbox)
+		));
+	});
+
+	const componentSelectGroups = new Map();
+	componentCustomizations.forEach(([pack, details]) => {
+		if (details.mode !== 'select') return;
+		const control = details.control || framePackDisplayName(pack);
+		const key = details.slot + '::' + control;
+		if (!componentSelectGroups.has(key)) componentSelectGroups.set(key, {slot:details.slot, control:control, defaultLabel:details.default || 'Default', defaultIsChoice:Boolean(details.defaultIsChoice), options:[], cascade:Boolean(details.cascade)});
+		else if (details.defaultIsChoice) componentSelectGroups.get(key).defaultIsChoice = true;
+		const options = details.choices?.length ? details.choices.map(choice => {
+			const frame = typeof choice === 'string' ? choice : choice.value;
+			const label = typeof choice === 'string' ? choice : choice.label;
+			const optionGroup = typeof choice === 'string' ? null : choice.group;
+			return {pack:pack, frame:frame, label:label, group:optionGroup};
+		}).filter(choice => details.defaultIsChoice || choice.frame !== details.default) : [{pack:pack, frame:null, label:details.value || framePackDisplayName(pack)}];
+		componentSelectGroups.get(key).options.push(...options);
+	});
+
+	componentSelectGroups.forEach(group => {
+		if (group.cascade) {
+			container.appendChild(renderFrameCascadeControl(group));
+			return;
+		}
+		const label = document.createElement('div');
+		label.className = 'frame-customize-field';
+		const title = document.createElement('span');
+		title.textContent = group.control;
+		const select = document.createElement('select');
+		select.className = 'input frame-customize-input';
+		select.setAttribute('aria-label', group.control);
+		const defaultOption = document.createElement('option');
+		defaultOption.value = '';
+		defaultOption.textContent = group.defaultLabel;
+		if (!group.defaultIsChoice) select.appendChild(defaultOption);
+		group.options.forEach(option => {
+			const element = document.createElement('option');
+			element.value = option.pack + '::' + (option.frame || '');
+			element.textContent = option.label;
+			select.appendChild(element);
+		});
+		const selected = activeFrameComponentOptions[group.slot];
+		select.value = selected ? selected.pack + '::' + (selected.frame || '') : '';
+		select.onchange = () => applyFrameComponentCustomization(group.slot, select.value);
+		label.append(title, select);
+		container.appendChild(label);
+	});
+
+	componentCustomizations.forEach(([pack, details]) => {
+		if (details.mode !== 'checkbox') return;
+		container.appendChild(renderFrameCheckboxControl(
+			details.control || details.label || framePackDisplayName(pack),
+			details.option || 'Enabled',
+			activeFrameComponentOptions[details.slot]?.pack === pack,
+			checkbox => applyFrameComponentCustomization(details.slot, checkbox.checked ? pack + '::' : '')
+		));
+	});
+
+	section.hidden = !container.children.length;
+}
+
+function renderFrameCheckboxControl(titleText, optionText, checked, onchange) {
+	const field = document.createElement('div');
+	field.className = 'frame-customize-field';
+	const title = document.createElement('span');
+	title.textContent = titleText;
+	const label = document.createElement('label');
+	label.className = 'checkbox-container input workspace-checkbox frame-customize-checkbox';
+	label.textContent = optionText;
+	const checkbox = document.createElement('input');
+	checkbox.type = 'checkbox';
+	checkbox.checked = checked;
+	checkbox.onchange = () => onchange(checkbox);
+	const checkmark = document.createElement('span');
+	checkmark.className = 'checkmark';
+	label.append(checkbox, checkmark);
+	field.append(title, label);
+	return field;
+}
+
+function renderFrameCascadeControl(group) {
+	const field = document.createElement('div');
+	field.className = 'frame-customize-field frame-cascade-field';
+	const title = document.createElement('span');
+	title.textContent = group.control;
+	const cascade = document.createElement('div');
+	cascade.className = 'frame-cascade';
+	let cascadeCloseTimer = null;
+	const trigger = document.createElement('button');
+	trigger.type = 'button';
+	trigger.className = 'input frame-cascade-trigger';
+	trigger.setAttribute('aria-haspopup', 'menu');
+	trigger.setAttribute('aria-expanded', 'false');
+	const selected = activeFrameComponentOptions[group.slot];
+	const selectedOption = selected ? group.options.find(option => option.pack === selected.pack && option.frame === selected.frame) : null;
+	appendFrameColorChoiceContent(trigger, selectedOption || {label:group.defaultLabel, frame:''});
+	trigger.onclick = () => {
+		const open = !cascade.classList.contains('open');
+		document.querySelectorAll('.frame-cascade.open').forEach(menu => menu.classList.remove('open'));
+		cascade.classList.toggle('open', open);
+		trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+	};
+
+	const menu = document.createElement('div');
+	menu.className = 'frame-cascade-menu';
+	menu.setAttribute('role', 'menu');
+	const addChoice = (parent, option, value, selectedChoice = false) => {
+		const button = document.createElement('button');
+		button.type = 'button';
+		button.className = 'frame-cascade-choice' + (selectedChoice ? ' selected' : '');
+		appendFrameColorChoiceContent(button, option);
+		button.setAttribute('role', 'menuitem');
+		button.onclick = async event => {
+			event.stopPropagation();
+			cascade.classList.remove('open');
+			trigger.setAttribute('aria-expanded', 'false');
+			await applyFrameComponentCustomization(group.slot, value);
+		};
+		parent.appendChild(button);
+	};
+	addChoice(menu, {label:group.defaultLabel, frame:''}, '', !selected);
+
+	const groupedOptions = new Map();
+	group.options.forEach(option => {
+		if (!option.group) return;
+		if (!groupedOptions.has(option.group)) groupedOptions.set(option.group, []);
+		groupedOptions.get(option.group).push(option);
+	});
+	groupedOptions.forEach((options, groupLabel) => {
+		const submenuGroup = document.createElement('div');
+		submenuGroup.className = 'frame-cascade-group';
+		const groupButton = document.createElement('button');
+		groupButton.type = 'button';
+		groupButton.className = 'frame-cascade-group-trigger';
+		groupButton.textContent = groupLabel;
+		groupButton.setAttribute('aria-haspopup', 'menu');
+		const arrow = document.createElement('span');
+		arrow.textContent = '‹';
+		arrow.setAttribute('aria-hidden', 'true');
+		groupButton.appendChild(arrow);
+		const submenu = document.createElement('div');
+		submenu.className = 'frame-cascade-submenu';
+		submenu.setAttribute('role', 'menu');
+		let submenuCloseTimer = null;
+		const positionSubmenu = () => requestAnimationFrame(() => {
+			const bounds = groupButton.getBoundingClientRect();
+			const top = Math.max(8, Math.min(bounds.top, window.innerHeight - submenu.offsetHeight - 8));
+			// Slightly overlap the flyout with its parent row so there is no
+			// one-pixel dead zone while the pointer crosses between them.
+			submenu.style.left = (bounds.left + 3) + 'px';
+			submenu.style.top = top + 'px';
+		});
+		const openSubmenu = () => {
+			clearTimeout(submenuCloseTimer);
+			menu.querySelectorAll('.frame-cascade-group.submenu-open').forEach(openGroup => {
+				if (openGroup !== submenuGroup) openGroup.classList.remove('submenu-open');
+			});
+			submenuGroup.classList.add('submenu-open');
+			positionSubmenu();
+		};
+		const gentlyCloseSubmenu = () => {
+			clearTimeout(submenuCloseTimer);
+			submenuCloseTimer = setTimeout(() => submenuGroup.classList.remove('submenu-open'), 260);
+		};
+		submenuGroup.onmouseenter = openSubmenu;
+		submenuGroup.onmouseleave = gentlyCloseSubmenu;
+		submenu.onmouseenter = openSubmenu;
+		submenu.onmouseleave = gentlyCloseSubmenu;
+		submenuGroup.onfocusin = openSubmenu;
+		groupButton.onfocus = openSubmenu;
+		groupButton.onclick = openSubmenu;
+		options.forEach(option => addChoice(submenu, option, option.pack + '::' + option.frame, selected?.pack === option.pack && selected?.frame === option.frame));
+		submenuGroup.append(groupButton, submenu);
+		menu.appendChild(submenuGroup);
+	});
+	group.options.filter(option => !option.group).forEach(option => addChoice(menu, option, option.pack + '::' + option.frame, selected?.pack === option.pack && selected?.frame === option.frame));
+	cascade.onmouseenter = () => clearTimeout(cascadeCloseTimer);
+	cascade.onmouseleave = () => {
+		clearTimeout(cascadeCloseTimer);
+		cascadeCloseTimer = setTimeout(() => {
+			cascade.classList.remove('open');
+			trigger.setAttribute('aria-expanded', 'false');
+		}, 320);
+	};
+	cascade.append(trigger, menu);
+	field.append(title, cascade);
+	return field;
+}
+
+function appendFrameColorChoiceContent(element, option) {
+	const content = document.createElement('span');
+	content.className = 'frame-color-choice-content';
+	const value = option?.frame || '';
+	if (value) {
+		const icons = document.createElement('span');
+		icons.className = 'frame-color-icons';
+		icons.setAttribute('aria-hidden', 'true');
+		if (value === 'M') {
+			const gold = document.createElement('span');
+			gold.className = 'frame-color-gold';
+			icons.appendChild(gold);
+		} else {
+			value.split('').filter(color => 'WUBRG'.includes(color)).forEach(color => {
+				const icon = document.createElement('img');
+				icon.src = '/img/manaSymbols/' + color.toLowerCase() + '.svg';
+				icon.alt = '';
+				icons.appendChild(icon);
+			});
+		}
+		content.appendChild(icons);
+	}
+	const name = document.createElement('span');
+	name.className = 'frame-color-name';
+	name.textContent = option?.label || '';
+	content.appendChild(name);
+	element.appendChild(content);
+}
+
+function enhanceWorkspaceSelect(select) {
+	if (!select || select.dataset.workspaceSelectEnhanced === 'true') return;
+	select.dataset.workspaceSelectEnhanced = 'true';
+	select.classList.add('workspace-native-select');
+	select.tabIndex = -1;
+	select.setAttribute('aria-hidden', 'true');
+
+	const dropdown = document.createElement('div');
+	dropdown.className = 'frame-cascade workspace-select';
+	const trigger = document.createElement('button');
+	trigger.type = 'button';
+	trigger.className = 'input frame-cascade-trigger workspace-select-trigger';
+	trigger.id = select.id ? select.id + '-trigger' : '';
+	trigger.setAttribute('aria-haspopup', 'listbox');
+	trigger.setAttribute('aria-expanded', 'false');
+	trigger.setAttribute('aria-label', select.getAttribute('aria-label') || select.previousElementSibling?.textContent?.trim() || 'Select an option');
+	const menu = document.createElement('div');
+	menu.className = 'frame-cascade-menu workspace-select-menu';
+	menu.setAttribute('role', 'listbox');
+	let closeTimer = null;
+
+	const close = () => {
+		dropdown.classList.remove('open');
+		dropdown.classList.remove('open-up');
+		trigger.setAttribute('aria-expanded', 'false');
+	};
+	const sync = () => {
+		const selected = select.options[select.selectedIndex];
+		trigger.textContent = selected?.textContent || select.getAttribute('placeholder') || 'Select';
+		trigger.disabled = select.disabled;
+		menu.querySelectorAll('.workspace-select-choice').forEach(choice => {
+			const chosen = choice.dataset.value === select.value;
+			choice.classList.toggle('selected', chosen);
+			choice.setAttribute('aria-selected', chosen ? 'true' : 'false');
+		});
+	};
+	const rebuild = () => {
+		menu.innerHTML = '';
+		Array.from(select.options).forEach(option => {
+			const choice = document.createElement('button');
+			choice.type = 'button';
+			choice.className = 'frame-cascade-choice workspace-select-choice';
+			choice.dataset.value = option.value;
+			choice.textContent = option.textContent;
+			choice.disabled = option.disabled;
+			choice.setAttribute('role', 'option');
+			choice.onclick = event => {
+				event.preventDefault();
+				event.stopPropagation();
+				select.value = option.value;
+				sync();
+				close();
+				select.dispatchEvent(new Event('input', {bubbles:true}));
+				select.dispatchEvent(new Event('change', {bubbles:true}));
+				trigger.focus();
+			};
+			menu.appendChild(choice);
+		});
+		sync();
+	};
+
+	trigger.onclick = event => {
+		event.preventDefault();
+		event.stopPropagation();
+		if (trigger.disabled) return;
+		const open = !dropdown.classList.contains('open');
+		document.querySelectorAll('.frame-cascade.open').forEach(control => {
+			control.classList.remove('open');
+			control.querySelector('[aria-expanded]')?.setAttribute('aria-expanded', 'false');
+		});
+		if (open) {
+			rebuild();
+			dropdown.classList.add('open');
+			trigger.setAttribute('aria-expanded', 'true');
+			requestAnimationFrame(() => {
+				const triggerBounds = trigger.getBoundingClientRect();
+				const availableBelow = window.innerHeight - triggerBounds.bottom - 8;
+				const availableAbove = triggerBounds.top - 8;
+				dropdown.classList.toggle('open-up', menu.offsetHeight > availableBelow && availableAbove > availableBelow);
+			});
+		}
+	};
+	dropdown.onmouseenter = () => clearTimeout(closeTimer);
+	dropdown.onmouseleave = () => {
+		clearTimeout(closeTimer);
+		closeTimer = setTimeout(close, 320);
+	};
+	select.addEventListener('change', sync);
+	new MutationObserver(rebuild).observe(select, {childList:true, subtree:true, attributes:true});
+	dropdown.append(trigger, menu);
+	select.insertAdjacentElement('afterend', dropdown);
+	if (select.id) {
+		document.querySelectorAll(`label[for="${select.id}"]`).forEach(label => label.htmlFor = trigger.id);
+	}
+	rebuild();
+}
+
+function initializeWorkspaceSelects() {
+	const workspace = document.querySelector('.creator-workspace');
+	if (!workspace) return;
+	const enhanceAll = root => {
+		if (root.matches?.('select.input')) enhanceWorkspaceSelect(root);
+		root.querySelectorAll?.('select.input').forEach(enhanceWorkspaceSelect);
+	};
+	enhanceAll(workspace);
+	new MutationObserver(mutations => mutations.forEach(mutation => mutation.addedNodes.forEach(node => {
+		if (node.nodeType === Node.ELEMENT_NODE) enhanceAll(node);
+	}))).observe(workspace, {childList:true, subtree:true});
+}
+
+async function applyFrameComponentCustomization(slot, value) {
+	if (!value) {
+		delete activeFrameComponentOptions[slot];
+	} else {
+		const separator = value.indexOf('::');
+		const selection = {
+			pack: separator < 0 ? value : value.slice(0, separator),
+			frame: separator < 0 ? null : (value.slice(separator + 2) || null)
+		};
+		activeFrameComponentOptions[slot] = selection;
+		// Component packs are edited frequently during local prototyping. Drop the
+		// parsed definition whenever the selection changes so manual bounds edits
+		// are picked up without restarting the server.
+		if (['127.0.0.1', 'localhost'].includes(window.location.hostname)) {
+			frameComponentPackCache.delete(selection.pack);
+		}
+	}
+	const section = document.querySelector('#frameCustomize');
+	if (section) section.classList.add('loading');
+	try {
+		await autoFrame();
+		// Component removal can change text bounds without adding a replacement
+		// layer, so redraw text explicitly instead of leaving the shifted raster.
+		if (typeof drawTextBuffer === 'function') drawTextBuffer(0);
+		renderFrameCustomize(activeFramePack);
+	} finally {
+		if (section) section.classList.remove('loading');
+	}
+}
+
+function getActiveFrameColorIdentityColors() {
+	if ((window.card?.text?.mana?.text || '').trim()) return null;
+	const selection = activeFrameComponentOptions['color-identity'];
+	if (!selection?.frame) return null;
+	if (selection.frame === 'M') return ['W', 'U', 'B'];
+	return selection.frame.split('').filter(color => 'WUBRG'.includes(color));
+}
+
+async function loadFrameComponentDefinitions(pack) {
+	if (frameComponentPackCache.has(pack)) return frameComponentPackCache.get(pack);
+	const localDevelopment = ['127.0.0.1', 'localhost'].includes(window.location.hostname);
+	const response = await fetch('/js/frames/pack' + pack + '.js', localDevelopment ? {cache:'no-store'} : undefined);
+	if (!response.ok) throw new Error('Could not load component pack ' + pack);
+	const source = await response.text();
+	const fakeElement = {disabled:false, onclick:null, checked:false, value:''};
+	const fakeDocument = {querySelector:() => fakeElement, querySelectorAll:() => []};
+	const evaluatePack = new Function('document', 'loadFramePack', 'loadFramePacks', 'notify', 'availableFrames', source + '\nreturn availableFrames;');
+	const frames = evaluatePack(fakeDocument, () => {}, () => {}, () => {}, []);
+	frameComponentPackCache.set(pack, frames);
+	return frames;
+}
+
+function frameCustomizeColorName(colors, typeLine) {
+	const normalizedType = String(typeLine || '').toLowerCase();
+	if (normalizedType.includes('land')) return 'Land';
+	if (normalizedType.includes('vehicle')) return 'Vehicle';
+	if (normalizedType.includes('artifact')) return 'Artifact';
+	if (colors.length > 1) return 'Multicolored';
+	if (colors.length === 1) return ({W:'White', U:'Blue', B:'Black', R:'Red', G:'Green'})[colors[0]] || 'White';
+	return 'White';
+}
+
+async function applyActiveFrameComponents(colors, typeLine) {
+	const componentRoots = new Set([activeFramePack, activeFrameCustomizationPack].filter(Boolean));
+	Object.entries(FRAME_REGISTRY?.components || {}).forEach(([componentPack, details]) => {
+		if (!details.defaultIsChoice || activeFrameComponentOptions[details.slot]) return;
+		if (!details.whenPacks?.some(pack => componentRoots.has(pack))) return;
+		activeFrameComponentOptions[details.slot] = {pack:componentPack, frame:details.default};
+	});
+	const manaCost = window.card?.text?.mana?.text || '';
+	const isLegendary = String(typeLine || '').toLowerCase().includes('legendary');
+	const selections = Object.entries(activeFrameComponentOptions).filter(([slot]) => {
+		if (slot === 'color-identity') return !manaCost.trim();
+		if (slot === 'crown-variant') return isLegendary;
+		return true;
+	});
+	const hasColorIdentity = selections.some(([slot]) => slot === 'color-identity');
+	const typeText = card.text?.type;
+	if (typeText) {
+		if (hasColorIdentity) {
+			if (frameCustomizeTypeObject !== typeText) {
+				frameCustomizeTypeObject = typeText;
+				frameCustomizeTypeDefaults = {x:typeText.x || 0, width:typeText.width || 1};
+			}
+			// Official indicators sit immediately left of the typeline. The old
+			// 255/1500 inset left roughly 70 px of empty space; 194/1500 matches
+			// the original {right66} placement while preserving wider layouts.
+			const indicatorTypeX = Math.max(frameCustomizeTypeDefaults.x, 194 / 1500);
+			const typeRightEdge = frameCustomizeTypeDefaults.x + frameCustomizeTypeDefaults.width;
+			typeText.x = indicatorTypeX;
+			typeText.width = Math.max(0.1, typeRightEdge - indicatorTypeX);
+		} else if (frameCustomizeTypeDefaults && frameCustomizeTypeObject === typeText) {
+			typeText.x = frameCustomizeTypeDefaults.x;
+			typeText.width = frameCustomizeTypeDefaults.width;
+			frameCustomizeTypeDefaults = null;
+			frameCustomizeTypeObject = null;
+		} else if (!hasColorIdentity) {
+			frameCustomizeTypeDefaults = null;
+			frameCustomizeTypeObject = null;
+		}
+	}
+	if (!selections.length) return;
+
+	const colorName = frameCustomizeColorName(colors, typeLine);
+	const layers = [];
+	for (const [slot, selection] of selections) {
+		const definitions = await loadFrameComponentDefinitions(selection.pack);
+		const clone = frame => {
+			const result = JSON.parse(JSON.stringify(frame));
+			result.frameCustomizeSlot = slot;
+			result.frameCustomizePack = selection.pack;
+			result.masks = result.masks || [];
+			return result;
+		};
+		if (selection.pack === 'M15Miracle') {
+			const source = definitions.find(frame => frame.name === colorName + ' Miracle Frame') || definitions[0];
+			if (source) layers.push(clone(source));
+		} else if (selection.pack === 'M15Borders') {
+			const source = definitions.find(frame => frame.name === selection.frame);
+			if (source) {
+				const border = clone(source);
+				border.masks = border.masks.filter(mask => mask.name === 'Full Border');
+				layers.push(border);
+			}
+		} else if (selection.pack === 'M15CIPips' || selection.pack === 'ClassicshiftedCIPips') {
+			const pipColors = colors.length ? colors.slice(0, 5) : ['W'];
+			const pipNames = {W:'White Pip', U:'Blue Pip', B:'Black Pip', R:'Red Pip', G:'Green Pip'};
+			const base = definitions.find(frame => frame.name.includes('Pip Base'));
+			if (base) layers.push(clone(base));
+			if (selection.frame === 'M') {
+				const gold = clone(definitions[0]);
+				gold.name = 'Gold Color Indicator';
+				gold.src = frameGoldColorIndicator();
+				gold.masks = [];
+				layers.unshift(gold);
+				continue;
+			}
+			const standardMasks = {
+				2:['First Half','Second Half']
+			}[pipColors.length];
+			pipColors.forEach((color, index) => {
+				const source = definitions.find(frame => frame.name === pipNames[color]);
+				if (!source) return;
+				const pip = clone(source);
+				if (standardMasks) {
+					pip.masks = pip.masks.filter(mask => mask.name === standardMasks[index]);
+				} else {
+					pip.masks = pipColors.length > 1 ? [{src:frameColorIdentityMask(index, pipColors.length), name:'Color Indicator Segment ' + (index + 1)}] : [];
+				}
+				layers.unshift(pip);
+			});
+		} else if (selection.pack === 'TheList') {
+			const source = definitions.find(frame => frame.name === 'Post-M15') || definitions[0];
+			if (source) layers.unshift(clone(source));
+		} else if (selection.pack === 'Brawl' || selection.pack === 'ModalLegendCrownsBrawl') {
+			const crownColor = colorName === 'Vehicle' ? 'Artifact' : colorName;
+			const crown = definitions.find(frame => frame.name === crownColor + ' Crown') || definitions[0];
+			const cover = definitions.find(frame => frame.name.includes('Border Cover'));
+			if (cover) layers.push(clone(cover));
+			if (crown) {
+				const fullCrown = clone(crown);
+				fullCrown.masks = [];
+				layers.unshift(fullCrown);
+			}
+		} else {
+			const source = definitions.find(frame => frame.name === selection.frame) || definitions[0];
+			if (source) layers.unshift(clone(source));
+		}
+	}
+	if (!layers.length) return;
+	card.frames.unshift(...layers);
+	for (const layer of layers.slice().reverse()) await addFrame([], layer);
+}
+
+function frameColorIdentityMask(index, count) {
+	const centerX = 150;
+	const centerY = 1242;
+	const radius = 24;
+	const firstSegmentStart = count === 3 ? 90 : 180 - (180 / count);
+	const startAngle = firstSegmentStart + (360 * index / count);
+	const endAngle = firstSegmentStart + (360 * (index + 1) / count);
+	const point = angle => {
+		const radians = angle * Math.PI / 180;
+		return [centerX + radius * Math.cos(radians), centerY + radius * Math.sin(radians)];
+	};
+	const start = point(startAngle);
+	const end = point(endAngle);
+	const largeArc = (360 / count) > 180 ? 1 : 0;
+	const path = `M ${centerX} ${centerY} L ${start[0]} ${start[1]} A ${radius} ${radius} 0 ${largeArc} 1 ${end[0]} ${end[1]} Z`;
+	const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="2100" viewBox="0 0 1500 2100"><path d="${path}" fill="white"/></svg>`;
+	return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
+function frameGoldColorIndicator() {
+	const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="2100" viewBox="0 0 1500 2100"><circle cx="150" cy="1242" r="22" fill="#d9ad45"/></svg>';
+	return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
+async function applyFrameCustomization(pack, sourceControl) {
+	const section = document.querySelector('#frameCustomize');
+	if (section) section.classList.add('loading');
+	document.querySelectorAll('#frameCustomizeControls input, #frameCustomizeControls select').forEach(control => {
+		if (control === sourceControl) return;
+		if (control.tagName === 'SELECT') control.selectedIndex = 0;
+		else control.checked = false;
+	});
+	try {
+		const packDetails = FRAME_REGISTRY?.definition(pack)?.details;
+		const assetPack = packDetails?.assetPack || pack;
+		if (pack === 'M15TransformFront') {
+			activeFrameComponentOptions['transform-icon'] = {pack:'M15TransformTypes', frame:'Up Arrow'};
+		} else if (pack === 'M15TransformBack') {
+			activeFrameComponentOptions['transform-icon'] = {pack:'M15TransformTypes', frame:'Down Arrow'};
+		} else if (pack === 'M15TransformBackNew') {
+			// Keep the default in the same overlay layer as every replacement.
+			// This prevents the icon from jumping between baked and overlay bounds.
+			activeFrameComponentOptions['transform-icon'] = {pack:'M15TransformTypesBack', frame:'Down Arrow'};
+		} else {
+			const transformIcon = activeFrameComponentOptions['transform-icon'];
+			if (transformIcon && ['M15TransformTypes','M15TransformTypesBack'].includes(transformIcon.pack)) {
+				delete activeFrameComponentOptions['transform-icon'];
 			}
 		}
-	});
-	inp.addEventListener("keydown", function(e) {
-		var x = document.getElementById(this.id + "autocomplete-list");
-		if (x) x = x.getElementsByTagName("div");
-		if (e.keyCode == 40) {
-        	currentFocus++;
-        	addActive(x);
-      	} else if (e.keyCode == 38) {
-        	currentFocus--;
-        	addActive(x);
-    	} else if (e.keyCode == 13) {
-    		e.preventDefault();
-    		if (currentFocus > -1) {
-    			if (x) x[currentFocus].click();
-    		}
-    	} else if (e.keyCode == 27) {
-    		closeAllLists();
-    	}
-	});
-	function addActive(x) {
-		if (!x) return false;
-		removeActive(x);
-		if (currentFocus >= x.length) currentFocus = 0;
-		if (currentFocus < 0) currentFocus = (x.length - 1);
-		x[currentFocus].classList.add("autocomplete-active");
+		await loadScript('/js/frames/pack' + assetPack + '.js');
+		activeFrameCustomizationPack = pack === activeFramePack ? null : pack;
+		await updateAutomaticFrameFromCatalog(pack);
+		renderFrameCustomize(activeFramePack);
+	} finally {
+		if (section) section.classList.remove('loading');
 	}
-	function removeActive(x) {
-		for (var i = 0; i < x.length; i++) {
-			x[i].classList.remove("autocomplete-active");
-		}
-	}
-	function closeAllLists(elmnt) {
-    	var x = document.getElementsByClassName("autocomplete-items");
-    	for (var i = 0; i < x.length; i++) {
-    		if (elmnt != x[i] && elmnt != inp) {
-    			x[i].parentNode.removeChild(x[i]);
-    		}
-	    }
-	}
-	document.addEventListener("click", function (e) {
-		closeAllLists(e.target);
-	});
 }
+
+async function updateAutomaticFrameFromCatalog(pack) {
+	const autoFrameInput = document.querySelector('#autoFrame');
+	if (!autoFrameInput) return;
+	const engine = typeof FRAME_REGISTRY == 'undefined' ? pack : (FRAME_REGISTRY.engine(pack) || pack);
+	autoFrameInput.value = engine;
+	autoFrameInput.dataset.profile = pack;
+	localStorage.setItem('autoFrame', engine);
+	localStorage.setItem('selectedFrameProfile', pack);
+	const automaticToggle = document.querySelector('#automaticallyUpdateFrame');
+	if (!automaticToggle || !automaticToggle.checked) return;
+	const autoLoadLayout = document.querySelector('#autoLoadFrameVersion');
+	const layoutButton = document.querySelector('#loadFrameVersion');
+	if (autoLoadLayout && autoLoadLayout.checked && layoutButton && typeof layoutButton.onclick == 'function' && !layoutButton.disabled) {
+		await layoutButton.onclick();
+	}
+	autoFramePack = engine;
+	await autoFrame();
+}
+
+function filterFrameCatalog(value) {
+	const query = value.trim().toLowerCase();
+	let visibleFrames = 0;
+	document.querySelectorAll('.frame-catalog-item').forEach(item => {
+		const matchesSearch = !query || item.dataset.name.includes(query);
+		const matchesCategory = activeFrameCategory == 'all' || item.dataset.category == activeFrameCategory;
+		const visible = matchesSearch && matchesCategory;
+		item.hidden = !visible;
+		if (visible) visibleFrames++;
+	});
+	const catalog = document.querySelector('#frameCatalog');
+	if (catalog) catalog.scrollLeft = 0;
+	updateFrameCatalogCount(visibleFrames);
+}
+
+function clearFrameCatalogSearch() {
+	const search = document.querySelector('#frameSearch');
+	if (!search) return;
+	search.value = '';
+	filterFrameCatalog('');
+	search.focus();
+}
+
+function updateFrameCatalogCount(visibleFrames) {
+	const count = document.querySelector('#frameCatalogCount');
+	if (!count) return;
+	const totalFrames = document.querySelectorAll('.frame-catalog-item').length;
+	count.textContent = visibleFrames == totalFrames ? totalFrames + ' frames' : visibleFrames + ' of ' + totalFrames;
+}
+
+initializeWorkspaceSelects();
+renderFrameCatalog();
