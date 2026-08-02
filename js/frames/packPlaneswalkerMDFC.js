@@ -2,18 +2,18 @@
 var masks = [{src:'/img/frames/planeswalker/mdfc/pinline.svg', name:'Pinline'}, {src:'/img/frames/modal/modalMaskReminder.png', name:'Reminder'}, {src:'/img/frames/planeswalker/mdfc/title.svg', name:'Title'}, {src:'/img/frames/planeswalker/regular/planeswalkerMaskType.png', name:'Type'}, {src:'/img/frames/planeswalker/regular/planeswalkerMaskBorder.png', name:'Border'}, {src:'/img/frames/planeswalker/maskLoyalty.png', name:'Loyalty'}];
 //defines available frames
 availableFrames = [
-	{name:'White Frame', src:'/img/frames/planeswalker/mdfc/wf.png', masks:masks},
-	{name:'Blue Frame', src:'/img/frames/planeswalker/mdfc/uf.png', masks:masks},
-	{name:'Black Frame', src:'/img/frames/planeswalker/mdfc/bf.png', masks:masks},
-	{name:'Red Frame', src:'/img/frames/planeswalker/mdfc/rf.png', masks:masks},
-	{name:'Green Frame', src:'/img/frames/planeswalker/mdfc/gf.png', masks:masks},
-	{name:'Multicolored Frame', src:'/img/frames/planeswalker/mdfc/mf.png', masks:masks},
-	{name:'White Frame', src:'/img/frames/planeswalker/mdfc/wb.png', masks:masks},
-	{name:'Blue Frame', src:'/img/frames/planeswalker/mdfc/ub.png', masks:masks},
-	{name:'Black Frame', src:'/img/frames/planeswalker/mdfc/bb.png', masks:masks},
-	{name:'Red Frame', src:'/img/frames/planeswalker/mdfc/rb.png', masks:masks},
-	{name:'Green Frame', src:'/img/frames/planeswalker/mdfc/gb.png', masks:masks},
-	{name:'Multicolored Frame', src:'/img/frames/planeswalker/mdfc/mb.png', masks:masks}
+	{name:'White Frame (Front)', src:'/img/frames/planeswalker/mdfc/wf.png', masks:masks},
+	{name:'Blue Frame (Front)', src:'/img/frames/planeswalker/mdfc/uf.png', masks:masks},
+	{name:'Black Frame (Front)', src:'/img/frames/planeswalker/mdfc/bf.png', masks:masks},
+	{name:'Red Frame (Front)', src:'/img/frames/planeswalker/mdfc/rf.png', masks:masks},
+	{name:'Green Frame (Front)', src:'/img/frames/planeswalker/mdfc/gf.png', masks:masks},
+	{name:'Multicolored Frame (Front)', src:'/img/frames/planeswalker/mdfc/mf.png', masks:masks},
+	{name:'White Frame (Back)', src:'/img/frames/planeswalker/mdfc/wb.png', masks:masks},
+	{name:'Blue Frame (Back)', src:'/img/frames/planeswalker/mdfc/ub.png', masks:masks},
+	{name:'Black Frame (Back)', src:'/img/frames/planeswalker/mdfc/bb.png', masks:masks},
+	{name:'Red Frame (Back)', src:'/img/frames/planeswalker/mdfc/rb.png', masks:masks},
+	{name:'Green Frame (Back)', src:'/img/frames/planeswalker/mdfc/gb.png', masks:masks},
+	{name:'Multicolored Frame (Back)', src:'/img/frames/planeswalker/mdfc/mb.png', masks:masks}
 ];
 //disables/enables the "Load Frame Version" button
 document.querySelector('#loadFrameVersion').disabled = false;
@@ -37,15 +37,15 @@ document.querySelector('#loadFrameVersion').onclick = async function() {
 	//text
 	loadTextOptions({
 		mana: {name:'Mana Cost', text:'', y:0.0481, width:0.9292, height:71/2100, oneLine:true, size:71/1638, align:'right', shadowX:-0.001, shadowY:0.0029, manaCost:true, manaSpacing:0},
-		title: {name:'Title', text:'', x:0.1614, y:0.0372, width:0.7534, height:0.0548, oneLine:true, font:'belerenb', size:0.0381},
-		type: {name:'Type', text:'', x:0.0867, y:0.5625, width:0.8267, height:0.0548, oneLine:true, font:'belerenb', size:0.0324},
+		title: {name:'Title', text:'', x:0.1614, y:0.0372, width:0.7534, height:0.0548, oneLine:true, font:'belerenb', size:0.0381, conditionalColor:'(Back):white'},
+		type: {name:'Type', text:'', x:0.0867, y:0.5625, width:0.8267, height:0.0548, oneLine:true, font:'belerenb', size:0.0324, conditionalColor:'(Back):white'},
 		ability0: {name:'Ability 1', text:'', x:0.18, y:0.6239, width:0.7467, height:0.0972, size:0.0353},
 		ability1: {name:'Ability 2', text:'', x:0.18, y:0, width:0.7467, height:0.0972, size:0.0353},
 		ability2: {name:'Ability 3', text:'', x:0.18, y:0, width:0.7467, height:0.0972, size:0.0353},
 		ability3: {name:'Ability 4', text:'', x:0.18, y:0, width:0.7467, height:0, size:0.0353},
 		loyalty: {name:'Loyalty', text:'', x:0.806, y:0.902, width:0.14, height:0.0372, size:0.0372, font:'belerenbsc', oneLine:true, align:'center', color:'white'},
-		flipsideType: {name:'Flipside Type', text:'', x:0.068, y:0.892, width:0.364, height:0.0391, size:0.0234, color:'white', oneLine:true, font:'belerenb'},
-		flipSideReminder: {name:'Flipside Text', text:'', x:0.068, y:0.892, width:0.364, height:0.0391, size:0.0258, color:'white', oneLine:true, align:'right'}
+		flipsideType: {name:'Flipside Type', text:'', x:0.068, y:0.892, width:0.364, height:0.0391, size:0.0234, color:'white', oneLine:true, font:'belerenb', conditionalColor:'(Back):black'},
+		flipSideReminder: {name:'Flipside Text', text:'', x:0.068, y:0.892, width:0.364, height:0.0391, size:0.0258, color:'white', oneLine:true, align:'right', conditionalColor:'(Back):black'}
 	});
 }
 //loads available frames

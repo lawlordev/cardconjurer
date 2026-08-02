@@ -1,19 +1,13 @@
 //checks to see if it needs to run
 var planeswalkerVersionFirstLoad = !loadedVersions.includes('/js/frames/versionPlaneswalker.js');
+var planeswalkerTallLayout = card.version.toLowerCase().includes('tall') || card.version.toLowerCase().includes('compleated');
+var planeswalkerLayoutMode = planeswalkerTallLayout ? 'tall' : 'normal';
+var planeswalkerDefaultShifts = (planeswalkerTallLayout ? [-16, 14, 34, 40] : [0, 38, 45, 0]).map(value => value / card.height);
+var planeswalkerDefaultCosts = planeswalkerTallLayout ? ['+1', '0', '-1', '-7'] : ['+1', '0', '-1', ''];
 if (planeswalkerVersionFirstLoad) {
 	loadedVersions.push('/js/frames/versionPlaneswalker.js');
 	sizeCanvas('planeswalkerPreFrame');
 	sizeCanvas('planeswalkerPostFrame');
-	if (!card.planeswalker) {
-		if (card.version.includes('Compleated')) {
-			card.planeswalker = {abilities:['+1', '0', '-7', ''], abilityAdjust:[0, 0, 0, 0], count:3, x:0.1167, width:0.8094};
-		} else {
-			card.planeswalker = {abilities:['', '+1', '0', '-7'], abilityAdjust:[0, 0, 0, 0], count:3, x:0.1167, width:0.8094};
-		}
-	}
-	if (card.version == 'planeswalkerSeventh') {
-		card.planeswalker.abilityAdjust = [-0.0143, -0.0143, -0.0143, -0.0143];
-	}
 	window.planeswalkerAbilityLayout = [[[0.7467], [0.6953, 0.822], [0.6639, 0.7467, 0.8362], [0.6505, 0.72, 0.7905, 0.861]],[[0.72], [0.6391, 0.801], [0.5986, 0.72, 0.8415], [0.5986, 0.6796, 0.7605, 0.8415]]];
 	var plusIcon = new Image();
 	setImageUrl(plusIcon, '/img/frames/planeswalker/planeswalkerPlus.png');
@@ -31,6 +25,32 @@ if (planeswalkerVersionFirstLoad) {
 	var lightColor = 'white';
 	var darkColor = '#a4a4a4';
 }
+
+if (!card.planeswalker) {
+	card.planeswalker = {
+		abilities:planeswalkerDefaultCosts.slice(),
+		abilityAdjust:planeswalkerDefaultShifts.slice(),
+		count:planeswalkerTallLayout ? 4 : 3,
+		x:0.1167,
+		width:0.8094,
+		layoutMode:planeswalkerLayoutMode
+	};
+} else if (card.planeswalker.layoutMode && card.planeswalker.layoutMode != planeswalkerLayoutMode) {
+	// Style changes deliberately update badge placement without replacing the
+	// user's first three loyalty costs or any entered ability text.
+	card.planeswalker.abilityAdjust = planeswalkerDefaultShifts.slice();
+	if (planeswalkerTallLayout) {
+		if (!card.planeswalker.abilities[3]) card.planeswalker.abilities[3] = '-7';
+	} else {
+		card.planeswalker.abilities[3] = '';
+	}
+	card.planeswalker.layoutMode = planeswalkerLayoutMode;
+} else if (!card.planeswalker.layoutMode) {
+	// Preserve custom values on older saved cards while opting them into future
+	// normal/tall transitions.
+	card.planeswalker.layoutMode = planeswalkerLayoutMode;
+}
+if (card.text?.loyalty && !card.text.loyalty.text) card.text.loyalty.text = '4';
 
 registerCardSpecificTextTools({
 	key: 'planeswalker',
@@ -187,6 +207,7 @@ function planeswalkerEdited() {
 	}
 	drawTextBuffer();
 	drawCard();
+	if (typeof queueLiveDraftSave === 'function') queueLiveDraftSave();
 }
 
 function fixPlaneswalkerInputs(callback) {
@@ -248,4 +269,5 @@ function invertPlaneswalkerColors(reverse = false) {
 		setImageUrl(lightToDark, '/img/frames/planeswalker/abilityLineOdd.png');
 		setImageUrl(darkToLight, '/img/frames/planeswalker/abilityLineEven.png');
 	}
+	if (!reverse && typeof queueLiveDraftSave === 'function') queueLiveDraftSave();
 }

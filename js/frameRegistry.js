@@ -54,7 +54,16 @@ window.FRAME_REGISTRY = (() => {
 		Brawl: {slot:'crown-variant', family:'regular', mode:'select', control:'Legend Crown', default:'Normal Legend Crown', value:'Brawl'},
 		ShatteredGlass: {slot:'crown-variant', family:'regular', mode:'select', default:'Normal', review:true},
 		PlaneswalkerHoloStamps: {slot:'holo-stamp', family:'planeswalker', when:'rarity:R|M|S'},
-		PlaneswalkerTransformIcons: {slot:'transform-icon', family:'planeswalker', mode:'select', control:'Transform Icon', default:'Sun', defaultIsChoice:true, whenPacks:['PlaneswalkerTransformFront','PlaneswalkerTransformBack','PlaneswalkerTransformFrontDBL','PlaneswalkerTransformBackDBL'], choices:['Sun','Crescent Moon','Full Moon','Emrakul','Compass','Land','Planeswalker Ember','Planeswalker Spark','Lesson']},
+		PlaneswalkerMDFCFlipsideColor: {
+			slot:'flipside-color', family:'planeswalker', mode:'select', control:'Flipside Color',
+			default:'Match Front', assetPack:'PlaneswalkerMDFC', whenPacks:['PlaneswalkerMDFC','PlaneswalkerMDFCBack'],
+			automaticFromFlipsideText:true,
+			choices:[
+				{value:'W', label:'White'}, {value:'U', label:'Blue'}, {value:'B', label:'Black'},
+				{value:'R', label:'Red'}, {value:'G', label:'Green'}, {value:'M', label:'Multicolored'}
+			]
+		},
+		PlaneswalkerTransformIcons: {slot:'transform-icon', family:'planeswalker', mode:'select', control:'Transform Icon', default:'Sun', defaultsByPack:{PlaneswalkerTransformBack:'Crescent Moon', PlaneswalkerTransformBackDBL:'Crescent Moon'}, defaultIsChoice:true, whenPacks:['PlaneswalkerTransformFront','PlaneswalkerTransformBack','PlaneswalkerTransformFrontDBL','PlaneswalkerTransformBackDBL'], choices:['Sun','Crescent Moon','Full Moon','Emrakul','Compass','Land','Planeswalker Ember','Planeswalker Spark','Lesson']},
 		M15TransformTypes: {slot:'transform-icon', family:'regular', mode:'select', control:'Transform Icon', default:'Up Arrow', defaultIsChoice:true, whenPacks:['M15TransformFront','M15TransformBack','SagaDFC'], choices:['Up Arrow','Down Arrow','Sun','Crescent Moon','Full Moon','Emrakul','Compass','Land','Planeswalker Ember','Planeswalker Spark','Lesson','Closed Fan','Open Fan','Meld']},
 		M15TransformTypesBack: {slot:'transform-icon', family:'regular', mode:'select', control:'Transform Icon', default:'Down Arrow', defaultIsChoice:true, whenPacks:['M15TransformBackNew'], choices:['Up Arrow','Down Arrow','Sun','Crescent Moon','Full Moon','Emrakul','Compass','Land','Planeswalker Ember','Planeswalker Spark','Lesson','Closed Fan','Open Fan','Meld']},
 		TransformLegendCrowns: {slot:'crown', family:'transform', when:'legendary'},
@@ -89,39 +98,52 @@ window.FRAME_REGISTRY = (() => {
 		EtchedSnow: {parent:'Etched', when:'snow', precedence:40},
 		M15DarkPT: {parent:'M15Regular-1', mode:'checkbox', control:'Power/Toughness Box', option:'Dark'},
 		PrototypeExtended: {parent:'Prototype', mode:'checkbox', label:'Extended (Puma) Art'},
+		StationBorderless: {parent:'StationRegular', mode:'select', control:'Style', value:'Borderless'},
+		GenericShowcase: {parent:'M15Regular-1', mode:'select', control:'Style', value:'Borderless'},
+		Borderless: {parent:'M15Regular-1', mode:'select', control:'Style', value:'Borderless (Alt)'},
+		M15ClearTextboxes: {parent:'M15Regular-1', mode:'select', control:'Style', value:'Full Art'},
+		M15BoxTopper: {parent:'M15Regular-1', mode:'select', control:'Style', value:'Extended Art'},
+		M15ExtendedArtShort: {parent:'M15Regular-1', mode:'select', control:'Style', value:'Extended Art (Shorter Textbox)'},
 		DoubleFeatureTransform: {parent:'DoubleFeature', mode:'select', control:'Transform', value:'Front'},
 		EquinoxFront: {parent:'Equinox', mode:'select', control:'Transform', value:'Front'},
 		EquinoxBack: {parent:'Equinox', mode:'select', control:'Transform', value:'Back'},
 		PlaneswalkerDBL: {parent:'DoubleFeature', when:'planeswalker', precedence:100},
 		PlaneswalkerRegular: {parent:'M15Regular-1', when:'planeswalker', precedence:100},
-		PlaneswalkerBorderless: {parent:'GenericShowcase', when:'planeswalker', precedence:100},
+		PlaneswalkerBorderless: {parent:'PlaneswalkerRegular', mode:'select', control:'Style', value:'Borderless'},
 		PlaneswalkerBoxTopper: {parent:'PlaneswalkerRegular', mode:'select', control:'Style', value:'Extended Art'},
 		PlaneswalkerTall: {parent:'PlaneswalkerRegular', mode:'select', control:'Style', value:'Tall Text'},
-		PlaneswalkerTallBorderless: {parent:'PlaneswalkerBorderless', mode:'select', control:'Style', value:'Tall Text'},
+		PlaneswalkerTallBorderless: {parent:'PlaneswalkerBorderless', groupParent:'PlaneswalkerRegular', mode:'select', control:'Style', value:'Tall Text (Borderless)'},
 		PlaneswalkerCompleated: {parent:'PlaneswalkerRegular', mode:'select', control:'Style', value:'Compleated'},
-		PlaneswalkerNickname: {parent:'PlaneswalkerBorderless', mode:'select', control:'Style', value:'Nickname'},
-		PlaneswalkerSDCC15: {parent:'PlaneswalkerRegular', mode:'select', control:'Style', value:'Blackout'},
-		PlaneswalkerMDFC: {parent:'PlaneswalkerBorderless', mode:'select', control:'Style', value:'MDFC'},
+		PlaneswalkerNickname: {parent:'PlaneswalkerBorderless', groupParent:'PlaneswalkerRegular', mode:'select', control:'Style', value:'Nickname'},
+		PlaneswalkerSDCC15: {parent:'PlaneswalkerRegular', mode:'select', control:'Style', value:'Blackout', standaloneFrame:'Frame'},
+		PlaneswalkerMDFC: {
+			parent:'PlaneswalkerBorderless', groupParent:'PlaneswalkerRegular', mode:'select', control:'Style', value:'MDFC',
+			face:'front', composeParent:{profile:'PlaneswalkerRegular', masks:['Frame', 'Pinline', 'Border']}
+		},
+		PlaneswalkerMDFCBack: {
+			parent:'PlaneswalkerBorderless', groupParent:'PlaneswalkerRegular', mode:'select', control:'Style', value:'MDFC (Back)',
+			assetPack:'PlaneswalkerMDFC', face:'back', composeParent:{profile:'PlaneswalkerRegular', masks:['Frame', 'Pinline', 'Border']}
+		},
 		PlaneswalkerTransformFront: {parent:'PlaneswalkerRegular', mode:'select', control:'Style', value:'Transform (Front)'},
 		PlaneswalkerTransformBack: {parent:'PlaneswalkerRegular', mode:'select', control:'Style', value:'Transform (Back)'},
-		PlaneswalkerTransformFrontDBL: {parent:'PlaneswalkerRegular', mode:'select', control:'Style', value:'Double Feature Transform (Front)'},
-		PlaneswalkerTransformBackDBL: {parent:'PlaneswalkerRegular', mode:'select', control:'Style', value:'Double Feature Transform (Back)'},
-		M15TransformFront: {parent:'M15Regular-1', mode:'select', control:'Transform', value:'Front'},
-		M15TransformBack: {parent:'M15Regular-1', mode:'select', control:'Transform', value:'Back'},
-		M15TransformBackNew: {parent:'M15Regular-1', mode:'select', control:'Transform', value:'Back - New'},
+		PlaneswalkerTransformFrontDBL: {parent:'PlaneswalkerDBL', mode:'select', control:'Style', value:'Transform (Front)'},
+		PlaneswalkerTransformBackDBL: {parent:'PlaneswalkerDBL', mode:'select', control:'Style', value:'Transform (Back)'},
+		M15TransformFront: {parent:'M15Regular-1', mode:'select', control:'Style', value:'Transform (Front)'},
+		M15TransformBack: {parent:'M15Regular-1', mode:'select', control:'Style', value:'Transform (Back)'},
+		M15TransformBackNew: {parent:'M15Regular-1', mode:'select', control:'Style', value:'Transform (Back - New)'},
 		SagaDFC: {parent:'SagaRegular', mode:'select', control:'Transform', value:'Front'},
-		TransformBorderlessFront: {parent:'GenericShowcase', mode:'select', control:'Transform', value:'Front'},
-		TransformBorderlessBack: {parent:'GenericShowcase', mode:'select', control:'Transform', value:'Back'},
-		TransformBorderlessAltFront: {parent:'Borderless', mode:'select', control:'Transform', value:'Front'},
-		TransformBorderlessAltBack: {parent:'Borderless', mode:'select', control:'Transform', value:'Back - New'},
-		TransformExtendedFront: {parent:'M15BoxTopper', mode:'select', control:'Transform', value:'Front'},
-		TransformExtendedBack: {parent:'M15BoxTopper', mode:'select', control:'Transform', value:'Back'},
+		TransformBorderlessFront: {parent:'GenericShowcase', groupParent:'M15Regular-1', mode:'select', control:'Style', value:'Borderless — Transform (Front)'},
+		TransformBorderlessBack: {parent:'GenericShowcase', groupParent:'M15Regular-1', mode:'select', control:'Style', value:'Borderless — Transform (Back)'},
+		TransformBorderlessAltFront: {parent:'Borderless', groupParent:'M15Regular-1', mode:'select', control:'Style', value:'Borderless (Alt) — Transform (Front)'},
+		TransformBorderlessAltBack: {parent:'Borderless', groupParent:'M15Regular-1', mode:'select', control:'Style', value:'Borderless (Alt) — Transform (Back)'},
+		TransformExtendedFront: {parent:'M15BoxTopper', groupParent:'M15Regular-1', mode:'select', control:'Style', value:'Extended Art — Transform (Front)'},
+		TransformExtendedBack: {parent:'M15BoxTopper', groupParent:'M15Regular-1', mode:'select', control:'Style', value:'Extended Art — Transform (Back)'},
 		NeonInkTransformFront: {parent:'NeonInk', mode:'select', control:'Transform', value:'Front'},
 		NeonInkTransformBack: {parent:'NeonInk', mode:'select', control:'Transform', value:'Back'},
-		ModalRegular: {parent:'M15Regular-1', mode:'select', control:'Transform', value:'Front - Modal DFC', face:'front'},
-		ModalRegularBack: {parent:'M15Regular-1', mode:'select', control:'Transform', value:'Back - Modal DFC', assetPack:'ModalRegular', face:'back'},
-		ModalBorderless: {parent:'GenericShowcase', mode:'select', control:'Transform', value:'Front - Modal DFC'},
-		ModalExtended: {parent:'M15BoxTopper', mode:'select', control:'Transform', value:'Front - Modal DFC'},
+		ModalRegular: {parent:'M15Regular-1', mode:'select', control:'Style', value:'Modal DFC (Front)', face:'front'},
+		ModalRegularBack: {parent:'M15Regular-1', mode:'select', control:'Style', value:'Modal DFC (Back)', assetPack:'ModalRegular', face:'back'},
+		ModalBorderless: {parent:'GenericShowcase', groupParent:'M15Regular-1', mode:'select', control:'Style', value:'Borderless — Modal DFC'},
+		ModalExtended: {parent:'M15BoxTopper', groupParent:'M15Regular-1', mode:'select', control:'Style', value:'Extended Art — Modal DFC'},
 		ModalNickname: {parent:'ModalRegular', when:'hasNickname'},
 		ModalShort: {parent:'ModalRegular', mode:'checkbox', label:'Short Textbox'},
 		ModalShortNickname: {parent:'ModalShort', when:'hasNickname'},
@@ -235,6 +257,10 @@ window.FRAME_REGISTRY = (() => {
 		const packFamily = family(pack);
 
 		if (normalizedType.includes('planeswalker')) {
+			// Customize choices can become the active auto-frame profile. Treat an
+			// already-selected Planeswalker style as its own valid automatic variant
+			// so typing the type line can always reload its frame and text layout.
+			if (pack.startsWith('Planeswalker')) return pack;
 			if (pack === 'DoubleFeature') return 'PlaneswalkerDBL';
 			if (pack === 'Seventh') return 'PlaneswalkerSeventh';
 			if (pack === 'Classicshifted') return 'ClassicshiftedPlaneswalker';
@@ -253,6 +279,19 @@ window.FRAME_REGISTRY = (() => {
 			return {class:'ClassUB', case:'CaseUB', saga:'SagaUB'}[enchantmentSubtype];
 		}
 		return null;
+	}
+
+	function profileForType(pack, typeLine = '') {
+		if (String(typeLine).toLowerCase().includes('planeswalker')) return pack;
+		let profile = pack;
+		const visited = new Set();
+		while (variants[profile] && !visited.has(profile)) {
+			visited.add(profile);
+			const details = variants[profile];
+			if (details.when === 'planeswalker') return details.parent;
+			profile = details.parent;
+		}
+		return pack;
 	}
 
 	function stampFor(pack, colorName) {
@@ -394,6 +433,7 @@ window.FRAME_REGISTRY = (() => {
 		review,
 		definition,
 		automaticVariant,
+		profileForType,
 		stampFor,
 		nicknameFor,
 		semanticComponentColors,

@@ -310,11 +310,31 @@ var activeFramePack = 'M15Regular-1';
 var activeFrameCustomizationPack = null;
 var activeFrameComponentOptions = {};
 var frameComponentPackCache = new Map();
+var frameTranslatedSvgCache = new Map();
 var frameCustomizeTypeDefaults = null;
 var frameCustomizeTypeObject = null;
 var activeFrameCategory = 'all';
 var frameCatalogPreviewObserver;
 var frameCatalogSelectionToken = 0;
+
+// Color-indicator adjustments in card pixels (the card canvas is 1500 x 2100).
+// Add or change a frame profile here when its indicator needs a small nudge.
+// Positive x moves right; positive y moves down.
+const FRAME_COLOR_INDICATOR_OFFSETS = {
+	default: {x:0, y:-6},
+	'M15Regular-1': {x:0, y:-6},
+	PlaneswalkerRegular: {x:0, y:-3},
+	PlaneswalkerTall: {x:0, y:-3},
+	PlaneswalkerCompleated: {x:0, y:-3},
+	PlaneswalkerBorderless: {x:0, y:-3},
+	PlaneswalkerTallBorderless: {x:0, y:-3},
+	SagaRegular: {x:0, y:-5},
+	SagaUB: {x:0, y:-5},
+	Class: {x:0, y:-5},
+	ClassUB: {x:0, y:-5},
+	Case: {x:0, y:-5},
+	CaseUB: {x:0, y:-5}
+};
 
 function frameSearch(str) {
 	const matchingFrame = Array.from(frameNames.entries()).find(item => item[0].toLowerCase() == str.toLowerCase());
@@ -375,7 +395,7 @@ function renderFrameCatalog() {
 	updateFrameCatalogCount(catalog.querySelectorAll('.frame-catalog-item').length);
 	const defaultTile = Array.from(catalog.querySelectorAll('.frame-catalog-item')).find(item => item.dataset.pack == activeFramePack);
 	const defaultFrame = Array.from(frameNames.entries()).find(item => item[1] == activeFramePack);
-	if (defaultTile && defaultFrame) selectFrameCatalogItem(defaultFrame[0], defaultFrame[1], defaultTile);
+	if (defaultTile && defaultFrame) return selectFrameCatalogItem(defaultFrame[0], defaultFrame[1], defaultTile);
 }
 
 function renderFrameCategoryFilters() {
@@ -486,6 +506,22 @@ function framePackDisplayName(pack) {
 	return Array.from(frameNames.entries()).find(entry => entry[1] === pack)?.[0] || pack;
 }
 
+function frameFlipsideTextColors() {
+	const value = String(window.card?.text?.flipSideReminder?.text || '');
+	const manaTokens = [];
+	for (const match of value.matchAll(/\{([^{}]+)\}/g)) {
+		const token = match[1].trim().toUpperCase();
+		if (/^(?:\d+|[WUBRGCXYZS]|[WUBRG2]\/[WUBRGP])$/.test(token)) manaTokens.push(token);
+	}
+	const withoutCodes = value.replace(/\{[^{}]*\}/g, '').trim();
+	if (!manaTokens.length && withoutCodes && /^[\s\dWUBRGCXYZSP/+-]+$/i.test(withoutCodes)) {
+		manaTokens.push(...FRAME_REGISTRY.tokenizeManaCost(withoutCodes));
+	}
+	return FRAME_REGISTRY.canonicalColors(manaTokens.flatMap(token =>
+		String(token).toUpperCase().split('').filter(character => 'WUBRG'.includes(character))
+	));
+}
+
 function renderFrameCustomize(basePack = activeFramePack) {
 	const section = document.querySelector('#frameCustomize');
 	const container = document.querySelector('#frameCustomizeControls');
@@ -499,17 +535,33 @@ function renderFrameCustomize(basePack = activeFramePack) {
 	const automaticPack = FRAME_REGISTRY.automaticVariant(basePack, typeLine);
 	if (automaticPack) roots.add(automaticPack);
 	if (activeFrameCustomizationPack) roots.add(activeFrameCustomizationPack);
+	if (roots.has('PlaneswalkerTallBorderless') || roots.has('PlaneswalkerNickname') || roots.has('PlaneswalkerMDFC') || roots.has('PlaneswalkerMDFCBack')) {
+		roots.add('PlaneswalkerBorderless');
+	}
+	if (roots.has('PlaneswalkerBorderless')) {
+		roots.add('PlaneswalkerRegular');
+	}
+	const planeswalkerContext = Array.from(roots).some(pack => pack.startsWith('Planeswalker'));
 
-	const customizations = Object.entries(FRAME_REGISTRY.variants).filter(([, details]) =>
-		roots.has(details.parent) && (details.mode === 'select' || details.mode === 'checkbox')
-	);
+	const customizations = Object.entries(FRAME_REGISTRY.variants).filter(([pack, details]) => {
+		const groupParent = details.groupParent || details.parent;
+		if ((!roots.has(details.parent) && !roots.has(groupParent)) || !['select', 'checkbox'].includes(details.mode)) return false;
+		if (planeswalkerContext && details.control === 'Transform') return false;
+		if (planeswalkerContext && groupParent === 'M15Regular-1' && details.control === 'Style') return false;
+		if (planeswalkerContext && pack === 'M15DarkPT') return false;
+		return true;
+	});
 	const applicableFamilies = new Set(Array.from(roots).flatMap(pack => [pack.toLowerCase(), FRAME_REGISTRY.family(pack).toLowerCase()]));
 	if (Array.from(roots).some(pack => pack.startsWith('Modal'))) applicableFamilies.add('modal');
 	if (Array.from(roots).some(pack => pack.startsWith('Planeswalker'))) applicableFamilies.add('planeswalker');
-	const componentCustomizations = Object.entries(FRAME_REGISTRY.components).filter(([, details]) => {
+	const componentCustomizations = Object.entries(FRAME_REGISTRY.components).filter(([pack, details]) => {
 		if (details.review || !['select', 'checkbox'].includes(details.mode)) return false;
-		if (!applicableFamilies.has(String(details.family).toLowerCase())) return false;
+		if (planeswalkerContext && ['M15Miracle', 'Brawl'].includes(pack)) return false;
+		const familyMatches = applicableFamilies.has(String(details.family).toLowerCase()) ||
+			(planeswalkerContext && pack === 'M15CIPips');
+		if (!familyMatches) return false;
 		if (details.whenNoMana && manaCost.trim()) return false;
+		if (details.automaticFromFlipsideText && frameFlipsideTextColors().length) return false;
 		return !details.whenPacks || details.whenPacks.some(pack => roots.has(pack));
 	});
 
@@ -517,8 +569,9 @@ function renderFrameCustomize(basePack = activeFramePack) {
 	customizations.forEach(([pack, details]) => {
 		if (details.mode !== 'select') return;
 		const control = details.control || 'Style';
-		const key = details.parent + '::' + control;
-		if (!selectGroups.has(key)) selectGroups.set(key, {parent:details.parent, control:control, options:[]});
+		const groupParent = details.groupParent || details.parent;
+		const key = groupParent + '::' + control;
+		if (!selectGroups.has(key)) selectGroups.set(key, {parent:groupParent, control:control, options:[]});
 		selectGroups.get(key).options.push({pack:pack, value:details.value || framePackDisplayName(pack)});
 	});
 
@@ -540,7 +593,8 @@ function renderFrameCustomize(basePack = activeFramePack) {
 			element.textContent = option.value;
 			select.appendChild(element);
 		});
-		select.value = group.options.some(option => option.pack === activeFrameCustomizationPack) ? activeFrameCustomizationPack : group.parent;
+		const effectivePack = activeFrameCustomizationPack || automaticPack;
+		select.value = group.options.some(option => option.pack === effectivePack) ? effectivePack : group.parent;
 		select.onchange = () => applyFrameCustomization(select.value, select);
 		label.append(title, select);
 		container.appendChild(label);
@@ -920,16 +974,17 @@ function getActiveFrameColorIdentityColors() {
 }
 
 async function loadFrameComponentDefinitions(pack) {
-	if (frameComponentPackCache.has(pack)) return frameComponentPackCache.get(pack);
+	const assetPack = FRAME_REGISTRY?.components?.[pack]?.assetPack || pack;
+	if (frameComponentPackCache.has(assetPack)) return frameComponentPackCache.get(assetPack);
 	const localDevelopment = ['127.0.0.1', 'localhost'].includes(window.location.hostname);
-	const response = await fetch('/js/frames/pack' + pack + '.js', localDevelopment ? {cache:'no-store'} : undefined);
+	const response = await fetch('/js/frames/pack' + assetPack + '.js', localDevelopment ? {cache:'no-store'} : undefined);
 	if (!response.ok) throw new Error('Could not load component pack ' + pack);
 	const source = await response.text();
 	const fakeElement = {disabled:false, onclick:null, checked:false, value:''};
 	const fakeDocument = {querySelector:() => fakeElement, querySelectorAll:() => []};
 	const evaluatePack = new Function('document', 'loadFramePack', 'loadFramePacks', 'notify', 'availableFrames', source + '\nreturn availableFrames;');
 	const frames = evaluatePack(fakeDocument, () => {}, () => {}, () => {}, []);
-	frameComponentPackCache.set(pack, frames);
+	frameComponentPackCache.set(assetPack, frames);
 	return frames;
 }
 
@@ -940,23 +995,35 @@ function frameCustomizeColorName(colors, typeLine) {
 	if (normalizedType.includes('artifact')) return 'Artifact';
 	if (colors.length > 1) return 'Multicolored';
 	if (colors.length === 1) return ({W:'White', U:'Blue', B:'Black', R:'Red', G:'Green'})[colors[0]] || 'White';
-	return 'White';
+	return 'Colorless';
 }
 
-async function applyActiveFrameComponents(colors, typeLine) {
+async function applyActiveFrameComponents(colors, typeLine, requestId) {
 	const componentRoots = new Set([activeFramePack, activeFrameCustomizationPack].filter(Boolean));
+	const automaticFlipsideColors = frameFlipsideTextColors();
+	const hasPlaneswalkerMDFC = componentRoots.has('PlaneswalkerMDFC') || componentRoots.has('PlaneswalkerMDFCBack');
+	const planeswalkerMDFCFace = componentRoots.has('PlaneswalkerMDFCBack') ? 'back' : 'front';
 	Object.entries(FRAME_REGISTRY?.components || {}).forEach(([componentPack, details]) => {
 		if (!details.defaultIsChoice || activeFrameComponentOptions[details.slot]) return;
-		if (!details.whenPacks?.some(pack => componentRoots.has(pack))) return;
-		activeFrameComponentOptions[details.slot] = {pack:componentPack, frame:details.default};
+		const matchingPack = details.whenPacks?.find(pack => componentRoots.has(pack));
+		if (!matchingPack) return;
+		const defaultFrame = details.defaultsByPack?.[matchingPack] || details.default;
+		activeFrameComponentOptions[details.slot] = {pack:componentPack, frame:defaultFrame};
 	});
 	const manaCost = window.card?.text?.mana?.text || '';
 	const isLegendary = String(typeLine || '').toLowerCase().includes('legendary');
 	const selections = Object.entries(activeFrameComponentOptions).filter(([slot]) => {
 		if (slot === 'color-identity') return !manaCost.trim();
 		if (slot === 'crown-variant') return isLegendary;
+		if (slot === 'flipside-color') return hasPlaneswalkerMDFC && !automaticFlipsideColors.length;
 		return true;
 	});
+	if (hasPlaneswalkerMDFC && automaticFlipsideColors.length) {
+		selections.push(['flipside-color', {
+			pack:'PlaneswalkerMDFCFlipsideColor',
+			frame:automaticFlipsideColors.length > 1 ? 'M' : automaticFlipsideColors[0]
+		}]);
+	}
 	const hasColorIdentity = selections.some(([slot]) => slot === 'color-identity');
 	const typeText = card.text?.type;
 	if (typeText) {
@@ -995,7 +1062,15 @@ async function applyActiveFrameComponents(colors, typeLine) {
 			result.masks = result.masks || [];
 			return result;
 		};
-		if (selection.pack === 'M15Miracle') {
+		if (selection.pack === 'PlaneswalkerMDFCFlipsideColor') {
+			const colorName = ({W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', M:'Multicolored'})[selection.frame];
+			const source = definitions.find(frame => frame.name === colorName + ` Frame (${planeswalkerMDFCFace === 'back' ? 'Back' : 'Front'})`);
+			if (source) {
+				const flipside = clone(source);
+				flipside.masks = flipside.masks.filter(mask => ['Reminder', 'Flipside'].includes(mask.name));
+				layers.unshift(flipside);
+			}
+		} else if (selection.pack === 'M15Miracle') {
 			const source = definitions.find(frame => frame.name === colorName + ' Miracle Frame') || definitions[0];
 			if (source) layers.push(clone(source));
 		} else if (selection.pack === 'M15Borders') {
@@ -1008,12 +1083,22 @@ async function applyActiveFrameComponents(colors, typeLine) {
 		} else if (selection.pack === 'M15CIPips' || selection.pack === 'ClassicshiftedCIPips') {
 			const pipColors = colors.length ? colors.slice(0, 5) : ['W'];
 			const pipNames = {W:'White Pip', U:'Blue Pip', B:'Black Pip', R:'Red Pip', G:'Green Pip'};
+			const indicatorPosition = frameColorIndicatorPosition();
+			const indicatorOffsetX = indicatorPosition.x - 150;
+			const indicatorOffsetY = indicatorPosition.y - 1242;
 			const base = definitions.find(frame => frame.name.includes('Pip Base'));
-			if (base) layers.push(clone(base));
+			if (base) {
+				const positionedBase = clone(base);
+				if (positionedBase.bounds) {
+					positionedBase.bounds.x += indicatorOffsetX / 1500;
+					positionedBase.bounds.y = indicatorPosition.y / 2100 - positionedBase.bounds.height / 2;
+				}
+				layers.push(positionedBase);
+			}
 			if (selection.frame === 'M') {
 				const gold = clone(definitions[0]);
 				gold.name = 'Gold Color Indicator';
-				gold.src = frameGoldColorIndicator();
+				gold.src = frameGoldColorIndicator(indicatorPosition.x, indicatorPosition.y);
 				gold.masks = [];
 				layers.unshift(gold);
 				continue;
@@ -1021,17 +1106,19 @@ async function applyActiveFrameComponents(colors, typeLine) {
 			const standardMasks = {
 				2:['First Half','Second Half']
 			}[pipColors.length];
-			pipColors.forEach((color, index) => {
+			for (const [index, color] of pipColors.entries()) {
 				const source = definitions.find(frame => frame.name === pipNames[color]);
-				if (!source) return;
+				if (!source) continue;
 				const pip = clone(source);
+				pip.src = await frameTranslatedSvgAsset(pip.src, indicatorOffsetX, indicatorOffsetY);
 				if (standardMasks) {
 					pip.masks = pip.masks.filter(mask => mask.name === standardMasks[index]);
+					for (const mask of pip.masks) mask.src = await frameTranslatedSvgAsset(mask.src, indicatorOffsetX, indicatorOffsetY);
 				} else {
-					pip.masks = pipColors.length > 1 ? [{src:frameColorIdentityMask(index, pipColors.length), name:'Color Indicator Segment ' + (index + 1)}] : [];
+					pip.masks = pipColors.length > 1 ? [{src:frameColorIdentityMask(index, pipColors.length, indicatorPosition.x, indicatorPosition.y), name:'Color Indicator Segment ' + (index + 1)}] : [];
 				}
 				layers.unshift(pip);
-			});
+			}
 		} else if (selection.pack === 'TheList') {
 			const source = definitions.find(frame => frame.name === 'Post-M15') || definitions[0];
 			if (source) layers.unshift(clone(source));
@@ -1051,13 +1138,63 @@ async function applyActiveFrameComponents(colors, typeLine) {
 		}
 	}
 	if (!layers.length) return;
+	if (requestId && typeof autoFrameRequestId !== 'undefined' && requestId !== autoFrameRequestId) return;
 	card.frames.unshift(...layers);
 	for (const layer of layers.slice().reverse()) await addFrame([], layer);
 }
 
-function frameColorIdentityMask(index, count) {
-	const centerX = 150;
-	const centerY = 1242;
+function frameColorIndicatorProfile() {
+	return activeFrameCustomizationPack ||
+		(typeof automaticVariantPack !== 'undefined' && automaticVariantPack) ||
+		document.querySelector('#autoFrame')?.dataset.profile ||
+		activeFramePack ||
+		'default';
+}
+
+function frameColorIndicatorOffset() {
+	let profile = frameColorIndicatorProfile();
+	const visited = new Set();
+	while (profile && !visited.has(profile)) {
+		if (FRAME_COLOR_INDICATOR_OFFSETS[profile]) return FRAME_COLOR_INDICATOR_OFFSETS[profile];
+		visited.add(profile);
+		profile = typeof FRAME_REGISTRY === 'undefined' ? null : FRAME_REGISTRY.definition(profile)?.details?.parent;
+	}
+	return FRAME_COLOR_INDICATOR_OFFSETS.default;
+}
+
+function frameColorIndicatorPosition() {
+	const typeText = card.text?.type;
+	const offset = frameColorIndicatorOffset();
+	if (!typeText) return {x:150 + offset.x, y:1242 + offset.y};
+	const regularTypeCenter = 0.5625 + 0.0548 / 2;
+	const regularIndicatorCenter = 1242 / 2100;
+	return {
+		x: 150 + offset.x,
+		y: Math.round((typeText.y + typeText.height / 2 + regularIndicatorCenter - regularTypeCenter) * 2100) + offset.y
+	};
+}
+
+async function frameTranslatedSvgAsset(source, offsetX, offsetY) {
+	if ((!offsetX && !offsetY) || !source?.toLowerCase().includes('.svg')) return source;
+	const key = source + '::' + offsetX + '::' + offsetY;
+	if (frameTranslatedSvgCache.has(key)) return frameTranslatedSvgCache.get(key);
+	const response = await fetch(source);
+	if (!response.ok) return source;
+	const original = await response.text();
+	const svgStart = original.indexOf('<svg');
+	const openingEnd = original.indexOf('>', svgStart);
+	const closingStart = original.lastIndexOf('</svg>');
+	if (svgStart < 0 || openingEnd < 0 || closingStart < 0) return source;
+	const translated = original.slice(svgStart, openingEnd + 1) +
+		'<g transform="translate(' + offsetX + ' ' + offsetY + ')">' +
+		original.slice(openingEnd + 1, closingStart) +
+		'</g></svg>';
+	const result = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(translated);
+	frameTranslatedSvgCache.set(key, result);
+	return result;
+}
+
+function frameColorIdentityMask(index, count, centerX = 150, centerY = 1242) {
 	const radius = 24;
 	const firstSegmentStart = count === 3 ? 90 : 180 - (180 / count);
 	const startAngle = firstSegmentStart + (360 * index / count);
@@ -1074,8 +1211,8 @@ function frameColorIdentityMask(index, count) {
 	return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 }
 
-function frameGoldColorIndicator() {
-	const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="2100" viewBox="0 0 1500 2100"><circle cx="150" cy="1242" r="22" fill="#d9ad45"/></svg>';
+function frameGoldColorIndicator(centerX = 150, centerY = 1242) {
+	const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="2100" viewBox="0 0 1500 2100"><circle cx="' + centerX + '" cy="' + centerY + '" r="22" fill="#d9ad45"/></svg>';
 	return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 }
 
@@ -1090,7 +1227,17 @@ async function applyFrameCustomization(pack, sourceControl) {
 	try {
 		const packDetails = FRAME_REGISTRY?.definition(pack)?.details;
 		const assetPack = packDetails?.assetPack || pack;
-		if (pack === 'M15TransformFront') {
+		const planeswalkerTransformDefaults = {
+			PlaneswalkerTransformFront:'Sun',
+			PlaneswalkerTransformBack:'Crescent Moon',
+			PlaneswalkerTransformFrontDBL:'Sun',
+			PlaneswalkerTransformBackDBL:'Crescent Moon'
+		};
+		if (planeswalkerTransformDefaults[pack]) {
+			activeFrameComponentOptions['transform-icon'] = {pack:'PlaneswalkerTransformIcons', frame:planeswalkerTransformDefaults[pack]};
+		} else if (pack.startsWith('Planeswalker')) {
+			delete activeFrameComponentOptions['transform-icon'];
+		} else if (pack === 'M15TransformFront') {
 			activeFrameComponentOptions['transform-icon'] = {pack:'M15TransformTypes', frame:'Up Arrow'};
 		} else if (pack === 'M15TransformBack') {
 			activeFrameComponentOptions['transform-icon'] = {pack:'M15TransformTypes', frame:'Down Arrow'};
@@ -1123,9 +1270,8 @@ async function updateAutomaticFrameFromCatalog(pack) {
 	localStorage.setItem('selectedFrameProfile', pack);
 	const automaticToggle = document.querySelector('#automaticallyUpdateFrame');
 	if (!automaticToggle || !automaticToggle.checked) return;
-	const autoLoadLayout = document.querySelector('#autoLoadFrameVersion');
 	const layoutButton = document.querySelector('#loadFrameVersion');
-	if (autoLoadLayout && autoLoadLayout.checked && layoutButton && typeof layoutButton.onclick == 'function' && !layoutButton.disabled) {
+	if (layoutButton && typeof layoutButton.onclick == 'function' && !layoutButton.disabled) {
 		await layoutButton.onclick();
 	}
 	autoFramePack = engine;
@@ -1163,4 +1309,4 @@ function updateFrameCatalogCount(visibleFrames) {
 }
 
 initializeWorkspaceSelects();
-renderFrameCatalog();
+window.frameCatalogReadyPromise = Promise.resolve(renderFrameCatalog());

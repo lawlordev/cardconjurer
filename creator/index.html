@@ -172,7 +172,7 @@
 							<span class='creator-eyebrow'>Canvas</span>
 							<h2>Live Preview</h2>
 						</div>
-						<span class='creator-canvas-size'>1005 &times; 1407</span>
+						<button type='button' class='creator-canvas-reset' onclick='resetLiveDraftCard();'>Reset</button>
 					</div>
 					<div class='creator-canvas-well'>
 						<canvas class='creator-canvas box-shadow' id='previewCanvas' width='1005' height='1407'></canvas>
@@ -268,7 +268,7 @@
 										</div>
 										<h5 class='padding input-description'>You can now double click frames and masks to add them to the card. You can do so while holding the shift, control, or alt keys to add to the right half, left half, or middle third, respectively.</h5>
 									</div>
-								<h5 id='selectedPreview' class='padding input-description'>(Selected: White Frame, No Mask)</h5>
+								<h5 id='selectedPreview' class='padding input-description'>(Selected: Colorless Frame, No Mask)</h5>
 							</div>
 							<div class='readable-background padding margin-bottom'>
 								<h5 class='margin-bottom padding input-description'>Drag to reorder frame images</h5>
@@ -1025,8 +1025,8 @@
 	-->
 
 	</div>
-	<script defer src='/js/frameRegistry.js?v=20260802-regular-transform-8'></script>
-	<script defer src='/js/autoFrame.js?v=20260802-regular-transform-7'></script>
-	<script defer src='/js/creator-23.js?v=20260802-card-specific-text-11'></script>
-	<script defer src='/js/frameSearch.js?v=20260802-dropdown-ui-11'></script>
+	<script defer src='/js/frameRegistry.js?v=20260802-render-engine-2'></script>
+	<script defer src='/js/autoFrame.js?v=20260802-render-engine-2'></script>
+	<script defer src='/js/creator-23.js?v=20260802-render-engine-2'></script>
+	<script defer src='/js/frameSearch.js?v=20260802-render-engine-2'></script>
 <!-- END OF CONTENT -->

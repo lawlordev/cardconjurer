@@ -136,7 +136,9 @@ window.FontLoadTracker = {
         // The document.fonts.load() method checks if a font is ready for use.
         // It requires a size (e.g., '12px'), but the family name is the crucial part.
         for (const font of this.fonts) {
-            fontPromises.push(document.fonts.load(`12px ${font}`));
+            fontPromises.push(typeof ensureCanvasFontReady === 'function'
+                ? ensureCanvasFontReady(font)
+                : document.fonts.load(`12px "${String(font).replace(/["\\]/g, '\\$&')}"`));
         }
 
         console.log('Waiting for fonts to load:', Array.from(this.fonts));
@@ -146,6 +148,10 @@ window.FontLoadTracker = {
 
 //card object
 var card = {width:getStandardWidth(), height:getStandardHeight(), marginX:0, marginY:0, frames:[], artSource:fixUri('/img/blank.png'), artX:0, artY:0, artZoom:1, artRotate:0, setSymbolSource:fixUri('/img/blank.png'), setSymbolX:0, setSymbolY:0, setSymbolZoom:1, setSymbolRotate:0, watermarkSource:fixUri('/img/blank.png'), watermarkX:0, watermarkY:0, watermarkZoom:1, watermarkLeft:'none', watermarkRight:'none', watermarkOpacity:0.4, version:'', manaSymbols:[]};
+var liveDraftCardStorageKey = '__card_conjurer_live_draft__';
+var liveDraftUiStorageKey = '__card_conjurer_live_draft_ui__';
+var liveDraftResetInProgress = false;
+var liveDraftSaveTimer = null;
 window.cardDrawingPromiseResolver = null;
 //core images/masks
 const black = new Image(); black.crossOrigin = 'anonymous'; black.src = fixUri('/img/black.png');
@@ -174,6 +180,90 @@ watermark.onload = watermarkEdited;
 //preview canvas
 var previewCanvas = document.querySelector('#previewCanvas');
 var previewContext = previewCanvas.getContext('2d');
+var previewRenderCommitId = 0;
+
+function beginPreviewRenderCommit() {
+	return ++previewRenderCommitId;
+}
+
+function finishPreviewRenderCommit(commitId) {
+	if (commitId !== previewRenderCommitId) return;
+	var previewWell = previewCanvas.closest('.creator-canvas-well');
+	if (previewWell) previewWell.dataset.renderRevision = String(commitId);
+}
+
+var canvasFontReadyPromises = new Map();
+var manaSymbolImagesReadyPromise = null;
+
+function canvasFontFamiliesFor(textObjects) {
+	var families = new Set(['mplantin']);
+	(textObjects || []).forEach(textObject => {
+		if (!textObject) return;
+		families.add(textObject.font || 'mplantin');
+		var rawText = String(textObject.text || '');
+		var fontCodePattern = /\{font(?!color|size)([^}]+)\}/gi;
+		var fontMatch;
+		while ((fontMatch = fontCodePattern.exec(rawText))) {
+			if (fontMatch[1]) families.add(fontMatch[1].trim());
+		}
+		if (/\{roll/i.test(rawText)) families.add('belerenb');
+		if (textObject.font === 'saloongirl' && rawText.includes('*')) families.add('belerenbsc');
+	});
+	Array.from(families).forEach(fontFamily => {
+		if (fontFamily === 'mplantin') families.add('mplantini');
+		if (fontFamily === 'gillsans') {
+			families.add('gillsansitalic');
+			families.add('gillsansbold');
+			families.add('gillsansbolditalic');
+		}
+		if (fontFamily === 'neosans') families.add('neosansitalic');
+	});
+	return Array.from(families).filter(Boolean);
+}
+
+function ensureCanvasFontReady(fontFamily) {
+	if (!document.fonts?.load || !fontFamily) return Promise.resolve();
+	if (!canvasFontReadyPromises.has(fontFamily)) {
+		var escapedFamily = String(fontFamily).replace(/["\\]/g, '\\$&');
+		var fontPromise = document.fonts.load(`16px "${escapedFamily}"`, 'BESbswy')
+			.catch(error => console.warn(`Could not preload canvas font: ${fontFamily}`, error));
+		canvasFontReadyPromises.set(fontFamily, fontPromise);
+	}
+	return canvasFontReadyPromises.get(fontFamily);
+}
+
+async function ensureCanvasFontsReady(textObjects) {
+	if (!document.fonts) return;
+	await Promise.all(canvasFontFamiliesFor(textObjects).map(ensureCanvasFontReady));
+	await document.fonts.ready;
+}
+
+function waitForRenderableImage(image) {
+	if (!image || image.complete) {
+		return image?.decode ? image.decode().catch(() => {}) : Promise.resolve();
+	}
+	return new Promise(resolve => {
+		var settled = false;
+		var finish = () => {
+			if (settled) return;
+			settled = true;
+			clearTimeout(timeout);
+			image.removeEventListener('load', finish);
+			image.removeEventListener('error', finish);
+			resolve();
+		};
+		var timeout = setTimeout(finish, 2500);
+		image.addEventListener('load', finish, {once:true});
+		image.addEventListener('error', finish, {once:true});
+	});
+}
+
+function ensureManaSymbolImagesReady() {
+	if (!manaSymbolImagesReadyPromise) {
+		manaSymbolImagesReadyPromise = Promise.all(Array.from(mana.values()).map(symbol => waitForRenderableImage(symbol.image)));
+	}
+	return manaSymbolImagesReadyPromise;
+}
 var canvasList = [];
 //frame/mask picker stuff
 var availableFrames = [];
@@ -196,6 +286,7 @@ var savedTextXPosition2 = 0;
 var savedRollYPosition = null;
 var savedFont = null;
 var savedTextContents = {};
+var savedTextFontSizes = {};
 //for misc
 var date = new Date();
 card.infoYear = date.getFullYear();
@@ -606,7 +697,11 @@ function loadFramePack(frameOptions = availableFrames) {
 
 	})
 	document.querySelector('#mask-picker').innerHTML = '';
-	document.querySelector('#frame-picker').children[0].click();
+	let defaultFrameIndex = frameOptions.findIndex(item => /^(colorless|eldrazi)(?: regular)? frame/i.test(item.name || ''));
+	if (defaultFrameIndex < 0) {
+		defaultFrameIndex = frameOptions.findIndex(item => /^white(?: regular)? frame/i.test(item.name || ''));
+	}
+	document.querySelector('#frame-picker').children[defaultFrameIndex < 0 ? 0 : defaultFrameIndex].click();
 	const automaticallyUpdateFrame = document.querySelector('#automaticallyUpdateFrame');
 	if (localStorage.getItem('autoLoadFrameVersion') == 'true' && (!automaticallyUpdateFrame || !automaticallyUpdateFrame.checked)) {
 		document.querySelector('#loadFrameVersion').click();
@@ -1010,35 +1105,35 @@ function frameElementClicked(event) {
 		}
 		// Basic manipulations
 		document.querySelector('#frame-editor-x').value = scaleWidth(selectedFrame.bounds.x || 0);
-		document.querySelector('#frame-editor-x').onchange = (event) => {selectedFrame.bounds.x = (event.target.value / card.width); drawFrames();}
+		document.querySelector('#frame-editor-x').onchange = (event) => {selectedFrame.bounds.x = (event.target.value / card.width); drawFrames(); queueLiveDraftSave();}
 		document.querySelector('#frame-editor-y').value = scaleHeight(selectedFrame.bounds.y || 0);
-		document.querySelector('#frame-editor-y').onchange = (event) => {selectedFrame.bounds.y = (event.target.value / card.height); drawFrames();}
+		document.querySelector('#frame-editor-y').onchange = (event) => {selectedFrame.bounds.y = (event.target.value / card.height); drawFrames(); queueLiveDraftSave();}
 		document.querySelector('#frame-editor-width').value = scaleWidth(selectedFrame.bounds.width || 1);
-		document.querySelector('#frame-editor-width').onchange = (event) => {selectedFrame.bounds.width = (event.target.value / card.width); drawFrames();}
+		document.querySelector('#frame-editor-width').onchange = (event) => {selectedFrame.bounds.width = (event.target.value / card.width); drawFrames(); queueLiveDraftSave();}
 		document.querySelector('#frame-editor-height').value = scaleHeight(selectedFrame.bounds.height || 1);
-		document.querySelector('#frame-editor-height').onchange = (event) => {selectedFrame.bounds.height = (event.target.value / card.height); drawFrames();}
+		document.querySelector('#frame-editor-height').onchange = (event) => {selectedFrame.bounds.height = (event.target.value / card.height); drawFrames(); queueLiveDraftSave();}
 		document.querySelector('#frame-editor-opacity').value = selectedFrame.opacity || 100;
-		document.querySelector('#frame-editor-opacity').onchange = (event) => {selectedFrame.opacity = event.target.value; drawFrames();}
+		document.querySelector('#frame-editor-opacity').onchange = (event) => {selectedFrame.opacity = event.target.value; drawFrames(); queueLiveDraftSave();}
 		document.querySelector('#frame-editor-erase').checked = selectedFrame.erase || false;
-		document.querySelector('#frame-editor-erase').onchange = (event) => {selectedFrame.erase = event.target.checked; drawFrames();}
+		document.querySelector('#frame-editor-erase').onchange = (event) => {selectedFrame.erase = event.target.checked; drawFrames(); queueLiveDraftSave();}
 		document.querySelector('#frame-editor-alpha').checked = selectedFrame.preserveAlpha || false;
-		document.querySelector('#frame-editor-alpha').onchange = (event) => {selectedFrame.preserveAlpha = event.target.checked; drawFrames();}
+		document.querySelector('#frame-editor-alpha').onchange = (event) => {selectedFrame.preserveAlpha = event.target.checked; drawFrames(); queueLiveDraftSave();}
 		document.querySelector('#frame-editor-color-overlay-check').checked = selectedFrame.colorOverlayCheck || false;
-		document.querySelector('#frame-editor-color-overlay-check').onchange = (event) => {selectedFrame.colorOverlayCheck = event.target.checked; drawFrames();}
+		document.querySelector('#frame-editor-color-overlay-check').onchange = (event) => {selectedFrame.colorOverlayCheck = event.target.checked; drawFrames(); queueLiveDraftSave();}
 		document.querySelector('#frame-editor-color-overlay').value = selectedFrame.colorOverlay || false;
-		document.querySelector('#frame-editor-color-overlay').onchange = (event) => {selectedFrame.colorOverlay = event.target.value; drawFrames();}
+		document.querySelector('#frame-editor-color-overlay').onchange = (event) => {selectedFrame.colorOverlay = event.target.value; drawFrames(); queueLiveDraftSave();}
 		document.querySelector('#frame-editor-hsl-hue').value = selectedFrame.hslHue || 0;
 		document.querySelector('#frame-editor-hsl-hue-slider').value = selectedFrame.hslHue || 0;
-		document.querySelector('#frame-editor-hsl-hue').onchange = (event) => {selectedFrame.hslHue = event.target.value; drawFrames();}
-		document.querySelector('#frame-editor-hsl-hue-slider').onchange = (event) => {selectedFrame.hslHue = event.target.value; drawFrames();}
+		document.querySelector('#frame-editor-hsl-hue').onchange = (event) => {selectedFrame.hslHue = event.target.value; drawFrames(); queueLiveDraftSave();}
+		document.querySelector('#frame-editor-hsl-hue-slider').onchange = (event) => {selectedFrame.hslHue = event.target.value; drawFrames(); queueLiveDraftSave();}
 		document.querySelector('#frame-editor-hsl-saturation').value = selectedFrame.hslSaturation || 0;
 		document.querySelector('#frame-editor-hsl-saturation-slider').value = selectedFrame.hslSaturation || 0;
-		document.querySelector('#frame-editor-hsl-saturation').onchange = (event) => {selectedFrame.hslSaturation = event.target.value; drawFrames();}
-		document.querySelector('#frame-editor-hsl-saturation-slider').onchange = (event) => {selectedFrame.hslSaturation = event.target.value; drawFrames();}
+		document.querySelector('#frame-editor-hsl-saturation').onchange = (event) => {selectedFrame.hslSaturation = event.target.value; drawFrames(); queueLiveDraftSave();}
+		document.querySelector('#frame-editor-hsl-saturation-slider').onchange = (event) => {selectedFrame.hslSaturation = event.target.value; drawFrames(); queueLiveDraftSave();}
 		document.querySelector('#frame-editor-hsl-lightness').value = selectedFrame.hslLightness || 0;
 		document.querySelector('#frame-editor-hsl-lightness-slider').value = selectedFrame.hslLightness || 0;
-		document.querySelector('#frame-editor-hsl-lightness').onchange = (event) => {selectedFrame.hslLightness = event.target.value; drawFrames();}
-		document.querySelector('#frame-editor-hsl-lightness-slider').onchange = (event) => {selectedFrame.hslLightness = event.target.value; drawFrames();}
+		document.querySelector('#frame-editor-hsl-lightness').onchange = (event) => {selectedFrame.hslLightness = event.target.value; drawFrames(); queueLiveDraftSave();}
+		document.querySelector('#frame-editor-hsl-lightness-slider').onchange = (event) => {selectedFrame.hslLightness = event.target.value; drawFrames(); queueLiveDraftSave();}
 		// Removing masks
 		const selectMaskElement = document.querySelector('#frame-editor-masks');
 		selectMaskElement.innerHTML = null;
@@ -1064,6 +1159,7 @@ function frameElementMaskRemoved() {
 			if (mask.name == selectedOption) {
 				selectedFrame.masks = selectedFrame.masks.filter(item => item.name != selectedOption);
 				drawFrames();
+				queueLiveDraftSave();
 			}
 		});
 	}
@@ -1194,6 +1290,8 @@ function hslToRGB(h, s, l){
 //TEXT TAB
 var writingText;
 var autoFrameTimer;
+var textRenderRequestId = 0;
+var bottomInfoRenderRequestId = 0;
 var manaInputState = {};
 var currentLayoutTextKeys = new Set();
 var userOptionalTextKeys = new Set();
@@ -1202,6 +1300,30 @@ const optionalTextboxDefinitions = {
 	pt: {name:'Power/Toughness', text:'', x:0.7928, y:0.902, width:0.1367, height:0.0372, size:0.0372, font:'belerenbsc', oneLine:true, align:'center'},
 	dateStamp: {name:'Date Stamp', text:'', x:0.11, y:0.5072, width:0.78, height:0.0286, size:0.0286, font:'belerenb', oneLine:true, align:'right', color:'#ffd35b', shadowX:-0.0007, shadowY:-0.001}
 };
+
+function isPlaneswalkerTextLayout() {
+	return String(card.version || '').toLowerCase().includes('planeswalker');
+}
+
+function isTallPlaneswalkerTextLayout() {
+	var version = String(card.version || '').toLowerCase();
+	return version.includes('planeswalker') && (version.includes('tall') || version.includes('compleated'));
+}
+
+function textFieldSupportedForCurrentCard(key) {
+	return !(isPlaneswalkerTextLayout() && ['nickname', 'pt'].includes(key));
+}
+
+function optionalTextboxDefinitionForCurrentCard(key) {
+	var definition = optionalTextboxDefinitions[key];
+	if (!definition) return null;
+	var result = {...definition};
+	if (key === 'dateStamp' && isTallPlaneswalkerTextLayout()) {
+		var typeY = card.text?.type?.y;
+		result.y += (typeof typeY === 'number' ? typeY : 0.4967) - 0.5625;
+	}
+	return result;
+}
 
 function textFieldFocusState() {
 	var activeElement = document.activeElement;
@@ -1218,6 +1340,7 @@ function loadTextOptions(textObject, replace=true) {
 	var oldCardText = card.text || {};
 	Object.entries(oldCardText).forEach(item => {
 		savedTextContents[item[0]] = oldCardText[item[0]].text;
+		if (oldCardText[item[0]].fontSize !== undefined) savedTextFontSizes[item[0]] = oldCardText[item[0]].fontSize;
 	});
 	if (replace) {
 		currentLayoutTextKeys = new Set(Object.keys(textObject));
@@ -1233,12 +1356,19 @@ function loadTextOptions(textObject, replace=true) {
 		} else if (savedTextContents[item[0]] !== undefined) {
 			card.text[item[0]].text = savedTextContents[item[0]];
 		}
+		if (oldCardText[item[0]]?.fontSize !== undefined) {
+			card.text[item[0]].fontSize = oldCardText[item[0]].fontSize;
+		} else if (savedTextFontSizes[item[0]] !== undefined) {
+			card.text[item[0]].fontSize = savedTextFontSizes[item[0]];
+		}
 	});
 	if (replace) {
 		Object.keys(optionalTextboxDefinitions).forEach(key => {
+			if (!textFieldSupportedForCurrentCard(key)) return;
 			if (!card.text[key] && userOptionalTextKeys.has(key) && savedTextContents[key]) {
 				if (key === 'nickname') installNicknameTextbox(savedTextContents[key]);
-				else card.text[key] = {...optionalTextboxDefinitions[key], text:savedTextContents[key]};
+				else card.text[key] = {...optionalTextboxDefinitionForCurrentCard(key), text:savedTextContents[key]};
+				if (card.text[key] && savedTextFontSizes[key] !== undefined) card.text[key].fontSize = savedTextFontSizes[key];
 			}
 		});
 	}
@@ -1272,9 +1402,10 @@ function removeNicknameTextbox() {
 }
 
 function ensureOptionalTextbox(key) {
+	if (!textFieldSupportedForCurrentCard(key)) return null;
 	if (!card.text[key] && optionalTextboxDefinitions[key]) {
 		if (key === 'nickname') installNicknameTextbox();
-		else card.text[key] = {...optionalTextboxDefinitions[key]};
+		else card.text[key] = optionalTextboxDefinitionForCurrentCard(key);
 	}
 	userOptionalTextKeys.add(key);
 	setSelectedTextKey(key);
@@ -1348,10 +1479,12 @@ function renderTextFieldForm(focusState) {
 	if (!form) return;
 	var fragment = document.createDocumentFragment();
 	Object.entries(card.text || {}).forEach(item => {
+		if (!textFieldSupportedForCurrentCard(item[0])) return;
 		fragment.appendChild(createTextFieldCard(item[0], item[1], false));
 	});
 	Object.entries(optionalTextboxDefinitions).forEach(item => {
-		if (!card.text[item[0]]) fragment.appendChild(createTextFieldCard(item[0], item[1], true));
+		if (!textFieldSupportedForCurrentCard(item[0])) return;
+		if (!card.text[item[0]]) fragment.appendChild(createTextFieldCard(item[0], optionalTextboxDefinitionForCurrentCard(item[0]), true));
 	});
 	form.replaceChildren(fragment);
 	renderCardSpecificTextTools();
@@ -1485,15 +1618,15 @@ function textboxEditor() {
 	document.querySelector('#textbox-editor-title').textContent = `${selectedTextbox.name || 'Text'} Layout`;
 	document.querySelector('#textbox-editor').classList.add('opened');
 	document.querySelector('#textbox-editor-x').value = scaleWidth(selectedTextbox.x || 0);
-	document.querySelector('#textbox-editor-x').onchange = (event) => {selectedTextbox.x = (event.target.value / card.width); drawTextBuffer();}
+	document.querySelector('#textbox-editor-x').onchange = (event) => {selectedTextbox.x = (event.target.value / card.width); drawTextBuffer(); queueLiveDraftSave();}
 	document.querySelector('#textbox-editor-y').value = scaleHeight(selectedTextbox.y || 0);
-	document.querySelector('#textbox-editor-y').onchange = (event) => {selectedTextbox.y = (event.target.value / card.height); drawTextBuffer();}
+	document.querySelector('#textbox-editor-y').onchange = (event) => {selectedTextbox.y = (event.target.value / card.height); drawTextBuffer(); queueLiveDraftSave();}
 	document.querySelector('#textbox-editor-width').value = scaleWidth(selectedTextbox.width || 1);
-	document.querySelector('#textbox-editor-width').onchange = (event) => {selectedTextbox.width = (event.target.value / card.width); drawTextBuffer();}
+	document.querySelector('#textbox-editor-width').onchange = (event) => {selectedTextbox.width = (event.target.value / card.width); drawTextBuffer(); queueLiveDraftSave();}
 	document.querySelector('#textbox-editor-height').value = scaleHeight(selectedTextbox.height || 1);
-	document.querySelector('#textbox-editor-height').onchange = (event) => {selectedTextbox.height = (event.target.value / card.height); drawTextBuffer();}
+	document.querySelector('#textbox-editor-height').onchange = (event) => {selectedTextbox.height = (event.target.value / card.height); drawTextBuffer(); queueLiveDraftSave();}
 	document.querySelector('#textbox-editor-font-size').value = selectedTextbox.fontSize || 0;
-	document.querySelector('#textbox-editor-font-size').oninput = (event) => {selectedTextbox.fontSize = event.target.value; drawTextBuffer();}
+	document.querySelector('#textbox-editor-font-size').oninput = (event) => {selectedTextbox.fontSize = event.target.value; drawTextBuffer(); queueLiveDraftSave();}
 }
 function textEdited(key, value, optionalPlaceholder=false) {
 	if (typeof key === 'string') {
@@ -1513,33 +1646,70 @@ function textEdited(key, value, optionalPlaceholder=false) {
 		syncTextFieldValues();
 	}
 	const editedTextObject = typeof key === 'string' ? card.text[key] : null;
-	drawTextBuffer(editedTextObject?.manaCost ? 35 : 500);
-	if (typeof key !== 'string' || editedTextObject?.manaCost || key === 'type' || key === 'nickname') autoFrameBuffer(editedTextObject?.manaCost ? 120 : 500);
-	if ((key === 'type' || editedTextObject?.manaCost) && typeof renderFrameCustomize === 'function') renderFrameCustomize();
+	drawTextBuffer(editedTextObject?.manaCost ? 35 : 160);
+	const flipsideColorEdited = key === 'flipSideReminder';
+	if (typeof key !== 'string' || editedTextObject?.manaCost || key === 'type' || key === 'nickname' || flipsideColorEdited) {
+		autoFrameBuffer(editedTextObject?.manaCost || flipsideColorEdited ? 120 : 500);
+	}
+	if ((key === 'type' || editedTextObject?.manaCost || flipsideColorEdited) && typeof renderFrameCustomize === 'function') renderFrameCustomize();
+	if (key === 'ability3') autoUpdatePlaneswalkerStyleFromAbility4();
+	if (typeof queueLiveDraftSave === 'function') queueLiveDraftSave();
+}
+
+var planeswalkerStyleAutoUpdatePending = false;
+async function autoUpdatePlaneswalkerStyleFromAbility4() {
+	if (planeswalkerStyleAutoUpdatePending || typeof applyFrameCustomization !== 'function') return;
+	var fourthAbilityHasText = Boolean(card.text?.ability3?.text?.trim());
+	var targetStyle = ({
+		planeswalkerRegular:fourthAbilityHasText ? 'PlaneswalkerTall' : null,
+		planeswalkerTall:fourthAbilityHasText ? null : 'PlaneswalkerRegular',
+		planeswalkerBorderless:fourthAbilityHasText ? 'PlaneswalkerTallBorderless' : null,
+		planeswalkerTallBorderless:fourthAbilityHasText ? null : 'PlaneswalkerBorderless'
+	})[card.version];
+	if (!targetStyle) return;
+	planeswalkerStyleAutoUpdatePending = true;
+	try {
+		await applyFrameCustomization(targetStyle);
+	} finally {
+		planeswalkerStyleAutoUpdatePending = false;
+	}
 }
 function textFieldFontSizeEdited(key, value) {
 	var textObject = card.text[key] || ensureOptionalTextbox(key);
 	textObject.fontSize = value;
+	savedTextFontSizes[key] = value;
 	drawTextBuffer();
+	if (typeof queueLiveDraftSave === 'function') queueLiveDraftSave();
 }
 function fontSizedEdited() {
 	var key = Object.keys(card.text)[selectedTextIndex];
 	if (key) textFieldFontSizeEdited(key, document.querySelector('#text-editor-font-size').value);
 }
-function drawTextBuffer(delay=500) {
+function drawTextBuffer(delay=160) {
 	clearTimeout(writingText);
-	writingText = setTimeout(drawText, delay);
+	var requestId = ++textRenderRequestId;
+	writingText = setTimeout(() => drawText(requestId), delay);
 }
 function autoFrameBuffer(delay=500) {
 	clearTimeout(autoFrameTimer);
 	autoFrameTimer = setTimeout(autoFrame, delay);
 }
-async function drawText() {
+async function drawText(requestId) {
+	if (requestId == null) requestId = ++textRenderRequestId;
+	var previewCommitId = beginPreviewRenderCommit();
+	var textObjects = Object.values(card.text || {});
+	await Promise.all([
+		ensureCanvasFontsReady(textObjects),
+		ensureManaSymbolImagesReady()
+	]);
+	if (requestId !== textRenderRequestId) {
+		return false;
+	}
 	textContext.clearRect(0, 0, textCanvas.width, textCanvas.height);
 	prePTContext.clearRect(0, 0, prePTCanvas.width, prePTCanvas.height);
 	drawTextBetweenFrames = false;
 	for (var textObject of Object.entries(card.text)) {
-		await writeText(textObject[1], textContext);
+		writeText(textObject[1], textContext);
 		continue;
 	}
 	if (drawTextBetweenFrames || redrawFrames) {
@@ -1550,6 +1720,8 @@ async function drawText() {
 	} else {
 		drawCard();
 	}
+	finishPreviewRenderCommit(previewCommitId);
+	return true;
 }
 var justifyWidth = 90;
 let manaSymbolsToRender = [];
@@ -2295,6 +2467,18 @@ function writeText(textObject, targetContext) {
 					var manaSymbolHeight = manaSymbol.height * textSize * 0.78;
 					var manaSymbolX = currentX + canvasMargin + manaSymbolSpacing;
 					var manaSymbolY = canvasMargin + textSize * 0.34 - manaSymbolHeight / 2;
+					if (!textManaCost) {
+						// Center inline symbols against the visible glyph box instead of
+						// aligning their bottom edge to the surrounding text baseline.
+						// This adapts to the active font while leaving dedicated mana-cost
+						// and explicitly positioned symbol layouts unchanged.
+						var inlineManaMetrics = lineContext.measureText('Mg');
+						var inlineManaAscent = inlineManaMetrics.actualBoundingBoxAscent || textSize * 0.7;
+						var inlineManaDescent = inlineManaMetrics.actualBoundingBoxDescent || textSize * 0.18;
+						var inlineManaBaseline = canvasMargin + textSize * textFontHeightRatio + lineY;
+						var inlineManaCenter = inlineManaBaseline + (inlineManaDescent - inlineManaAscent) / 2;
+						manaSymbolY = inlineManaCenter - manaSymbolHeight / 2 + textSize * -0.07;
+					}
 					if (textObject.manaPlacement) {
 						manaSymbolX = scaleWidth(textObject.manaPlacement.x[manaPlacementCounter] || 0) + canvasMargin;
 						manaSymbolY = canvasMargin;
@@ -2787,9 +2971,10 @@ async function addTextbox(textboxType) {
 		renderTextFieldForm(textFieldFocusState());
 		drawTextBuffer();
 	} else if (textboxType == 'Power/Toughness' && !card.text.pt) {
-		loadTextOptions({pt: {name:'Power/Toughness', text:'', x:0.7928, y:0.902, width:0.1367, height:0.0372, size:0.0372, font:'belerenbsc', oneLine:true, align:'center'}}, false);
+		var ptDefinition = optionalTextboxDefinitionForCurrentCard('pt');
+		if (ptDefinition) loadTextOptions({pt:ptDefinition}, false);
 	} else if (textboxType == 'DateStamp' && !card.text.dateStamp) {
-		loadTextOptions({dateStamp: {name:'Date Stamp', text:'', x:0.11, y:0.5072, width:0.78, height:0.0286, size:0.0286, font:'belerenb', oneLine:true, align:'right', color:'#ffd35b', shadowX:-0.0007, shadowY:-0.001}}, false);
+		loadTextOptions({dateStamp:optionalTextboxDefinitionForCurrentCard('dateStamp')}, false);
 	}
 }
 //ART TAB
@@ -3226,10 +3411,9 @@ async function loadBottomInfo(textObjects = []) {
 	card.bottomInfo = null;
 	card.bottomInfo = textObjects;
 	await bottomInfoEdited();
-	bottomInfoEdited();
 }
 async function bottomInfoEdited() {
-	await bottomInfoContext.clearRect(0, 0, bottomInfoCanvas.width, bottomInfoCanvas.height);
+	var requestId = ++bottomInfoRenderRequestId;
 	card.infoNumber = document.querySelector('#info-number').value;
 	card.infoRarity = document.querySelector('#info-rarity').value;
 	card.infoSet = document.querySelector('#info-set').value;
@@ -3237,6 +3421,13 @@ async function bottomInfoEdited() {
 	card.infoArtist = document.querySelector('#info-artist').value;
 	card.infoYear = document.querySelector('#info-year').value;
 	card.infoNote = document.querySelector('#info-note').value;
+	var bottomTextObjects = Object.values(card.bottomInfo || {});
+	var previewCommitId = beginPreviewRenderCommit();
+	await ensureCanvasFontsReady(bottomTextObjects);
+	if (requestId !== bottomInfoRenderRequestId) {
+		return false;
+	}
+	bottomInfoContext.clearRect(0, 0, bottomInfoCanvas.width, bottomInfoCanvas.height);
 
 	if (document.querySelector('#enableCollectorInfo').checked) {
 		for (var textObject of Object.entries(card.bottomInfo)) {
@@ -3244,13 +3435,15 @@ async function bottomInfoEdited() {
 				continue;
 			} else {
 				textObject[1].name = textObject[0];
-				await writeText(textObject[1], bottomInfoContext);
+				writeText(textObject[1], bottomInfoContext);
 			}
 			continue;
 		}
 	}
 
 	drawCard();
+	finishPreviewRenderCommit(previewCommitId);
+	return true;
 }
 async function serialInfoEdited() {
 	card.serialNumber = document.querySelector('#serial-number').value;
@@ -3655,7 +3848,7 @@ async function bulkDownloadZip() {
             ImageLoadTracker.start();
             FontLoadTracker.start();
             await loadCard(key);
-            drawText();
+            await drawText();
             
             const imagePromise = ImageLoadTracker.waitForAll();
             const fontPromise = FontLoadTracker.waitForAll();
@@ -4876,6 +5069,169 @@ function loadAvailableCards(cardKeys = JSON.parse(localStorage.getItem('cardKeys
 		document.querySelector('#load-card-options').appendChild(cardKeyOption);
 	});
 }
+
+function cardStorageSnapshot() {
+	var cardToSave = JSON.parse(JSON.stringify(card));
+	(cardToSave.frames || []).forEach(frame => {
+		delete frame.image;
+		(frame.masks || []).forEach(mask => delete mask.image);
+	});
+	return cardToSave;
+}
+
+function liveDraftUiSnapshot() {
+	var autoFrameInput = document.querySelector('#autoFrame');
+	return {
+		activeFramePack: typeof activeFramePack === 'undefined' ? null : activeFramePack,
+		activeFrameCustomizationPack: typeof activeFrameCustomizationPack === 'undefined' ? null : activeFrameCustomizationPack,
+		activeFrameComponentOptions: typeof activeFrameComponentOptions === 'undefined' ? {} : activeFrameComponentOptions,
+		automaticVariantPack: typeof automaticVariantPack === 'undefined' ? null : automaticVariantPack,
+		autoFrameValue: autoFrameInput?.value || null,
+		selectedFrameProfile: autoFrameInput?.dataset.profile || null
+	};
+}
+
+function saveLiveDraftCard() {
+	if (liveDraftResetInProgress || !card) return;
+	try {
+		var liveDraftSnapshot = cardStorageSnapshot();
+		localStorage.setItem(liveDraftCardStorageKey, JSON.stringify(liveDraftSnapshot));
+		localStorage.setItem(liveDraftUiStorageKey, JSON.stringify(liveDraftUiSnapshot()));
+	} catch (error) {
+		console.warn('The current card could not be preserved for live reload.', error);
+	}
+}
+
+function queueLiveDraftSave(delay = 250) {
+	clearTimeout(liveDraftSaveTimer);
+	liveDraftSaveTimer = setTimeout(saveLiveDraftCard, delay);
+}
+
+function applyLiveDraftUi(ui) {
+	if (!ui) return;
+	if (typeof activeFramePack !== 'undefined' && ui.activeFramePack) activeFramePack = ui.activeFramePack;
+	if (typeof activeFrameCustomizationPack !== 'undefined') activeFrameCustomizationPack = ui.activeFrameCustomizationPack || null;
+	if (typeof activeFrameComponentOptions !== 'undefined') activeFrameComponentOptions = ui.activeFrameComponentOptions || {};
+	if (typeof automaticVariantPack !== 'undefined') automaticVariantPack = ui.automaticVariantPack || null;
+	var autoFrameInput = document.querySelector('#autoFrame');
+	if (autoFrameInput) {
+		if (ui.autoFrameValue) autoFrameInput.value = ui.autoFrameValue;
+		if (ui.selectedFrameProfile) autoFrameInput.dataset.profile = ui.selectedFrameProfile;
+	}
+	if (ui.autoFrameValue) localStorage.setItem('autoFrame', ui.autoFrameValue);
+	if (ui.selectedFrameProfile) localStorage.setItem('selectedFrameProfile', ui.selectedFrameProfile);
+	if (typeof renderFrameCustomize === 'function') renderFrameCustomize(activeFramePack);
+	document.querySelectorAll('.frame-catalog-item').forEach(item => {
+		var selected = item.dataset.pack === activeFramePack;
+		item.classList.toggle('selected', selected);
+		item.setAttribute('aria-pressed', selected ? 'true' : 'false');
+	});
+}
+
+function liveDraftFrameIdentity(frame) {
+	return [
+		frame.frameCustomizeSlot || '', frame.frameCustomizePack || '',
+		frame.frameComposedParentFor || '', frame.frameComposedParentProfile || '',
+		frame.name || '', frame.src || '',
+		(frame.masks || []).map(mask => mask.name || mask.src || '').join('|')
+	].join('::');
+}
+
+function restoreLiveDraftLayout(savedCard) {
+	if (!savedCard) return;
+	Object.entries(savedCard.text || {}).forEach(([key, savedText]) => {
+		if (card.text?.[key]) Object.assign(card.text[key], JSON.parse(JSON.stringify(savedText)));
+	});
+	['planeswalker', 'saga', 'class', 'station', 'dungeon', 'artBounds', 'setSymbolBounds', 'watermarkBounds'].forEach(key => {
+		if (savedCard[key] != null) card[key] = JSON.parse(JSON.stringify(savedCard[key]));
+	});
+
+	const savedFramesByIdentity = new Map();
+	(savedCard.frames || []).forEach(frame => {
+		const identity = liveDraftFrameIdentity(frame);
+		if (!savedFramesByIdentity.has(identity)) savedFramesByIdentity.set(identity, []);
+		savedFramesByIdentity.get(identity).push(frame);
+	});
+	const editableFrameProperties = [
+		'bounds', 'ogBounds', 'opacity', 'erase', 'preserveAlpha', 'colorOverlayCheck',
+		'colorOverlay', 'hslHue', 'hslSaturation', 'hslLightness'
+	];
+	(card.frames || []).forEach(frame => {
+		const savedFrame = savedFramesByIdentity.get(liveDraftFrameIdentity(frame))?.shift();
+		if (!savedFrame) return;
+		editableFrameProperties.forEach(property => {
+			if (savedFrame[property] != null) frame[property] = JSON.parse(JSON.stringify(savedFrame[property]));
+		});
+	});
+	if (typeof syncTextFieldValues === 'function') syncTextFieldValues();
+	// Version renderers read their layout controls back into the card. Refresh
+	// those controls from the restored model first so their next render cannot
+	// replace custom bounds with the pack defaults.
+	if (typeof fixPlaneswalkerInputs === 'function' && card.planeswalker) fixPlaneswalkerInputs();
+}
+
+async function restoreLiveDraftCard() {
+	var savedCard = localStorage.getItem(liveDraftCardStorageKey);
+	if (!savedCard) return;
+	try {
+		var savedCardObject = JSON.parse(savedCard);
+		var savedUi = JSON.parse(localStorage.getItem(liveDraftUiStorageKey) || 'null');
+		// The frame catalog loads and renders its default asynchronously during
+		// startup. Restore only after that work is finished so Regular cannot
+		// overwrite the saved frame a moment later.
+		if (window.frameCatalogReadyPromise) await window.frameCatalogReadyPromise;
+		applyLiveDraftUi(savedUi);
+		await loadCard(liveDraftCardStorageKey);
+		applyLiveDraftUi(savedUi);
+		var restoredProfile = savedUi?.activeFrameCustomizationPack || savedUi?.selectedFrameProfile;
+		var restoredDetails = typeof FRAME_REGISTRY === 'undefined' ? null : FRAME_REGISTRY.definition(restoredProfile)?.details;
+		var requiredComposedParent = typeof restoredDetails?.composeParent === 'string'
+			? restoredDetails.composeParent
+			: (restoredDetails?.composeParent?.profile || restoredDetails?.parent);
+		var requiredComposedMasks = Array.isArray(restoredDetails?.composeParent?.masks)
+			? restoredDetails.composeParent.masks
+			: [];
+		var composedParentFrames = (card.frames || []).filter(frame => frame.frameComposedParentFor === restoredProfile);
+		var missingComposedParent = restoredDetails?.composeParent &&
+			(requiredComposedMasks.length
+				? !requiredComposedMasks.every(maskName => composedParentFrames.some(frame =>
+					frame.frameComposedParentProfile === requiredComposedParent &&
+					(frame.frameComposedParentMasks || []).includes(maskName)))
+				: !composedParentFrames.some(frame => frame.frameComposedParentProfile === requiredComposedParent));
+		var obsoleteComposedParent = !restoredDetails?.composeParent && composedParentFrames.length > 0;
+		var savedStyleReapplied = false;
+		if (savedUi?.activeFrameCustomizationPack && typeof applyFrameCustomization === 'function') {
+			await applyFrameCustomization(savedUi.activeFrameCustomizationPack);
+			savedStyleReapplied = true;
+		}
+		if (!savedStyleReapplied && (missingComposedParent || obsoleteComposedParent)) {
+			if (restoredProfile && typeof applyFrameCustomization === 'function') await applyFrameCustomization(restoredProfile);
+			else if (typeof autoFrame === 'function') await autoFrame();
+		}
+		if (savedStyleReapplied) {
+			restoreLiveDraftLayout(savedCardObject);
+			await renderLoadedCard(false);
+		}
+	} catch (error) {
+		console.warn('The live-reload card draft could not be restored.', error);
+		localStorage.removeItem(liveDraftCardStorageKey);
+		localStorage.removeItem(liveDraftUiStorageKey);
+	}
+}
+
+function resetLiveDraftCard() {
+	if (!confirm('Reset the current card to the default card?')) return;
+	liveDraftResetInProgress = true;
+	localStorage.removeItem(liveDraftCardStorageKey);
+	localStorage.removeItem(liveDraftUiStorageKey);
+	location.reload();
+}
+
+if (!window.cardConjurerLiveDraftBound) {
+	window.cardConjurerLiveDraftBound = true;
+	window.addEventListener('beforeunload', saveLiveDraftCard);
+}
+
 function importChanged() {
 	var unique = document.querySelector('#importAllPrints').checked ? 'prints' : '';
 	fetchScryfallData(document.querySelector("#import-name").value, importCard, unique);
@@ -4906,11 +5262,7 @@ function saveCard(saveFromFile) {
 	if (saveFromFile) {
 		cardToSave = saveFromFile.data;
 	} else {
-		cardToSave = JSON.parse(JSON.stringify(card));
-		cardToSave.frames.forEach(frame => {
-			delete frame.image;
-			frame.masks.forEach(mask => delete mask.image);
-		});
+		cardToSave = cardStorageSnapshot();
 	}
 	try {
 		localStorage.setItem(cardKey, JSON.stringify(cardToSave));
@@ -4967,13 +5319,12 @@ async function loadCard(selectedCardKey) {
 		document.querySelector('#serial-scale').value = card.serialScale;
 		serialInfoEdited();
 
-		card.frames.reverse();
-		await card.frames.forEach(item => addFrame([], item));
-		card.frames.reverse();
+		var framesToLoad = (card.frames || []).slice().reverse();
+		for (const item of framesToLoad) await addFrame([], item);
 		if (card.onload) {
 			await loadScript(card.onload);
 		}
-		card.manaSymbols.forEach(item => loadScript(item));
+		await Promise.all((card.manaSymbols || []).map(item => loadScript(item)));
 		//canvases
 		var canvasesResized = false;
 		canvasList.forEach(name => {
@@ -4982,15 +5333,50 @@ async function loadCard(selectedCardKey) {
 				canvasesResized = true;
 			}
 		});
-		if (canvasesResized) {
-			drawTextBuffer();
-			drawFrames();
-			bottomInfoEdited();
-			watermarkEdited();
-		}
+		await renderLoadedCard(canvasesResized);
 	} else {
 		notify(selectedCardKey + ' failed to load.', 5)
 	}
+}
+
+function loadedCardRenderableImages() {
+	var images = [art, setSymbol, watermark];
+	(card.frames || []).forEach(frame => {
+		images.push(frame.image);
+		(frame.masks || []).forEach(mask => images.push(mask.image));
+	});
+	// Version scripts keep these images outside card.frames, but they are still
+	// required before a restored Planeswalker can be rendered deterministically.
+	if ((card.version || '').toLowerCase().includes('planeswalker')) {
+		['plusIcon', 'minusIcon', 'neutralIcon', 'lightToDark', 'darkToLight', 'planeswalkerTextMask']
+			.forEach(name => images.push(window[name]));
+	}
+	return images.filter(Boolean);
+}
+
+async function renderLoadedCard(canvasesResized = false) {
+	// loadTextOptions intentionally buffers ordinary typing, but loading a whole
+	// card needs a single ordered commit after every dependent asset is ready.
+	clearTimeout(writingText);
+	await Promise.all(loadedCardRenderableImages().map(waitForRenderableImage));
+	await Promise.all([
+		ensureCanvasFontsReady([
+			...Object.values(card.text || {}),
+			...Object.values(card.bottomInfo || {})
+		]),
+		ensureManaSymbolImagesReady()
+	]);
+
+	if ((card.version || '').toLowerCase().includes('planeswalker') && typeof planeswalkerEdited === 'function') {
+		planeswalkerEdited();
+		clearTimeout(writingText);
+	}
+	drawFrames();
+	watermarkEdited();
+	if (card.bottomInfo) await bottomInfoEdited();
+	await drawText();
+	if (canvasesResized) drawNewGuidelines();
+	drawCard();
 }
 function deleteCard() {
 	var keyToDelete = document.querySelector('#load-card-options').value;
@@ -5158,9 +5544,9 @@ function loadScript(scriptPath) {
 	}
 	var scriptSource = scriptPath;
 	if (/^\/js\/frames\/pack.+\.js$/.test(scriptPath)) {
-		scriptSource += '?v=20260802-regular-transform-7';
+		scriptSource += '?v=20260802-render-engine-2';
 	} else if (/^\/js\/frames\/version.+\.js$/.test(scriptPath)) {
-		scriptSource += '?v=20260802-card-specific-text-11';
+		scriptSource += '?v=20260802-render-engine-2';
 	}
 	script.setAttribute('src', scriptSource);
 	document.querySelectorAll('head')[0].appendChild(script);
@@ -5413,6 +5799,10 @@ if (!localStorage.getItem('automaticallyUpdateFrame')) {
 	localStorage.setItem('automaticallyUpdateFrame', 'true');
 }
 document.querySelector('#automaticallyUpdateFrame').checked = localStorage.getItem('automaticallyUpdateFrame') == 'true';
+if (document.querySelector('#automaticallyUpdateFrame').checked) {
+	document.querySelector('#autoLoadFrameVersion').checked = true;
+	localStorage.setItem('autoLoadFrameVersion', 'true');
+}
 if (!localStorage.getItem('autoframe-always-nyx')) {
 	localStorage.setItem('autoframe-always-nyx', 'false');
 }
@@ -5455,3 +5845,4 @@ bindInputs('#show-guidelines', '#show-guidelines-2', true);
 loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
 loadAvailableCards();
 initDraggableArt();
+setTimeout(restoreLiveDraftCard, 0);

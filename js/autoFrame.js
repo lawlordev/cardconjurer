@@ -1671,31 +1671,41 @@ async function autoFrameUnified(frameType, colors, mana_cost, type_line, power) 
 // (mana cost for spells, rules text for lands) and triggers frame building.
 
 var automaticVariantPack = null;
+var autoFrameRequestId = 0;
 
-async function loadAutomaticVariantPack(pack) {
+async function loadAutomaticVariantPack(pack, requestId) {
+	let loadedFrames = availableFrames;
 	if (automaticVariantPack != pack || autoFramePack != pack || window.loadedFramePack != pack) {
 		await loadScript('/js/frames/pack' + pack + '.js');
-		const autoLoadLayout = document.querySelector('#autoLoadFrameVersion');
+		if (requestId != autoFrameRequestId) return null;
+		loadedFrames = availableFrames;
 		const layoutButton = document.querySelector('#loadFrameVersion');
-		if (autoLoadLayout?.checked && layoutButton && typeof layoutButton.onclick == 'function' && !layoutButton.disabled) {
-			await layoutButton.onclick();
+		if (layoutButton && typeof layoutButton.onclick == 'function' && !layoutButton.disabled) {
+			const applyLayout = layoutButton.onclick;
+			await applyLayout();
 		}
 	}
+	if (requestId != autoFrameRequestId) return null;
 	automaticVariantPack = pack;
 	autoFramePack = pack;
+	return loadedFrames;
 }
 
-async function restoreSelectedFramePack(pack, engine) {
-	if (!automaticVariantPack) return;
+async function restoreSelectedFramePack(pack, engine, requestId) {
+	if (!automaticVariantPack) return availableFrames;
 	const assetPack = typeof FRAME_REGISTRY == 'undefined' ? pack : (FRAME_REGISTRY.definition(pack)?.details?.assetPack || pack);
 	await loadScript('/js/frames/pack' + assetPack + '.js');
-	const autoLoadLayout = document.querySelector('#autoLoadFrameVersion');
+	if (requestId != autoFrameRequestId) return null;
+	const loadedFrames = availableFrames;
 	const layoutButton = document.querySelector('#loadFrameVersion');
-	if (autoLoadLayout?.checked && layoutButton && typeof layoutButton.onclick == 'function' && !layoutButton.disabled) {
-		await layoutButton.onclick();
+	if (layoutButton && typeof layoutButton.onclick == 'function' && !layoutButton.disabled) {
+		const applyLayout = layoutButton.onclick;
+		await applyLayout();
 	}
+	if (requestId != autoFrameRequestId) return null;
 	automaticVariantPack = null;
 	autoFramePack = engine;
+	return loadedFrames;
 }
 
 /**
@@ -1703,6 +1713,7 @@ async function restoreSelectedFramePack(pack, engine) {
  * Detects card colors and builds appropriate frame
  */
 async function autoFrame() {
+	const requestId = ++autoFrameRequestId;
 	var automaticallyUpdate = document.querySelector('#automaticallyUpdateFrame');
 	if (automaticallyUpdate && !automaticallyUpdate.checked) {
 		autoFramePack = null;
@@ -1712,6 +1723,26 @@ async function autoFrame() {
 	var frame = autoFrameInput.value;
 	var selectedProfile = autoFrameInput.dataset.profile || frame;
 	if (frame == 'false') { autoFramePack = null; return; }
+
+	if (typeof FRAME_REGISTRY !== 'undefined') {
+		var compatibleProfile = FRAME_REGISTRY.profileForType(selectedProfile, card.text.type.text);
+		if (compatibleProfile !== selectedProfile) {
+			// A Planeswalker style is a temporary specialization of the catalog
+			// frame. When the type stops being a Planeswalker, return to that
+			// catalog frame so its other semantic variants (Saga, Class, etc.) can
+			// be selected normally.
+			var catalogProfile = typeof activeFramePack === 'undefined' ? compatibleProfile : activeFramePack;
+			selectedProfile = FRAME_REGISTRY.profileForType(catalogProfile, card.text.type.text);
+			frame = FRAME_REGISTRY.engine(selectedProfile) || selectedProfile;
+			autoFrameInput.value = frame;
+			autoFrameInput.dataset.profile = selectedProfile;
+			localStorage.setItem('autoFrame', frame);
+			localStorage.setItem('selectedFrameProfile', selectedProfile);
+			if (typeof activeFrameCustomizationPack !== 'undefined') activeFrameCustomizationPack = null;
+			if (typeof activeFrameComponentOptions !== 'undefined') delete activeFrameComponentOptions['transform-icon'];
+			if (typeof renderFrameCustomize === 'function') renderFrameCustomize(selectedProfile);
+		}
+	}
 
 	var colors = [];
 	
@@ -1798,24 +1829,23 @@ async function autoFrame() {
 	if (colorIdentityOverride?.length) colors = colorIdentityOverride;
 	colors = canonicalFrameColors(colors);
 
-	// A new card starts as a regular white frame until mana or card type gives us
-	// a meaningful reason to choose something else.
-	const typeLine = card.text.type.text.toLowerCase();
-	if (colors.length == 0 && card.text.mana.text.trim() == '' && !typeLine.includes('land') && !typeLine.includes('artifact') && !typeLine.includes('vehicle')) {
-		colors = ['W'];
-	}
+	// With no detected colors, leave the color list empty so the frame engine
+	// uses its colorless treatment instead of inventing a white identity.
 
 	// ----------------------------------------------------------------
 	// FRAME BUILDING & PACK LOADING
 	// ----------------------------------------------------------------
 	const typeVariant = typeof FRAME_REGISTRY == 'undefined' ? null : FRAME_REGISTRY.automaticVariant(selectedProfile, card.text.type.text);
 	if (typeVariant) {
-		await loadAutomaticVariantPack(typeVariant);
-		await autoFrameFromAvailableFrames(colors, card.text.type.text, typeVariant);
-		if (typeof applyActiveFrameComponents === 'function') await applyActiveFrameComponents(colors, card.text.type.text);
+		const variantFrames = await loadAutomaticVariantPack(typeVariant, requestId);
+		if (!variantFrames || requestId != autoFrameRequestId) return;
+		await autoFrameFromAvailableFrames(colors, card.text.type.text, typeVariant, variantFrames, requestId);
+		if (requestId != autoFrameRequestId) return;
+		if (typeof applyActiveFrameComponents === 'function') await applyActiveFrameComponents(colors, card.text.type.text, requestId);
 		return;
 	}
-	await restoreSelectedFramePack(selectedProfile, frame);
+	const selectedFrames = await restoreSelectedFramePack(selectedProfile, frame, requestId);
+	if (!selectedFrames || requestId != autoFrameRequestId) return;
 	
 	// Get frame config and build the frame
 	const config = getFrameTypeConfig(frame);
@@ -1829,35 +1859,59 @@ async function autoFrame() {
 		
 		const currentTypeVariant = typeof FRAME_REGISTRY == 'undefined' ? null : FRAME_REGISTRY.automaticVariant(selectedProfile, card.text.type.text);
 		if (!currentTypeVariant && autoFramePack != packFrame) {
-			loadScript('/js/frames/pack' + packFrame + '.js');
+			await loadScript('/js/frames/pack' + packFrame + '.js');
+			if (requestId != autoFrameRequestId) return;
 			autoFramePack = packFrame;
 		}
 	} else {
-		await autoFrameFromAvailableFrames(colors, card.text.type.text, selectedProfile);
+		await autoFrameFromAvailableFrames(colors, card.text.type.text, selectedProfile, selectedFrames, requestId);
 	}
-	if (typeof applyActiveFrameComponents === 'function') await applyActiveFrameComponents(colors, card.text.type.text);
+	if (requestId != autoFrameRequestId) return;
+	if (typeof applyActiveFrameComponents === 'function') await applyActiveFrameComponents(colors, card.text.type.text, requestId);
 }
 
-async function autoFrameFromAvailableFrames(colors, typeLine, selectedProfile) {
-	if (!availableFrames || !availableFrames.length) return;
-	if (selectedProfile === 'Prototype' || selectedProfile === 'PrototypeExtended') {
-		await autoFramePrototypeFromAvailableFrames(typeLine);
-		return;
-	}
-	if (selectedProfile === 'Attraction') {
-		await autoFrameStandaloneFromAvailableFrames('Attraction Frame');
-		return;
-	}
+function findAutoFrameColorVariant(frameOptions, desiredColor, typeLine, colors, selectedProfile, requestedFace) {
 	const colorNames = ['White', 'Blue', 'Black', 'Red', 'Green', 'Multicolored', 'Artifact', 'Land', 'Vehicle', 'Colorless'];
-	const variantFrames = availableFrames.map((item, index) => ({item: item, index: index})).filter(entry => {
+	const variantFrames = (frameOptions || []).map((item, index) => ({item: item, index: index})).filter(entry => {
 		const name = entry.item.name.toLowerCase();
 		return colorNames.some(color => name.includes(color.toLowerCase())) &&
 			!name.includes('power/toughness') && !name.includes('pinline') && !name.includes('stamp') &&
 			!name.includes('crown') && !name.includes('outline') && !name.includes('textbox');
 	});
-	if (variantFrames.length < 2) return;
+	if (variantFrames.length < 2) return null;
+	const normalizedType = String(typeLine || '').toLowerCase();
+	const desiredName = desiredColor.toLowerCase();
+	const matchesRequestedFace = entry => !requestedFace || entry.item.name.toLowerCase().includes(`(${requestedFace})`);
+	const colorName = colors.length === 1 ? ({W:'white', U:'blue', B:'black', R:'red', G:'green'})[colors[0]] : null;
+	const isPlaneswalkerProfile = String(selectedProfile || '').startsWith('Planeswalker');
+	return (normalizedType.includes('land') && colorName ? variantFrames.find(entry => {
+		const name = entry.item.name.toLowerCase();
+		return matchesRequestedFace(entry) && name.includes(`${colorName} land frame`);
+	}) : null) || variantFrames.find(entry => {
+		const name = entry.item.name.toLowerCase();
+		return matchesRequestedFace(entry) && name.includes(desiredName) && name.includes('frame');
+	}) || variantFrames.find(entry => matchesRequestedFace(entry) && entry.item.name.toLowerCase().includes(desiredName)) ||
+		(desiredColor === 'Colorless' ? variantFrames.find(entry => matchesRequestedFace(entry) && entry.item.name.toLowerCase().includes('eldrazi frame')) : null) ||
+		(desiredColor === 'Colorless' && isPlaneswalkerProfile ? variantFrames.find(entry => matchesRequestedFace(entry) && entry.item.name.toLowerCase().includes('artifact frame')) : null) ||
+		(desiredColor === 'Colorless' ? variantFrames.find(entry => matchesRequestedFace(entry) && entry.item.name.toLowerCase().includes('white frame')) : null);
+}
 
-	let desiredColor = 'White';
+async function autoFrameFromAvailableFrames(colors, typeLine, selectedProfile, frameOptions = availableFrames, requestId = autoFrameRequestId) {
+	if (!frameOptions || !frameOptions.length || requestId != autoFrameRequestId) return;
+	const profileDetails = typeof FRAME_REGISTRY == 'undefined' ? null : FRAME_REGISTRY.definition(selectedProfile)?.details;
+	if (profileDetails?.standaloneFrame) {
+		await autoFrameStandaloneFromAvailableFrames(profileDetails.standaloneFrame, frameOptions, requestId);
+		return;
+	}
+	if (selectedProfile === 'Prototype' || selectedProfile === 'PrototypeExtended') {
+		await autoFramePrototypeFromAvailableFrames(typeLine, frameOptions, requestId);
+		return;
+	}
+	if (selectedProfile === 'Attraction') {
+		await autoFrameStandaloneFromAvailableFrames('Attraction Frame', frameOptions, requestId);
+		return;
+	}
+	let desiredColor = 'Colorless';
 	const normalizedType = typeLine.toLowerCase();
 	if (normalizedType.includes('land')) desiredColor = 'Land';
 	else if (normalizedType.includes('vehicle')) desiredColor = 'Vehicle';
@@ -1865,24 +1919,14 @@ async function autoFrameFromAvailableFrames(colors, typeLine, selectedProfile) {
 	else if (colors.length > 1) desiredColor = 'Multicolored';
 	else if (colors.length == 1) desiredColor = ({W:'White', U:'Blue', B:'Black', R:'Red', G:'Green'})[colors[0]];
 
-	const desiredName = desiredColor.toLowerCase();
-	const profileDetails = typeof FRAME_REGISTRY == 'undefined' ? null : FRAME_REGISTRY.definition(selectedProfile)?.details;
 	const requestedFace = profileDetails?.face;
-	const matchesRequestedFace = entry => !requestedFace || entry.item.name.toLowerCase().includes(`(${requestedFace})`);
-	const colorName = colors.length === 1 ? ({W:'white', U:'blue', B:'black', R:'red', G:'green'})[colors[0]] : null;
-	const selectedVariant = (normalizedType.includes('land') && colorName ? variantFrames.find(entry => {
-		const name = entry.item.name.toLowerCase();
-		return matchesRequestedFace(entry) && name.includes(`${colorName} land frame`);
-	}) : null) || variantFrames.find(entry => {
-		const name = entry.item.name.toLowerCase();
-		return matchesRequestedFace(entry) && name.includes(desiredName) && name.includes('frame');
-	}) || variantFrames.find(entry => matchesRequestedFace(entry) && entry.item.name.toLowerCase().includes(desiredName));
+	const selectedVariant = findAutoFrameColorVariant(frameOptions, desiredColor, typeLine, colors, selectedProfile, requestedFace);
 	if (!selectedVariant) return;
 
 	const rarity = (card.infoRarity || document.querySelector('#info-rarity')?.value || '').trim().toUpperCase();
 	let profileStamp = null;
 	if (['R', 'M', 'S'].includes(rarity)) {
-		const availableStamps = availableFrames.filter(item => (item.name || '').toLowerCase().includes('holo stamp'));
+		const availableStamps = frameOptions.filter(item => (item.name || '').toLowerCase().includes('holo stamp'));
 		const matchingStamp = availableStamps.find(item => item.name.toLowerCase() === desiredName + ' holo stamp') ||
 			availableStamps.find(item => item.name.toLowerCase() === 'holo stamp') || availableStamps[0];
 		const registryStamp = typeof FRAME_REGISTRY == 'undefined' ? null : FRAME_REGISTRY.stampFor(selectedProfile, desiredColor);
@@ -1913,9 +1957,35 @@ async function autoFrameFromAvailableFrames(colors, typeLine, selectedProfile) {
 
 	const baseFrame = JSON.parse(JSON.stringify(selectedVariant.item));
 	baseFrame.masks = [];
+	let composedParentFrames = [];
+	if (profileDetails?.composeParent && typeof loadFrameComponentDefinitions === 'function') {
+		const parentComposition = profileDetails.composeParent;
+		const parentProfile = typeof parentComposition === 'string'
+			? parentComposition
+			: (parentComposition.profile || profileDetails.parent);
+		const parentFrames = await loadFrameComponentDefinitions(parentProfile);
+		if (requestId != autoFrameRequestId) return;
+		const parentDetails = typeof FRAME_REGISTRY == 'undefined' ? null : FRAME_REGISTRY.definition(parentProfile)?.details;
+		const parentVariant = findAutoFrameColorVariant(parentFrames, desiredColor, typeLine, colors, parentProfile, parentDetails?.face);
+		if (parentVariant) {
+			const requestedMasks = Array.isArray(parentComposition?.masks) ? parentComposition.masks : null;
+			const parentLayers = requestedMasks?.length ? requestedMasks.map(maskName => [maskName]) : [[]];
+			composedParentFrames = parentLayers.map(layerMasks => {
+				const parentFrame = JSON.parse(JSON.stringify(parentVariant.item));
+				parentFrame.masks = layerMasks.length
+					? (parentFrame.masks || []).filter(mask => layerMasks.includes(mask.name))
+					: [];
+				parentFrame.frameComposedParentFor = selectedProfile;
+				parentFrame.frameComposedParentProfile = parentProfile;
+				parentFrame.frameComposedParentMasks = layerMasks;
+				return parentFrame;
+			});
+		}
+	}
+	if (requestId != autoFrameRequestId) return;
 	card.frames = [];
 	document.querySelector('#frame-list').innerHTML = '';
-	const frames = [...semanticComponents, baseFrame];
+	const frames = [...semanticComponents, baseFrame, ...composedParentFrames].filter(Boolean);
 	card.frames = frames.slice().reverse();
 	for (const frame of card.frames) {
 		await addFrame([], frame);
@@ -1923,9 +1993,9 @@ async function autoFrameFromAvailableFrames(colors, typeLine, selectedProfile) {
 	card.frames.reverse();
 }
 
-async function autoFramePrototypeFromAvailableFrames(typeLine) {
+async function autoFramePrototypeFromAvailableFrames(typeLine, frameOptions = availableFrames, requestId = autoFrameRequestId) {
 	const cloneFrame = (name) => {
-		const source = availableFrames.find(frame => frame.name === name);
+		const source = frameOptions.find(frame => frame.name === name);
 		if (!source) return null;
 		const frame = JSON.parse(JSON.stringify(source));
 		// Prototype assets are already isolated component layers. Their picker
@@ -1952,6 +2022,7 @@ async function autoFramePrototypeFromAvailableFrames(typeLine) {
 	// card.frames is stored top-to-bottom; drawFrames reverses it so the
 	// artifact base is painted first and all Prototype components sit above it.
 	const frames = [prototypePT, prototypeManaFrame, prototypeRules, artifactPT, baseFrame].filter(Boolean);
+	if (requestId != autoFrameRequestId) return;
 	card.frames = frames.slice().reverse();
 	document.querySelector('#frame-list').innerHTML = '';
 	for (const frame of card.frames) {
@@ -1960,11 +2031,12 @@ async function autoFramePrototypeFromAvailableFrames(typeLine) {
 	card.frames.reverse();
 }
 
-async function autoFrameStandaloneFromAvailableFrames(frameName) {
-	const source = availableFrames.find(frame => frame.name === frameName);
+async function autoFrameStandaloneFromAvailableFrames(frameName, frameOptions = availableFrames, requestId = autoFrameRequestId) {
+	const source = frameOptions.find(frame => frame.name === frameName);
 	if (!source) return;
 	const baseFrame = JSON.parse(JSON.stringify(source));
 	baseFrame.masks = [];
+	if (requestId != autoFrameRequestId) return;
 	card.frames = [baseFrame];
 	document.querySelector('#frame-list').innerHTML = '';
 	await addFrame([], baseFrame);
