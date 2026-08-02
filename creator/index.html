@@ -124,6 +124,15 @@
 				</section>
 			</div>
 		</div>
+		<div id='card-specific-layout-drawer' class='textbox-editor layout-drawer' role='dialog' aria-modal='true' aria-labelledby='card-specific-layout-title'>
+			<div class='textbox-editor-heading'>
+				<span class='creator-eyebrow'>Card Layout</span>
+				<h2 id='card-specific-layout-title' class='textbox-editor-title'>Card Layout</h2>
+				<p id='card-specific-layout-description'>Adjust the placement and dimensions used by this card type.</p>
+			</div>
+			<button type='button' class='textbox-editor-close' aria-label='Close card layout' onclick='closeCardSpecificLayoutDrawer();'>×</button>
+			<div id='card-specific-layout-body' class='layout-drawer-body'></div>
+		</div>
 		<!-- Regular stuff -->
 		<div class='creator-workspace'>
 			<div class='creator-app-bar'>
@@ -286,6 +295,7 @@
 								<h4>Card Text</h4>
 								<button type='button' class='text-field-layout-button' aria-controls='formatting-help-drawer' onclick='document.querySelector("#formatting-help-drawer").classList.add("opened");'>Formatting Help</button>
 							</div>
+							<section id='card-specific-text-tools' class='card-specific-text-tools hidden' aria-live='polite'></section>
 							<div id='text-field-form' class='text-field-form'></div>
 							<div id='text-options' class='hidden' aria-hidden='true'></div>
 							<textarea id='text-editor' class='hidden' aria-hidden='true' tabindex='-1'></textarea>
@@ -1017,6 +1027,6 @@
 	</div>
 	<script defer src='/js/frameRegistry.js?v=20260802-regular-transform-8'></script>
 	<script defer src='/js/autoFrame.js?v=20260802-regular-transform-7'></script>
-	<script defer src='/js/creator-23.js?v=20260802-text-advanced-9'></script>
+	<script defer src='/js/creator-23.js?v=20260802-card-specific-text-10'></script>
 	<script defer src='/js/frameSearch.js?v=20260802-dropdown-ui-11'></script>
 <!-- END OF CONTENT -->

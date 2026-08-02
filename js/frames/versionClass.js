@@ -1,39 +1,29 @@
 //checks to see if it needs to run
-if (!loadedVersions.includes('/js/frames/versionClass.js')) {
+var classVersionFirstLoad = !loadedVersions.includes('/js/frames/versionClass.js');
+if (classVersionFirstLoad) {
 	loadedVersions.push('/js/frames/versionClass.js');
 	sizeCanvas('class');
-	document.querySelector('#creator-menu-tabs').innerHTML += '<h3 class="selectable readable-background" onclick="toggleCreatorTabs(event, `class`)">Class</h3>';
-	var newHTML = document.createElement('div');
-	newHTML.id = 'creator-menu-class';
-	newHTML.classList.add('hidden');
-	newHTML.innerHTML = `
-	<div class='readable-background padding'>
-		<h5 class='padding margin-bottom input-description'>Adjust the height of each Class level</h5>
-		<h5 class='padding margin-bottom input-description'>First Level:</h5>
-		<div class='padding input-grid margin-bottom'>
-			<input id='class-height-0' type='number' class='input' oninput='classEdited();' min='0'>
-		</div>
-		<h5 class='padding margin-bottom input-description'>Second Level:</h5>
-		<div class='padding input-grid margin-bottom'>
-			<input id='class-height-1' type='number' class='input' oninput='classEdited();' min='0'>
-		</div>
-		<h5 class='padding margin-bottom input-description'>Third Level:</h5>
-		<div class='padding input-grid margin-bottom'>
-			<input id='class-height-2' type='number' class='input' oninput='classEdited();' min='0'>
-		</div>
-		<h5 class='padding margin-bottom input-description'>Fourth Level:</h5>
-		<div class='padding input-grid margin-bottom'>
-			<input id='class-height-3' type='number' class='input' oninput='classEdited();' min='0'>
-		</div>
-	</div>`;
 
-	document.querySelector('#creator-menu-sections').appendChild(newHTML);
 	var classHeader = new Image();
 	classHeader.onload = classEdited;
-	fixClassInputs(classEdited);
-} else {
-	fixClassInputs(classEdited);
 }
+
+registerCardSpecificTextTools({
+	key: 'class',
+	title: 'Class',
+	description: 'Level text and costs are edited with the regular Card Text fields.',
+	layoutDescription: 'Adjust the vertical space available to each Class level.',
+	layoutHTML: `
+		<section class="layout-control-group">
+			<div class="layout-control-heading"><h3>Class levels</h3><p>Set the rules-text height for each level</p></div>
+			<div class="layout-control-grid">
+				${[0, 1, 2, 3].map(index => `<label class="layout-control-field"><span>Level ${index + 1} height</span><span class="layout-input-shell"><input id="class-height-${index}" type="number" class="input" min="0" step="1" oninput="classEdited();"><small>px</small></span></label>`).join('')}
+			</div>
+		</section>`,
+	onRender: fixClassInputs
+});
+
+fixClassInputs(classEdited);
 	//placement for header
 function getCardClass() {
 		switch (card.version) {

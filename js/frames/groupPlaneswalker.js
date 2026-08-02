@@ -21,4 +21,4 @@ loadFramePacks([
 	{name:'Color Identity Pips', value:'M15CIPips'},
 	{name:'Transform Icons', value:'PlaneswalkerTransformIcons'}
 ])
-notify('When you load a Planeswalker frame version, a "Planeswalker" tab will appear. This tab controls the placement and loyalty costs for Planeswalker abilities.', 10)
+notify('Planeswalker loyalty costs are available beside each ability in Card Text. Use the Planeswalker Layout button there to adjust placement.', 10)

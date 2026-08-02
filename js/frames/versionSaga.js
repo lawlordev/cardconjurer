@@ -1,48 +1,19 @@
 //checks to see if it needs to run
-if (!loadedVersions.includes('/js/frames/versionSaga.js')) {
+var sagaVersionFirstLoad = !loadedVersions.includes('/js/frames/versionSaga.js');
+if (sagaVersionFirstLoad) {
 	loadedVersions.push('/js/frames/versionSaga.js');
 	sizeCanvas('saga');
-	document.querySelector('#creator-menu-tabs').innerHTML += '<h3 class="selectable readable-background" onclick="toggleCreatorTabs(event, `saga`)">Saga</h3>';
-	var newHTML = document.createElement('div');
-	newHTML.id = 'creator-menu-saga';
-	newHTML.classList.add('hidden');
-	newHTML.innerHTML = `
-	<div class='readable-background padding'>
-		<h5 class='padding margin-bottom input-description'>Adjust the height (first input) and chapter count (second input) of each Saga ability</h5>
-		<h5 class='padding margin-bottom input-description'>First Ability:</h5>
-		<div class='padding input-grid margin-bottom'>
-			<input id='saga-height-0' type='number' class='input' oninput='sagaEdited();' min='0'>
-			<input id='saga-chapters-0' type='number' class='input' oninput='sagaEdited();' min='0' max='6' step='1'>
-		</div>
-		<h5 class='padding margin-bottom input-description'>Second Ability:</h5>
-		<div class='padding input-grid margin-bottom'>
-			<input id='saga-height-1' type='number' class='input' oninput='sagaEdited();' min='0'>
-			<input id='saga-chapters-1' type='number' class='input' oninput='sagaEdited();' min='0' max='6' step='1'>
-		</div>
-		<h5 class='padding margin-bottom input-description'>Third Ability:</h5>
-		<div class='padding input-grid margin-bottom'>
-			<input id='saga-height-2' type='number' class='input' oninput='sagaEdited();' min='0'>
-			<input id='saga-chapters-2' type='number' class='input' oninput='sagaEdited();' min='0' max='6' step='1'>
-		</div>
-		<h5 class='padding margin-bottom input-description'>Fourth Ability:</h5>
-		<div class='padding input-grid margin-bottom'>
-			<input id='saga-height-3' type='number' class='input' oninput='sagaEdited();' min='0'>
-			<input id='saga-chapters-3' type='number' class='input' oninput='sagaEdited();' min='0' max='6' step='1'>
-		</div>
-	</div>`;
 	if (!card.saga) {
 		card.saga = {abilities:[1, 1, 1, 0], count:3, x:(card.version === "oldSaga" ? 0.1114 : 0.1), width:(card.version === "oldSaga" ? 0.3727 : 0.3947)};
 	} else {
 		card.saga.x = (card.version === "oldSaga" ? 0.1114 : 0.1);
 		card.saga.width = (card.version === "oldSaga" ? 0.3727 : 0.3947);
 	}
-	document.querySelector('#creator-menu-sections').appendChild(newHTML);
 	var sagaChapter = new Image();
 	setImageUrl(sagaChapter, '/img/frames/saga/sagaChapter.png');
 	var sagaDivider = new Image();
 	setImageUrl(sagaDivider, '/img/frames/saga/sagaDivider.png');
 	sagaChapter.onload = sagaDivider.onload = sagaEdited;
-	updateAbilityHeights();
 } else {
 	if (!card.saga) {
 		card.saga = {abilities:[1, 1, 1, 0], count:3, x:(card.version === "oldSaga" ? 0.1114 : 0.1), width:(card.version === "oldSaga" ? 0.3727 : 0.3947)};
@@ -50,8 +21,27 @@ if (!loadedVersions.includes('/js/frames/versionSaga.js')) {
 		card.saga.x = (card.version === "oldSaga" ? 0.1114 : 0.1);
 		card.saga.width = (card.version === "oldSaga" ? 0.3727 : 0.3947);
 	}
-	updateAbilityHeights();
 }
+
+registerCardSpecificTextTools({
+	key: 'saga',
+	title: 'Saga',
+	description: 'Choose how many chapter symbols belong to each ability.',
+	fieldAccessories: Object.fromEntries([0, 1, 2, 3].map(index => [`ability${index}`, `
+		<label for="saga-chapters-${index}"><span>Chapter count</span><input id="saga-chapters-${index}" type="number" class="input" min="0" max="6" step="1" oninput="sagaEdited();" aria-label="Ability ${index + 1} chapter count"></label>
+	`])),
+	layoutDescription: 'Adjust the vertical space available to each Saga ability.',
+	layoutHTML: `
+		<section class="layout-control-group">
+			<div class="layout-control-heading"><h3>Ability boxes</h3><p>Set each chapter ability's text height</p></div>
+			<div class="layout-control-grid">
+				${[0, 1, 2, 3].map(index => `<label class="layout-control-field"><span>Ability ${index + 1} height</span><span class="layout-input-shell"><input id="saga-height-${index}" type="number" class="input" min="0" step="1" oninput="sagaEdited();"><small>px</small></span></label>`).join('')}
+			</div>
+		</section>`,
+	onRender: fixSagaInputs
+});
+
+updateAbilityHeights();
 
 function sagaEdited() {
 	//gather data

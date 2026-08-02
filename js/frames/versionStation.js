@@ -126,7 +126,8 @@ async function initializeStationFrame(frameType = 'regular', preservedData = nul
 // INITIALIZATION AND SETUP
 //=====================================
 
-if (!loadedVersions.includes('/js/frames/versionStation.js')) {
+var stationVersionFirstLoad = !loadedVersions.includes('/js/frames/versionStation.js');
+if (stationVersionFirstLoad) {
 	loadedVersions.push('/js/frames/versionStation.js');
 	
 	sizeCanvas('stationPreFrame');
@@ -134,12 +135,9 @@ if (!loadedVersions.includes('/js/frames/versionStation.js')) {
 	
 	initializeStationImages();
 	initializeStationDefaults();
-	setupStationUI();
 	
 	// Set up property watchers
 	setupStationListeners();
-	
-	fixStationInputs(stationEdited);
 } else {
 	// Clear existing watchers before setting up new ones
 	clearStationListeners();
@@ -147,9 +145,10 @@ if (!loadedVersions.includes('/js/frames/versionStation.js')) {
 	// Set up fresh watchers
 	setupStationListeners();
 	
-	// Just refresh the UI inputs
-	fixStationInputs(stationEdited);
 }
+
+setupStationUI();
+fixStationInputs(stationEdited);
 
 // Override textEdited function to handle station-specific updates
 if (typeof window.originalTextEdited === 'undefined' && typeof textEdited === 'function') {
@@ -327,106 +326,50 @@ function initializeStationDefaults() {
 //=====================================
 
 function setupStationUI() {
-	document.querySelector('#creator-menu-tabs').innerHTML += '<h3 class="selectable readable-background" onclick="toggleCreatorTabs(event, `station`)">Station</h3>';
-	
-	const newHTML = document.createElement('div');
-	newHTML.id = 'creator-menu-station';
-	newHTML.classList.add('hidden');
-	newHTML.innerHTML = `
-	<div class='readable-background padding'>
-		<h5 class='padding margin-bottom input-description'>Station Card Controls - Adjust text box heights and colored square backgrounds for each ability</h5>
-		
-		<h5 class='padding margin-bottom input-description'>Station Badge Settings:</h5>
-		<div class='padding input-grid margin-bottom'>
-			<div><h5 class='padding margin-bottom input-description' style='font-style: normal;'>Badge Color Mode:</h5>
-				<select id='station-badge-color-mode' class='input' onchange='updateBadgeColorMode();'>
-					<option value='auto'>Auto (Based on Mana Cost)</option>
-					<option value='white'>White</option>
-					<option value='blue'>Blue</option>
-					<option value='black'>Black</option>
-					<option value='red'>Red</option>
-					<option value='green'>Green</option>
-					<option value='multi'>Multicolored</option>
-					<option value='colorless'>Colorless</option>
-				</select>
-			</div>
-			<div><h5 class='padding margin-bottom input-description' style='font-style: normal;'>First Ability Badge Value:</h5><input id='station-badge-value-1' type='text' class='input' oninput='stationEdited();' placeholder='Badge Text'></div>
-			<div><h5 class='padding margin-bottom input-description' style='font-style: normal;'>Second Ability Badge Value:</h5><input id='station-badge-value-2' type='text' class='input' oninput='stationEdited();' placeholder='Badge Text'></div>
-		</div>
-		
-		<div style='border-top: 1px solid #ccc; padding-top: 15px; margin-top: 15px;'></div>
-
-		<h5 class='padding margin-bottom input-description'>Station PT Box Settings:</h5>
-		<div class='padding input-grid margin-bottom'>
-			<div><h5 class='padding margin-bottom input-description' style='font-style: normal;'>PT Color Mode:</h5>
-				<select id='station-pt-color-mode' class='input' onchange='updatePTColorMode();'>
-					<option value='auto'>Auto (Based on Mana Cost)</option>
-					<option value='white'>White</option>
-					<option value='blue'>Blue</option>
-					<option value='black'>Black</option>
-					<option value='red'>Red</option>
-					<option value='green'>Green</option>
-					<option value='multi'>Multicolored</option>
-					<option value='colorless'>Colorless</option>
-				</select>
-			</div>
-			<div><h5 class='padding margin-bottom input-description' style='font-style: normal;'>PT X Offset:</h5><input id='station-pt-x-offset' type='number' class='input' oninput='stationEdited();' placeholder='PT X Offset'></div>
-			<div><h5 class='padding margin-bottom input-description' style='font-style: normal;'>PT Y Offset:</h5><input id='station-pt-y-offset' type='number' class='input' oninput='stationEdited();' placeholder='PT Y Offset'></div>
-		</div>
-		
-		<div style='border-top: 1px solid #ccc; padding-top: 15px; margin-top: 15px;'></div>
-
-		<h5 class='padding margin-bottom input-description'>Station Square Settings:</h5>
-
-		<div class='padding input-grid margin-bottom'>
-			<div><h5 class='padding margin-bottom input-description' style='font-style: normal;'>Square Width (Both Squares):</h5><input id='station-square-width' type='number' class='input' oninput='stationEdited();' min='0' placeholder='Square Width'></div>
-			<div><h5 class='padding margin-bottom input-description' style='font-style: normal;'>Square X Offset (Both Squares):</h5><input id='station-square-x' type='number' class='input' oninput='stationEdited();' placeholder='Square X Offset'></div>
-			<div><h5 class='padding margin-bottom input-description' style='font-style: normal;'>Square Y Offset (Starting point of first square):</h5><input id='station-square-y' type='number' class='input' oninput='stationEdited();' placeholder='Square Y Offset'></div>
-		</div>
-
-		<div class='padding input-grid margin-bottom'>
-			<div><h5 class='padding margin-bottom input-description' style='font-style: normal;'>First Square Height:</h5><input id='station-square-height-1' type='number' class='input' oninput='stationEdited();' min='0' placeholder='First Square Height'></div>
-			<div><h5 class='padding margin-bottom input-description' style='font-style: normal;'>Second Square Height (Set to bottom of text box automatically from bottom of first square):</h5><input id='station-square-height-2' type='number' class='input' oninput='stationEdited();' min='0' placeholder='Second Square Height'></div>
-		</div>
-
-		<div class='padding input-grid'>
-			<label class='checkbox-container input'>Disable First Square Color (First square becomes transparent. Second square gets first squares base opacity for each color on auto. Set to a color mode to get independent opacity)
-				<input id='station-disable-first-ability' type='checkbox' onchange='stationEdited();'>
-				<span class='checkmark'></span>
+	const colorOptions = `
+		<option value="auto">Auto (Based on Mana Cost)</option><option value="white">White</option><option value="blue">Blue</option>
+		<option value="black">Black</option><option value="red">Red</option><option value="green">Green</option>
+		<option value="multi">Multicolored</option><option value="colorless">Colorless</option>`;
+	registerCardSpecificTextTools({
+		key: 'station',
+		title: 'Station',
+		description: 'Add station thresholds here. Colors and precise placement stay out of the way until needed.',
+		inlineHTML: `
+			<label class="card-specific-control"><span>First ability badge</span><input id="station-badge-value-1" type="text" class="input" oninput="stationEdited();" placeholder="Badge value"></label>
+			<label class="card-specific-control"><span>Second ability badge</span><input id="station-badge-value-2" type="text" class="input" oninput="stationEdited();" placeholder="Badge value"></label>`,
+		layoutDescription: 'Adjust the power/toughness badge and the two Station ability boxes.',
+		layoutHTML: `
+			<section class="layout-control-group">
+				<div class="layout-control-heading"><h3>Power/Toughness badge</h3><p>Move the badge from its automatic position</p></div>
+				<div class="layout-control-grid">
+					<label class="layout-control-field"><span>Horizontal offset</span><span class="layout-input-shell"><input id="station-pt-x-offset" type="number" class="input" step="1" oninput="stationEdited();"><small>px</small></span></label>
+					<label class="layout-control-field"><span>Vertical offset</span><span class="layout-input-shell"><input id="station-pt-y-offset" type="number" class="input" step="1" oninput="stationEdited();"><small>px</small></span></label>
+				</div>
+			</section>
+			<section class="layout-control-group">
+				<div class="layout-control-heading"><h3>Ability boxes</h3><p>Size and position the colored areas behind Station abilities</p></div>
+				<div class="layout-control-grid">
+					<label class="layout-control-field"><span>Width</span><span class="layout-input-shell"><input id="station-square-width" type="number" class="input" min="0" step="1" oninput="stationEdited();"><small>px</small></span></label>
+					<label class="layout-control-field"><span>Horizontal offset</span><span class="layout-input-shell"><input id="station-square-x" type="number" class="input" step="1" oninput="stationEdited();"><small>px</small></span></label>
+					<label class="layout-control-field"><span>Starting Y offset</span><span class="layout-input-shell"><input id="station-square-y" type="number" class="input" step="1" oninput="stationEdited();"><small>px</small></span></label>
+					<label class="layout-control-field"><span>First box height</span><span class="layout-input-shell"><input id="station-square-height-1" type="number" class="input" min="0" step="1" oninput="stationEdited();"><small>px</small></span></label>
+					<label class="layout-control-field"><span>Second box height</span><span class="layout-input-shell"><input id="station-square-height-2" type="number" class="input" min="0" step="1" oninput="stationEdited();"><small>px</small></span></label>
+				</div>
+			</section>`,
+		advancedHTML: `
+			<label class="card-specific-control"><span>Badge color</span><select id="station-badge-color-mode" class="input" onchange="updateBadgeColorMode();">${colorOptions}</select></label>
+			<label class="card-specific-control"><span>Power/Toughness color</span><select id="station-pt-color-mode" class="input" onchange="updatePTColorMode();">${colorOptions}</select></label>
+			<label class="checkbox-container input workspace-checkbox card-specific-option-card full-width">
+				<span class="frame-advanced-option-copy"><strong>Hide First Ability Box</strong><small>Make the first colored box transparent</small></span>
+				<input id="station-disable-first-ability" type="checkbox" onchange="stationEdited();"><span class="checkmark"></span>
 			</label>
-		</div>
-
-		<div class='padding input-grid margin-bottom'>
-			<div><h5 class='padding margin-bottom input-description' style='font-style: normal;'>Square Color Mode:</h5>
-				<select id='station-square-color-mode' class='input' onchange='toggleSquareColorPicker();'>
-					<option value='auto'>Auto (Based on Mana Cost)</option>
-					<option value='white'>White</option>
-					<option value='blue'>Blue</option>
-					<option value='black'>Black</option>
-					<option value='red'>Red</option>
-					<option value='green'>Green</option>
-					<option value='multi'>Multicolored</option>
-					<option value='colorless'>Colorless</option>
-					<option value='artifact'>Artifact</option>
-					<option value='land'>Land</option>
-					<option value='custom'>Custom</option>
-				</select>
-			</div>
-			<div id='station-square-color-picker' class='hidden'><h5 class='padding margin-bottom input-description' style='font-style: normal;'>Square Color:</h5><input id='station-square-color' type='color' class='input' value='#e6ecf2' onchange='stationEdited();'></div>
-		</div>
-		<div class='padding input-grid margin-bottom'>
-			<div><h5 id='station-square-opacity-1-label' class='padding margin-bottom input-description' style='font-style: normal;'>Square Opacity:</h5><input id='station-square-opacity-1' type='range' class='input' min='0' max='1' step='0.05' value='0.7' oninput='stationEdited();'></div>
-			<div id='station-square-opacity-2-container'><h5 class='padding margin-bottom input-description' style='font-style: normal;'>Second Square Opacity:</h5><input id='station-square-opacity-2' type='range' class='input' min='0' max='1' step='0.05' value='0.7' oninput='stationEdited();'></div>
-		</div>
-		
-		<div class='padding margin-bottom' style='text-align: center; border-top: 1px solid #ccc; padding-top: 20px;'>
-			<button id='station-reset-button' class='input' onclick='resetStationSettings();' style='background-color:rgb(51, 51, 51); color: white; padding: 10px 20px; font-weight: bold;'>
-				Reset Station Settings to Defaults
-			</button>
-		</div>
-	</div>`;
-	
-	document.querySelector('#creator-menu-sections').appendChild(newHTML);
+			<label class="card-specific-control"><span>Ability box color</span><select id="station-square-color-mode" class="input" onchange="toggleSquareColorPicker();">${colorOptions}<option value="artifact">Artifact</option><option value="land">Land</option><option value="custom">Custom</option></select></label>
+			<label id="station-square-color-picker" class="card-specific-control hidden"><span>Custom color</span><input id="station-square-color" type="color" class="input" value="#e6ecf2" onchange="stationEdited();"></label>
+			<label class="card-specific-control"><span id="station-square-opacity-1-label">Ability box opacity</span><input id="station-square-opacity-1" type="range" class="input" min="0" max="1" step="0.05" value="0.7" oninput="stationEdited();"></label>
+			<label id="station-square-opacity-2-container" class="card-specific-control"><span>Second box opacity</span><input id="station-square-opacity-2" type="range" class="input" min="0" max="1" step="0.05" value="0.7" oninput="stationEdited();"></label>
+			<button id="station-reset-button" type="button" class="input full-width" onclick="resetStationSettings();">Reset Station Settings</button>`,
+		onRender: fixStationInputs
+	});
 }
 
 //=====================================

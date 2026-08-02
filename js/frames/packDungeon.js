@@ -15,7 +15,7 @@ document.querySelector('#loadFrameVersion').disabled = false;
 //defines process for loading this version, if applicable
 document.querySelector('#loadFrameVersion').onclick = async function() {
 	// message
-	notify('Dungeons should now be fully functional, though the interface can be difficult. See the "Dungeon" tab to adjust rooms, and for more information.', 15);
+	notify('Dungeons are fully editable from Card Text. Use the Dungeon Layout button there to adjust rooms and view the room-map format.', 15);
 	//resets things so that every frame doesn't have to
 	await resetCardIrregularities();
 	//sets card version

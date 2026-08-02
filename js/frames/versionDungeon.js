@@ -1,32 +1,21 @@
 //checks to see if it needs to run
+var dungeonDefaultLayout = `0,0,16,2,3,11
+0,2,8,4,1.5,5.5
+8,2,8,4,0.5,4.5
+0,6,5,5,1.5
+5,6,6,5,0.5,3.5
+11,6,5,5,1.5
+0,11,8,4,3
+8,11,8,4,3
+0,15,16,4,7`;
+if (!card.dungeon) card.dungeon = {abilities:[1, 1, 1, 0], count:3, x:0.1, width:0.3947};
+if (!card.dungeon.layout) card.dungeon.layout = dungeonDefaultLayout;
+if (!card.dungeon.color) card.dungeon.color = 'B';
+
 if (!loadedVersions.includes('/js/frames/versionDungeon.js')) {
 	loadedVersions.push('/js/frames/versionDungeon.js');
 	sizeCanvas('dungeon');
 	sizeCanvas('dungeonFX');
-	document.querySelector('#creator-menu-tabs').innerHTML += '<h3 class="selectable readable-background" onclick="toggleCreatorTabs(event, `dungeon`)">Dungeon</h3>';
-	var newHTML = document.createElement('div');
-	newHTML.id = 'creator-menu-dungeon';
-	newHTML.classList.add('hidden');
-	newHTML.innerHTML = `
-	<div class='readable-background padding margin-bottom'>
-		<h5 class='padding margin-bottom input-description'>Use the following textbox to specify your room locations and sizes.<br><br>Each room must be separated by a new line, and may only include numeric characters.<br><br>Each number must be seperated by a comma, and ordered as follows:<br>X,Y,Width,Height,Door-1,Door-2,...<br>(doors are optional).<br><br>Apologies for the difficult interface; I hope to implement an improved UI in the future.</h5>
-		<textarea id='dungeon-input' type='number' class='input margin-bottom' oninput='dungeonEditedBuffer();'>0,0,16,2,3,11\n0,2,8,4,1.5,5.5\n8,2,8,4,0.5,4.5\n0,6,5,5,1.5\n5,6,6,5,0.5,3.5\n11,6,5,5,1.5\n0,11,8,4,3\n8,11,8,4,3\n0,15,16,4,7</textarea>
-	</div>
-	<div class='readable-background padding'>
-		<h5 class='padding margin-bottom input-description'>Select the dungeon wall color:</h5>
-		<select id='dungeon-color' class='input' onchange='dungeonEditedBuffer();'>
-			<option value="W">White</option>
-			<option value="U">Blue</option>
-			<option value="B" selected="selected">Black</option>
-			<option value="R">Red</option>
-			<option value="G">Green</option>
-			<option value="C">Colorless</option>
-		</select>
-	</div>`;
-	if (!card.dungeon) {
-		card.dungeon = {abilities:[1, 1, 1, 0], count:3, x:0.1, width:0.3947};
-	}
-	document.querySelector('#creator-menu-sections').appendChild(newHTML);
 	var dungeonFXtop = new Image(); setImageUrl(dungeonFXtop, '/img/frames/dungeon/walls/fx/top.png');
 	var dungeonFXleft = new Image(); setImageUrl(dungeonFXleft, '/img/frames/dungeon/walls/fx/left.png');
 	var dungeonFXbottom = new Image(); setImageUrl(dungeonFXbottom, '/img/frames/dungeon/walls/fx/bottom.png');
@@ -58,6 +47,31 @@ if (!loadedVersions.includes('/js/frames/versionDungeon.js')) {
 	dungeonTextureC.onload = dungeonEditedBuffer;
 }
 
+registerCardSpecificTextTools({
+	key: 'dungeon',
+	title: 'Dungeon',
+	description: 'Edit room text below. Wall color is the only common Dungeon setting.',
+	inlineHTML: `
+		<label class="card-specific-control full-width"><span>Wall color</span>
+			<select id="dungeon-color" class="input" onchange="card.dungeon.color=this.value; dungeonEditedBuffer();">
+				<option value="W">White</option><option value="U">Blue</option><option value="B">Black</option>
+				<option value="R">Red</option><option value="G">Green</option><option value="C">Colorless</option>
+			</select>
+		</label>`,
+	layoutDescription: 'Describe each room on its own line using X, Y, width, height, then optional doorway positions.',
+	layoutHTML: `
+		<section class="layout-control-group">
+			<div class="layout-control-heading"><h3>Room map</h3><p>Format: X,Y,Width,Height,Door-1,Door-2. Door positions are optional.</p></div>
+			<label class="layout-control-field"><span>Rooms</span><textarea id="dungeon-input" class="input card-specific-layout-textarea" spellcheck="false" oninput="card.dungeon.layout=this.value; dungeonEditedBuffer();"></textarea></label>
+		</section>`,
+	onRender: () => {
+		var colorInput = document.querySelector('#dungeon-color');
+		var layoutInput = document.querySelector('#dungeon-input');
+		if (colorInput) colorInput.value = card.dungeon.color || 'B';
+		if (layoutInput && layoutInput.value !== card.dungeon.layout) layoutInput.value = card.dungeon.layout || dungeonDefaultLayout;
+	}
+});
+
 var drawingDungeon;
 function dungeonEditedBuffer() {
 	clearTimeout(drawingDungeon);
@@ -67,6 +81,8 @@ function dungeonEditedBuffer() {
 function dungeonEdited() {
 	//gather data
 	data = document.querySelector('#dungeon-input').value;
+	card.dungeon.layout = data;
+	card.dungeon.color = document.querySelector('#dungeon-color').value;
 	rooms = [];
 	data.replace(/ /g, '').split('\n').forEach(room => {
 		newRoom = room.split(',');

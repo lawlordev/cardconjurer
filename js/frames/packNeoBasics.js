@@ -7,7 +7,7 @@ var stretch = [
 	{name:'symbol', targets: [0], change:[0, 0]}
 ];
 // Notification
-notify('When you load the Kamigawa Basics frame version, a "Kamigawa Basics" tab will appear. This tab allows you to control the height of the title bar.', 15);
+notify('Use the Kamigawa Basics Layout button in Card Text to adjust the title bar.', 15);
 //defines available frames
 availableFrames = [
 	{name:'White Frame', src:'/img/frames/neo/basics/w.svg', stretch:stretch, masks:masks},

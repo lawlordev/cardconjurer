@@ -1,22 +1,23 @@
 //checks to see if it needs to run
 if (!loadedVersions.includes('/js/frames/versionNeoBasics.js')) {
 	loadedVersions.push('/js/frames/versionNeoBasics.js');
-	document.querySelector('#creator-menu-tabs').innerHTML += '<h3 class="selectable readable-background" onclick="toggleCreatorTabs(event, `neoBasics`)">Kamigawa Basics</h3>';
-	var newHTML = document.createElement('div');
-	newHTML.id = 'creator-menu-neoBasics';
-	newHTML.classList.add('hidden');
-	newHTML.innerHTML = `
-	<div class='readable-background padding'>
-		<h5 class='padding margin-bottom input-description'>Adjust the title bar's height:</h5>
-		<input id='nb-change' class='input' type='number' oninput='stretchNeoBasics();' min='330', max='1000', value='330', step='10'>
-	</div>
-	<!--<div class='readable-background padding'>
-		<h5 class='padding margin-bottom input-description'>Adjust the targets:</h5>
-		<input id='targets' class='input' type='text' oninput='stretchNeoBasics();' value='0'>
-	</div>-->`;
-	document.querySelector('#creator-menu-sections').appendChild(newHTML);
 	loadScript('/js/frames/manaSymbolsMysticalArchiveJP.js');
 }
+
+registerCardSpecificTextTools({
+	key: 'neoBasics',
+	title: 'Kamigawa Basics',
+	description: 'Card text uses the normal fields. Title-bar sizing is available in Layout.',
+	layoutDescription: 'Stretch the vertical title treatment and its matching text bounds.',
+	layoutHTML: `
+		<section class="layout-control-group">
+			<div class="layout-control-heading"><h3>Title treatment</h3><p>Resize the frame and title text area together</p></div>
+			<label class="layout-control-field"><span>Title bar height</span><span class="layout-input-shell"><input id="nb-change" class="input" type="number" min="330" max="1000" step="10" oninput="stretchNeoBasics();"><small>px</small></span></label>
+		</section>`,
+	onRender: () => {
+		document.querySelector('#nb-change').value = Math.round((card.text?.title?.height || 500 / 2100) * 2100 - 170);
+	}
+});
 
 function stretchNeoBasics() {
 	const change = [0, (parseInt(document.querySelector('#nb-change').value) - 330) / 2100];

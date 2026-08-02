@@ -36,7 +36,7 @@ availableFrames = [
 	{name:'Legend Crown Border Cover', src:'/img/frames/custom/stoneCutter/stoneCutterDeluxe/blackBar.png', bounds:bounds}
 ];
 // Notification
-notify('When you load a Planeswalker frame version, a "Planeswalker" tab will appear. This tab controls the placement and loyalty costs for Planeswalker abilities.', 10)
+notify('Planeswalker loyalty costs are available beside each ability in Card Text. Use the Planeswalker Layout button there to adjust placement.', 10)
 //disables/enables the "Load Frame Version" button
 document.querySelector('#loadFrameVersion').disabled = false;
 //defines process for loading this version, if applicable

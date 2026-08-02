@@ -963,6 +963,7 @@ textarea.input {
 }
 .textbox-editor {
 	display: grid;
+	box-sizing: border-box;
 	top: 0;
 	right: auto;
 	bottom: 0;
@@ -1197,6 +1198,158 @@ textarea.input {
 	border-color: #627493;
 	color: #eef2f8;
 	background: #1b2432;
+}
+.card-specific-text-tools {
+	display: grid;
+	gap: 0.65rem;
+	margin-bottom: 0.75rem;
+	padding: 0.75rem;
+	border: 1px solid #2d394c;
+	border-radius: 0.6rem;
+	background: linear-gradient(135deg, rgba(67, 211, 194, 0.08), rgba(85, 111, 176, 0.06));
+}
+.card-specific-text-tools.hidden {
+	display: none;
+}
+.card-specific-tools-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+}
+.card-specific-tools-heading h4,
+.card-specific-tools-heading p {
+	margin: 0;
+}
+.card-specific-tools-heading h4 {
+	margin-top: 0.12rem;
+	font-size: 0.76rem;
+}
+.card-specific-tools-heading p {
+	margin-top: 0.2rem;
+	color: #8e9bb0;
+	font-size: 0.57rem;
+	line-height: 1.4;
+}
+.card-specific-inline-controls,
+.card-specific-advanced-controls {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.55rem;
+}
+.card-specific-control {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	gap: 0.3rem;
+}
+.card-specific-control > span,
+.card-specific-control > label {
+	color: #aeb9ca;
+	font-size: 0.6rem;
+	font-weight: 600;
+}
+.card-specific-control small {
+	color: #7f8da2;
+	font-size: 0.52rem;
+	line-height: 1.35;
+}
+.card-specific-control.hidden {
+	display: none;
+}
+.creator-workspace .card-specific-control .input {
+	margin: 0;
+}
+.card-specific-field-accessory {
+	display: flex;
+	align-items: center;
+	grid-column: 1 / -1;
+	gap: 0.45rem;
+	padding: 0.4rem 0.5rem;
+	border: 1px solid #222c3b;
+	border-radius: 0.42rem;
+	background: #0d141e;
+}
+.card-specific-field-accessory label {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	gap: 0.6rem;
+	color: #9facbf;
+	font-size: 0.58rem;
+	font-weight: 600;
+}
+.creator-workspace .card-specific-field-accessory .input {
+	width: 6.25rem;
+	min-height: 2rem;
+	margin: 0;
+	font-size: 0.66rem;
+}
+.card-specific-advanced-toggle {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+	min-height: 2rem;
+	padding: 0.35rem 0.15rem;
+	border: 0;
+	border-top: 1px solid #283143;
+	color: #aeb8c8;
+	background: transparent;
+	font-family: inherit;
+	font-size: 0.62rem;
+	cursor: pointer;
+}
+.card-specific-chevron {
+	width: 0.35rem;
+	height: 0.35rem;
+	border: solid currentColor;
+	border-width: 0 0.1rem 0.1rem 0;
+	transform: rotate(45deg) translateY(-0.12rem);
+	transition: transform 120ms ease;
+}
+.card-specific-advanced-toggle[aria-expanded="true"] .card-specific-chevron {
+	transform: rotate(225deg) translate(-0.08rem, -0.08rem);
+}
+.card-specific-advanced-controls {
+	padding-top: 0.1rem;
+}
+.card-specific-advanced-controls.hidden {
+	display: none;
+}
+.card-specific-option-card {
+	display: flex;
+	align-items: center;
+	min-width: 0;
+	min-height: 2.5rem;
+	padding: 0.5rem;
+	border: 1px solid #293548;
+	border-radius: 0.45rem;
+	background: #101721;
+}
+.card-specific-option-card.full-width,
+.card-specific-control.full-width {
+	grid-column: 1 / -1;
+}
+.card-specific-option-card .frame-advanced-option-copy {
+	padding-right: 1.8rem;
+}
+.card-specific-layout-textarea {
+	min-height: 16rem;
+	resize: vertical;
+	font-family: Consolas, monospace;
+	line-height: 1.45;
+}
+@media (max-width: 720px) {
+	.card-specific-inline-controls,
+	.card-specific-advanced-controls,
+	.layout-control-grid {
+		grid-template-columns: 1fr;
+	}
+	.creator-workspace .card-specific-field-accessory .input {
+		width: min(7rem, 48%);
+	}
 }
 .text-reminder-options {
 	display: grid;

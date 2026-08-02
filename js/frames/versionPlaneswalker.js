@@ -1,42 +1,9 @@
 //checks to see if it needs to run
-if (!loadedVersions.includes('/js/frames/versionPlaneswalker.js')) {
+var planeswalkerVersionFirstLoad = !loadedVersions.includes('/js/frames/versionPlaneswalker.js');
+if (planeswalkerVersionFirstLoad) {
 	loadedVersions.push('/js/frames/versionPlaneswalker.js');
 	sizeCanvas('planeswalkerPreFrame');
 	sizeCanvas('planeswalkerPostFrame');
-	document.querySelector('#creator-menu-tabs').innerHTML += '<h3 class="selectable readable-background" onclick="toggleCreatorTabs(event, `planeswalker`)">Planeswalker</h3>';
-	var newHTML = document.createElement('div');
-	newHTML.id = 'creator-menu-planeswalker';
-	newHTML.classList.add('hidden');
-	newHTML.innerHTML = `
-	<div class='readable-background padding'>
-		<h5 class='padding margin-bottom input-description'>Adjust the height (first input), loyalty cost (second input), and loyalty placement (third input) of each Planeswalker ability</h5>
-		<h5 class='padding margin-bottom input-description'>First Ability:</h5>
-		<div class='padding input-grid margin-bottom'>
-			<input id='planeswalker-height-0' type='number' class='input' oninput='planeswalkerEdited();' min='0'>
-			<input id='planeswalker-cost-0' type='text' class='input' oninput='planeswalkerEdited();'>
-			<input id='planeswalker-shift-0' type='number' class='input' oninput='planeswalkerEdited();'>
-		</div>
-		<h5 class='padding margin-bottom input-description'>Second Ability:</h5>
-		<div class='padding input-grid margin-bottom'>
-			<input id='planeswalker-height-1' type='number' class='input' oninput='planeswalkerEdited();' min='0'>
-			<input id='planeswalker-cost-1' type='text' class='input' oninput='planeswalkerEdited();'>
-			<input id='planeswalker-shift-1' type='number' class='input' oninput='planeswalkerEdited();'>
-		</div>
-		<h5 class='padding margin-bottom input-description'>Third Ability:</h5>
-		<div class='padding input-grid margin-bottom'>
-			<input id='planeswalker-height-2' type='number' class='input' oninput='planeswalkerEdited();' min='0'>
-			<input id='planeswalker-cost-2' type='text' class='input' oninput='planeswalkerEdited();'>
-			<input id='planeswalker-shift-2' type='number' class='input' oninput='planeswalkerEdited();'>
-		</div>
-		<h5 class='padding margin-bottom input-description'>Fourth Ability:</h5>
-		<div class='padding input-grid margin-bottom'>
-			<input id='planeswalker-height-3' type='number' class='input' oninput='planeswalkerEdited();' min='0'>
-			<input id='planeswalker-cost-3' type='text' class='input' oninput='planeswalkerEdited();'>
-			<input id='planeswalker-shift-3' type='number' class='input' oninput='planeswalkerEdited();'>
-		</div>
-		<h5 class='padding margin-bottom input-description'>Invert textbox colors:</h5>
-		<input id='planeswalker-invert' class='input margin-bottom' type='checkbox' onchange='invertPlaneswalkerColors();'>
-	</div>`;
 	if (!card.planeswalker) {
 		if (card.version.includes('Compleated')) {
 			card.planeswalker = {abilities:['+1', '0', '-7', ''], abilityAdjust:[0, 0, 0, 0], count:3, x:0.1167, width:0.8094};
@@ -48,7 +15,6 @@ if (!loadedVersions.includes('/js/frames/versionPlaneswalker.js')) {
 		card.planeswalker.abilityAdjust = [-0.0143, -0.0143, -0.0143, -0.0143];
 	}
 	window.planeswalkerAbilityLayout = [[[0.7467], [0.6953, 0.822], [0.6639, 0.7467, 0.8362], [0.6505, 0.72, 0.7905, 0.861]],[[0.72], [0.6391, 0.801], [0.5986, 0.72, 0.8415], [0.5986, 0.6796, 0.7605, 0.8415]]];
-	document.querySelector('#creator-menu-sections').appendChild(newHTML);
 	var plusIcon = new Image();
 	setImageUrl(plusIcon, '/img/frames/planeswalker/planeswalkerPlus.png');
 	var minusIcon = new Image();
@@ -64,9 +30,41 @@ if (!loadedVersions.includes('/js/frames/versionPlaneswalker.js')) {
 	setImageUrl(planeswalkerTextMask, '/img/frames/planeswalker/text.svg');
 	var lightColor = 'white';
 	var darkColor = '#a4a4a4';
-} else {
-	resetPlaneswalkerImages(fixPlaneswalkerInputs(planeswalkerEdited));
 }
+
+registerCardSpecificTextTools({
+	key: 'planeswalker',
+	title: 'Planeswalker',
+	description: 'Set loyalty beside each ability. Fine-tune spacing only when needed.',
+	fieldAccessories: Object.fromEntries([0, 1, 2, 3].map(index => [`ability${index}`, `
+		<label for="planeswalker-cost-${index}"><span>Loyalty cost</span><input id="planeswalker-cost-${index}" type="text" class="input" oninput="planeswalkerEdited();" aria-label="Ability ${index + 1} loyalty cost"></label>
+	`])),
+	layoutDescription: 'Adjust ability heights and the vertical placement of each loyalty badge.',
+	layoutHTML: `
+		<section class="layout-control-group">
+			<div class="layout-control-heading"><h3>Ability boxes</h3><p>Height available to each ability's rules text</p></div>
+			<div class="layout-control-grid">
+				${[0, 1, 2, 3].map(index => `<label class="layout-control-field"><span>Ability ${index + 1} height</span><span class="layout-input-shell"><input id="planeswalker-height-${index}" type="number" class="input" min="0" step="1" oninput="planeswalkerEdited();"><small>px</small></span></label>`).join('')}
+			</div>
+		</section>
+		<section class="layout-control-group">
+			<div class="layout-control-heading"><h3>Loyalty badges</h3><p>Move each loyalty badge vertically from its automatic position</p></div>
+			<div class="layout-control-grid">
+				${[0, 1, 2, 3].map(index => `<label class="layout-control-field"><span>Ability ${index + 1} shift</span><span class="layout-input-shell"><input id="planeswalker-shift-${index}" type="number" class="input" step="1" oninput="planeswalkerEdited();"><small>px</small></span></label>`).join('')}
+			</div>
+		</section>`,
+	advancedHTML: `
+		<label class="checkbox-container input workspace-checkbox card-specific-option-card full-width">
+			<span class="frame-advanced-option-copy"><strong>Invert Textbox Colors</strong><small>Use dark ability boxes for light artwork</small></span>
+			<input id="planeswalker-invert" type="checkbox" onchange="invertPlaneswalkerColors();"><span class="checkmark"></span>
+		</label>`,
+	onRender: () => {
+		fixPlaneswalkerInputs();
+		invertPlaneswalkerColors(true);
+	}
+});
+
+if (!planeswalkerVersionFirstLoad) resetPlaneswalkerImages(fixPlaneswalkerInputs(planeswalkerEdited));
 
 function planeswalkerEdited() {
 	// manage text masks

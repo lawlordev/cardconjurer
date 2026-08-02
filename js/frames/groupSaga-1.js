@@ -21,4 +21,4 @@ loadFramePacks([
 	{name:'Custom Addons', value:'disabled'},
 	{name:'Brawl Legend Crowns', value:'Brawl'}
 ])
-notify('When you load the Saga frame version, a "Saga" tab will appear. This tab controls the placement and chapter counts for Saga chapters.')
+notify('Saga chapter counts are available beside each ability in Card Text. Use the Saga Layout button there to adjust placement.')
