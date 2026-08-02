@@ -30,7 +30,7 @@ availableFrames = [
 	{name:'Legend Crown Border Cover', src:'/img/frames/custom/stoneCutter/stoneCutterDeluxe/blackBar.png', bounds:bounds}
 ];
 // Notification
-notify('When you load the Saga frame version, a "Saga" tab will appear. This tab controls the placement and chapter counts for Saga chapters.')
+notify('Saga chapter counts are available beside each ability in Card Text. Use the Saga Layout button there to adjust placement.')
 //disables/enables the "Load Frame Version" button
 document.querySelector('#loadFrameVersion').disabled = false;
 //defines process for loading this version, if applicable

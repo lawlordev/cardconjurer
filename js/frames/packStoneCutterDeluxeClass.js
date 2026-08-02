@@ -14,7 +14,7 @@ availableFrames = [
 	{name:'Nyx Inlay', src:'/img/frames/custom/stoneCutter/stoneCutterDeluxe/class/nyx.png'}
 ];
 // Notification
-notify('When you load a Class frame version, a "Class" tab will appear. This tab controls the placement and levels for Class abilities.')
+notify('Class levels are edited in Card Text. Use the Class Layout button there to adjust their placement.')
 //disables/enables the "Load Frame Version" button
 document.querySelector('#loadFrameVersion').disabled = false;
 //defines process for loading this version, if applicable

@@ -37,7 +37,7 @@ availableFrames = [
 	{name:'Legend Crown Gradient Corner Fill', src:'/img/frames/custom/stoneCutter/stoneCutterDeluxe/planeswalker/extended/lowerGradient.png', bounds:bounds}
 ];
 // Notification
-notify('When you load a Planeswalker frame version, a "Planeswalker" tab will appear. This tab controls the placement and loyalty costs for Planeswalker abilities.', 10)
+notify('Planeswalker loyalty costs are available beside each ability in Card Text. Use the Planeswalker Layout button there to adjust placement.', 10)
 //disables/enables the "Load Frame Version" button
 document.querySelector('#loadFrameVersion').disabled = false;
 //defines process for loading this version, if applicable

@@ -203,6 +203,8 @@ document.querySelector("#info-year").value = card.infoYear;
 //to avoid rerunning special scripts (planeswalker, saga, etc...)
 
 var loadedVersions = [];
+var activeCardSpecificTextTools = null;
+var cardSpecificLayoutReturnFocus = null;
 //Card Object managament
 async function resetCardIrregularities({canvas = [getStandardWidth(), getStandardHeight(), 0, 0], resetOthers = true} = {}) {
 	//misc details
@@ -236,6 +238,7 @@ async function resetCardIrregularities({canvas = [getStandardWidth(), getStandar
 		}
 	});
 	if (resetOthers) {
+		clearCardSpecificTextTools();
 		setBottomInfoStyle();
 		//onload
 		card.onload = null;
@@ -1329,6 +1332,13 @@ function createTextFieldCard(key, textObject, optionalPlaceholder) {
 		input.oninput = () => textEdited(key, input.value, optionalPlaceholder);
 	}
 	field.appendChild(input);
+	var accessoryHTML = activeCardSpecificTextTools?.fieldAccessories?.[key];
+	if (accessoryHTML && !optionalPlaceholder) {
+		var accessory = document.createElement('div');
+		accessory.className = 'card-specific-field-accessory';
+		accessory.innerHTML = typeof accessoryHTML === 'function' ? accessoryHTML(key, textObject) : accessoryHTML;
+		field.appendChild(accessory);
+	}
 
 	return field;
 }
@@ -1344,6 +1354,7 @@ function renderTextFieldForm(focusState) {
 		if (!card.text[item[0]]) fragment.appendChild(createTextFieldCard(item[0], item[1], true));
 	});
 	form.replaceChildren(fragment);
+	renderCardSpecificTextTools();
 
 	if (focusState) {
 		requestAnimationFrame(() => {
@@ -1355,6 +1366,95 @@ function renderTextFieldForm(focusState) {
 		});
 	}
 }
+
+function registerCardSpecificTextTools(config) {
+	activeCardSpecificTextTools = config || null;
+	renderTextFieldForm(textFieldFocusState());
+}
+
+function clearCardSpecificTextTools() {
+	activeCardSpecificTextTools = null;
+	document.querySelectorAll('.card-specific-field-accessory').forEach(accessory => accessory.remove());
+	var host = document.querySelector('#card-specific-text-tools');
+	if (host) {
+		host.replaceChildren();
+		host.classList.add('hidden');
+	}
+	closeCardSpecificLayoutDrawer(false);
+}
+
+function renderCardSpecificTextTools() {
+	var host = document.querySelector('#card-specific-text-tools');
+	var drawer = document.querySelector('#card-specific-layout-drawer');
+	var drawerBody = document.querySelector('#card-specific-layout-body');
+	if (!host || !drawer || !drawerBody) return;
+	if (!activeCardSpecificTextTools) {
+		host.replaceChildren();
+		host.classList.add('hidden');
+		drawerBody.replaceChildren();
+		drawer.classList.remove('opened');
+		return;
+	}
+
+	var tools = activeCardSpecificTextTools;
+	var inlineHTML = typeof tools.inlineHTML === 'function' ? tools.inlineHTML() : tools.inlineHTML;
+	var layoutHTML = typeof tools.layoutHTML === 'function' ? tools.layoutHTML() : tools.layoutHTML;
+	var advancedHTML = typeof tools.advancedHTML === 'function' ? tools.advancedHTML() : tools.advancedHTML;
+	var hasLayout = Boolean(layoutHTML);
+	var hasAdvanced = Boolean(advancedHTML);
+	host.classList.remove('hidden');
+	host.innerHTML = `
+		<div class="card-specific-tools-heading">
+			<div>
+				<span class="creator-eyebrow">Card-specific</span>
+				<h4>${tools.title || 'Card Tools'}</h4>
+				${tools.description ? `<p>${tools.description}</p>` : ''}
+			</div>
+			${hasLayout ? `<button type="button" class="text-field-layout-button" aria-controls="card-specific-layout-drawer" onclick="openCardSpecificLayoutDrawer(this);">Layout</button>` : ''}
+		</div>
+		${inlineHTML ? `<div class="card-specific-inline-controls">${inlineHTML}</div>` : ''}
+		${hasAdvanced ? `
+			<button type="button" class="card-specific-advanced-toggle" aria-expanded="false" aria-controls="card-specific-advanced-controls" onclick="toggleCardSpecificAdvanced(this);">
+				<span>Advanced</span><span class="card-specific-chevron" aria-hidden="true"></span>
+			</button>
+			<div id="card-specific-advanced-controls" class="card-specific-advanced-controls hidden">${advancedHTML}</div>
+		` : ''}`;
+
+	document.querySelector('#card-specific-layout-title').textContent = `${tools.title || 'Card'} Layout`;
+	document.querySelector('#card-specific-layout-description').textContent = tools.layoutDescription || 'Adjust the placement and dimensions used by this card type.';
+	drawerBody.innerHTML = layoutHTML || '';
+	if (typeof tools.onRender === 'function') tools.onRender();
+}
+
+function toggleCardSpecificAdvanced(button) {
+	var controls = document.querySelector('#card-specific-advanced-controls');
+	if (!controls) return;
+	var expanded = button.getAttribute('aria-expanded') !== 'true';
+	button.setAttribute('aria-expanded', expanded);
+	controls.classList.toggle('hidden', !expanded);
+}
+
+function openCardSpecificLayoutDrawer(trigger) {
+	if (!activeCardSpecificTextTools?.layoutHTML) return;
+	cardSpecificLayoutReturnFocus = trigger || document.activeElement;
+	document.querySelector('#card-specific-layout-drawer')?.classList.add('opened');
+	if (typeof activeCardSpecificTextTools.onLayoutOpen === 'function') activeCardSpecificTextTools.onLayoutOpen();
+	document.querySelector('#card-specific-layout-drawer .textbox-editor-close')?.focus({preventScroll:true});
+}
+
+function closeCardSpecificLayoutDrawer(returnFocus=true) {
+	var drawer = document.querySelector('#card-specific-layout-drawer');
+	if (!drawer) return;
+	drawer.classList.remove('opened');
+	if (returnFocus && cardSpecificLayoutReturnFocus?.isConnected) cardSpecificLayoutReturnFocus.focus({preventScroll:true});
+	cardSpecificLayoutReturnFocus = null;
+}
+
+document.addEventListener('keydown', event => {
+	if (event.key === 'Escape' && document.querySelector('#card-specific-layout-drawer.opened')) {
+		closeCardSpecificLayoutDrawer();
+	}
+});
 
 function syncTextFieldValues() {
 	document.querySelectorAll('.text-field-input').forEach(input => {
@@ -4825,6 +4925,7 @@ function saveCard(saveFromFile) {
 	}
 }
 async function loadCard(selectedCardKey) {
+	clearCardSpecificTextTools();
 	//clear the draggable frames
 	document.querySelector('#frame-list').innerHTML = null;
 	//clear the existing card, then replace it with the new JSON

@@ -9,7 +9,7 @@ var stretch = [
 var bounds = {x:0.8027, y:0.5381, width:0.116, height:0.0829}
 var bounds2 = {x:0.7767, y:0.8881, width:0.1687, height:0.0591}
 // Notification
-notify('When you load the Japanese Mystical Archive frame version, a "Mystical Archive" tab will appear. This tab allows you to control the height of the title bar.', 15);
+notify('Use the Mystical Archive Layout button in Card Text to adjust the title and type bars.', 15);
 //defines available frames
 availableFrames = [
 	{name:'White Frame', src:'/img/frames/mysticalArchive/jp/w.svg', stretch:stretch, masks:masks},
