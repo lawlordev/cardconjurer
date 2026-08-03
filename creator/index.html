@@ -680,7 +680,7 @@
 					</div>
 					<div id='creator-menu-bottomInfo' class='hidden'>
 						<div class='readable-background padding margin-bottom'>
-							<h5 class='padding margin-bottom input-description'>Enter the card number, rarity, set code, language, and artist's name</h5>
+							<h5 class='padding margin-bottom input-description'>Enter the card number, rarity, set code, language, artist's name, and optional copyright</h5>
 							<div class='padding input-grid'>
 								<input id='info-number' type='text' class='input' oninput='bottomInfoEdited();' placeholder='Number' value=''>
 								<input id='info-rarity' type='text' class='input' oninput='bottomInfoEdited(); autoFrameBuffer();' placeholder='Rarity' value='P'>
@@ -694,6 +694,14 @@
 							<div class='padding input-grid'>
 								<input id='info-year' type='number' class='input' oninput='bottomInfoEdited();' placeholder='0' value='1993'>
 							</div>
+							<h5 class='padding input-description'>Copyright (optional, up to two lines)</h5>
+							<div class='padding input-grid'>
+								<textarea id='info-copyright' class='input collector-copyright-input' rows='2' maxlength='160' oninput='limitCollectorCopyrightLines(this); bottomInfoEdited();' placeholder='©MEE&#10;™ &amp; © 2026 Wizards of the Coast' aria-label='Copyright text'></textarea>
+							</div>
+							<label class='checkbox-container input margin-bottom'>Match the first copyright line to the Note font and size
+								<input id='copyrightFirstLineNoteStyle' type='checkbox' onchange='copyrightFirstLineNoteStyleEdited();'>
+								<span class='checkmark'></span>
+							</label>
 						</div>
 						<div class='readable-background padding margin-bottom'>
 							<h5 class='input-description margin-bottom'>Enable importing collector information</h5>

@@ -342,19 +342,18 @@ async function resetCardIrregularities({canvas = [getStandardWidth(), getStandar
 async function setBottomInfoStyle() {
 	if (document.querySelector('#enableNewCollectorStyle').checked) {
 			await loadBottomInfo({
-				midLeft: {text:'{elemidinfo-set} \u2022 {elemidinfo-language}  {savex}{fontbelerenbsc}{fontsize' + scaleHeight(0.001) + '}{upinline' + scaleHeight(0.0005) + '}\uFFEE{savex2}{elemidinfo-artist}', x:0.0647, y:0.9548, width:0.8707, height:0.0171, oneLine:true, font:'gothammedium', size:0.0171, color:card.bottomInfoColor, outlineWidth:0.003},
-				topLeft: {text:'{elemidinfo-rarity} {kerning3}{elemidinfo-number}{kerning0}', x:0.0647, y:0.9377, width:0.8707, height:0.0171, oneLine:true, font:'gothammedium', size:0.0171, color:card.bottomInfoColor, outlineWidth:0.003},
-				note: {text:'{loadx}{elemidinfo-note}', x:0.0647, y:0.9377, width:0.8707, height:0.0171, oneLine:true, font:'gothammedium', size:0.0171, color:card.bottomInfoColor, outlineWidth:0.003},
+				midLeft: {text:'{kerning3}{elemidinfo-set}{kerning0} \u2022 {kerning3}{elemidinfo-language}{kerning0}  {savex}{fontbelerenbsc}{fontsize' + scaleHeight(0.001) + '}{upinline' + scaleHeight(0.0005) + '}\uFFEE{savex2}{elemidinfo-artist}', x:0.0647, y:0.9548, width:0.8707, height:0.0171, oneLine:true, font:'gothammedium', size:0.0171, color:card.bottomInfoColor, outlineWidth:0.003},
+				topLeft: {text:'{elemidinfo-rarity} {right13}{kerning4}{elemidinfo-number}{kerning0}{savex2}', x:0.0647, y:0.9377, width:0.8707, height:0.0171, oneLine:true, font:'gothammedium', size:0.0171, color:card.bottomInfoColor, outlineWidth:0.003, compactCollectorNumber:true},
+				note: {text:'{loadx2} {right13}{elemidinfo-note}', x:0.0647, y:0.9377, width:0.8707, height:0.0171, oneLine:true, font:'gothammedium', size:0.0171, color:card.bottomInfoColor, outlineWidth:0.003},
 				bottomLeft: {text:'NOT FOR SALE', x:0.0647, y:0.9719, width:0.8707, height:0.0143, oneLine:true, font:'gothammedium', size:0.0143, color:card.bottomInfoColor, outlineWidth:0.003},
 				wizards: {name:'wizards', text:'{ptshift0,0.0172}\u2122 & \u00a9 {elemidinfo-year} Wizards of the Coast', x:0.0647, y:0.9377, width:0.8707, height:0.0167, oneLine:true, font:'mplantin', size:0.0162, color:card.bottomInfoColor, align:'right', outlineWidth:0.003},
 				bottomRight: {text:'{ptshift0,0.0172}CardConjurer.com', x:0.0647, y:0.9548, width:0.8707, height:0.0143, oneLine:true, font:'mplantin', size:0.0143, color:card.bottomInfoColor, align:'right', outlineWidth:0.003}
 			});
 		} else {
 			await loadBottomInfo({
-				midLeft: {text:'{elemidinfo-set} \u2022 {elemidinfo-language}  {savex}{fontbelerenbsc}{fontsize' + scaleHeight(0.001) + '}{upinline' + scaleHeight(0.0005) + '}\uFFEE{savex2}{elemidinfo-artist}', x:0.0647, y:0.9548, width:0.8707, height:0.0171, oneLine:true, font:'gothammedium', size:0.0171, color: card.bottomInfoColor, outlineWidth:0.003},
-				topLeft: {text:'{elemidinfo-number}', x:0.0647, y:0.9377, width:0.8707, height:0.0171, oneLine:true, font:'gothammedium', size:0.0171, color:card.bottomInfoColor, outlineWidth:0.003},
-				note: {text:'{loadx2}{elemidinfo-note}', x:0.0647, y:0.9377, width:0.8707, height:0.0171, oneLine:true, font:'gothammedium', size:0.0171, color:card.bottomInfoColor, outlineWidth:0.003},
-				rarity: {text:'{loadx}{elemidinfo-rarity}', x:0.0647, y:0.9377, width:0.8707, height:0.0171, oneLine:true, font:'gothammedium', size:0.0171, color:card.bottomInfoColor, outlineWidth:0.003},
+				midLeft: {text:'{kerning3}{elemidinfo-set}{kerning0} \u2022 {kerning3}{elemidinfo-language}{kerning0}  {savex}{fontbelerenbsc}{fontsize' + scaleHeight(0.001) + '}{upinline' + scaleHeight(0.0005) + '}\uFFEE{savex2}{elemidinfo-artist}', x:0.0647, y:0.9548, width:0.8707, height:0.0171, oneLine:true, font:'gothammedium', size:0.0171, color: card.bottomInfoColor, outlineWidth:0.003},
+				topLeft: {text:'{kerning4}{elemidinfo-number}{kerning0} {right13}{elemidinfo-rarity}{savex2}', x:0.0647, y:0.9377, width:0.8707, height:0.0171, oneLine:true, font:'gothammedium', size:0.0171, color:card.bottomInfoColor, outlineWidth:0.003, compactCollectorNumber:true},
+				note: {text:'{loadx2} {right13}{elemidinfo-note}', x:0.0647, y:0.9377, width:0.8707, height:0.0171, oneLine:true, font:'gothammedium', size:0.0171, color:card.bottomInfoColor, outlineWidth:0.003},
 				bottomLeft: {text:'NOT FOR SALE', x:0.0647, y:0.9719, width:0.8707, height:0.0143, oneLine:true, font:'gothammedium', size:0.0143, color:card.bottomInfoColor, outlineWidth:0.003},
 				wizards: {name:'wizards', text:'{ptshift0,0.0172}\u2122 & \u00a9 {elemidinfo-year} Wizards of the Coast', x:0.0647, y:0.9377, width:0.8707, height:0.0167, oneLine:true, font:'mplantin', size:0.0162, color:card.bottomInfoColor, align:'right', outlineWidth:0.003},
 				bottomRight: {text:'{ptshift0,0.0172}CardConjurer.com', x:0.0647, y:0.9548, width:0.8707, height:0.0143, oneLine:true, font:'mplantin', size:0.0143, color:card.bottomInfoColor, align:'right', outlineWidth:0.003}
@@ -2223,7 +2222,7 @@ function writeText(textObject, targetContext) {
 		var textLineCap = textObject.lineCap || 'round';
 		var textLineJoin = textObject.lineJoin || 'round';
 		var hideBottomInfoBorder = card.hideBottomInfoBorder || false;
-		if (hideBottomInfoBorder && ['midLeft', 'topLeft', 'note', 'bottomLeft', 'wizards', 'bottomRight', 'rarity'].includes(textObject.name)) {
+		if (hideBottomInfoBorder && ['midLeft', 'topLeft', 'note', 'bottomLeft', 'wizards', 'bottomRight', 'rarity', 'copyrightLine1', 'copyrightLine2'].includes(textObject.name)) {
 			textOutlineWidth = 0;
 		}
 		lineContext.lineWidth = textOutlineWidth;
@@ -2456,7 +2455,7 @@ function writeText(textObject, targetContext) {
 					if (word.includes('set')) {
 						var bottomTextSubstring = card.bottomInfo.midLeft.text.substring(0, card.bottomInfo.midLeft.text.indexOf('  {savex}')).replace('{elemidinfo-set}', document.querySelector('#info-set').value || '').replace('{elemidinfo-language}', document.querySelector('#info-language').value || '');
 						justifyWidth = lineContext.measureText(bottomTextSubstring).width;
-					} else if (word.includes('number') && wordToWrite.includes('/') && !['pokemon', '8thPlaytest'].includes(card.version)) {
+					} else if (word.includes('number') && wordToWrite.includes('/') && !textObject.compactCollectorNumber && !['pokemon', '8thPlaytest'].includes(card.version)) {
 						fillJustify = true;
 						wordToWrite = Array.from(wordToWrite).join(' ');
 					}
@@ -3477,6 +3476,115 @@ async function loadBottomInfo(textObjects = []) {
 	card.bottomInfo = textObjects;
 	await bottomInfoEdited();
 }
+function limitCollectorCopyrightLines(input) {
+	var lines = input.value.replace(/\r/g, '').split('\n');
+	if (lines.length > 2) {
+		input.value = lines.slice(0, 2).join('\n');
+	}
+}
+function collectorCopyrightHasStatBox() {
+	var layoutOverride = card.collectorCopyrightLayout || {};
+	if (typeof layoutOverride.hasStatBox == 'boolean') {
+		return layoutOverride.hasStatBox;
+	}
+
+	var frameNames = (card.frames || []).map(frame => String(frame.name || '').toLowerCase());
+	var version = String(card.version || '').toLowerCase();
+	return frameNames.some(name => name.includes('power/toughness') || name.includes('loyalty box') || name == 'loyalty' || name.includes('defense'))
+		|| version.includes('planeswalker') || version.includes('battle');
+}
+function measureCollectorCopyrightLine(text, layout) {
+	lineContext.save();
+	lineContext.letterSpacing = '0px';
+	lineContext.font = scaleHeight(layout.size) + 'px ' + layout.font;
+	var metrics = lineContext.measureText(text.replace(/{[^}]+}/g, ''));
+	lineContext.restore();
+	return {
+		width: metrics.width / card.width,
+		left: (metrics.actualBoundingBoxLeft || 0) / card.width,
+		right: (metrics.actualBoundingBoxRight || metrics.width) / card.width
+	};
+}
+function drawCollectorCopyright() {
+	if (!document.querySelector('#enableNewCollectorStyle').checked) {
+		return;
+	}
+
+	var rawCopyright = document.querySelector('#info-copyright').value || '';
+	if (params.get('copyright') != null) {
+		rawCopyright = params.get('copyright') == 'none' ? '' : params.get('copyright');
+	}
+	var lines = rawCopyright.replace(/\r/g, '').split('\n').slice(0, 2);
+	if (!lines.some(line => line.trim())) {
+		return;
+	}
+	var hasSecondLine = lines.length > 1 && Boolean(lines[1].trim());
+
+	var hasStatBox = collectorCopyrightHasStatBox();
+	var layout = Object.assign({
+		x: 0.56,
+		width: 0.3754,
+		firstY: 0.9377,
+		secondY: 0.9548,
+		height: 0.0143,
+		size: 0.0143,
+		font: 'mplantin'
+	}, card.collectorCopyrightLayout || {});
+	var noteTextObject = card.bottomInfo && card.bottomInfo.note ? card.bottomInfo.note : {};
+	var useNoteStyle = document.querySelector('#copyrightFirstLineNoteStyle').checked;
+	var firstLineLayout = useNoteStyle ? Object.assign({}, layout, {
+		font: noteTextObject.font || 'gothammedium',
+		size: noteTextObject.size || 0.0171,
+		height: noteTextObject.height || 0.0171
+	}) : layout;
+	var secondLineMetrics = hasSecondLine ? measureCollectorCopyrightLine(lines[1], layout) : null;
+	var blockWidth = hasSecondLine ? Math.min(layout.width, secondLineMetrics.width) : layout.width;
+	var blockX = layout.x + layout.width - blockWidth;
+	var common = {
+		x: blockX,
+		width: blockWidth,
+		height: layout.height,
+		oneLine: true,
+		font: layout.font,
+		size: layout.size,
+		color: card.bottomInfoColor,
+		outlineWidth: 0.003
+	};
+
+	var firstLine = Object.assign({}, common, {
+		name: 'copyrightLine1',
+		text: lines[0],
+		y: hasSecondLine ? layout.firstY : layout.secondY,
+		align: hasStatBox && hasSecondLine ? 'left' : 'right',
+		font: firstLineLayout.font,
+		size: firstLineLayout.size,
+		height: firstLineLayout.height
+	});
+	var firstLineMetrics = measureCollectorCopyrightLine(lines[0], firstLineLayout);
+	if (hasStatBox && hasSecondLine) {
+		firstLine.x += firstLineMetrics.left - secondLineMetrics.left;
+	} else {
+		firstLine.x += firstLineMetrics.width - firstLineMetrics.right;
+	}
+	writeText(firstLine, bottomInfoContext);
+
+	if (hasSecondLine) {
+		var secondLine = Object.assign({}, common, {
+			name: 'copyrightLine2',
+			text: lines[1],
+			y: layout.secondY,
+			align: hasStatBox ? 'left' : 'right'
+		});
+		if (!hasStatBox) {
+			secondLine.x += secondLineMetrics.width - secondLineMetrics.right;
+		}
+		writeText(secondLine, bottomInfoContext);
+	}
+}
+function copyrightFirstLineNoteStyleEdited() {
+	card.infoCopyrightFirstLineNoteStyle = document.querySelector('#copyrightFirstLineNoteStyle').checked;
+	bottomInfoEdited();
+}
 async function bottomInfoEdited() {
 	var requestId = ++bottomInfoRenderRequestId;
 	card.infoNumber = document.querySelector('#info-number').value;
@@ -3486,6 +3594,8 @@ async function bottomInfoEdited() {
 	card.infoArtist = document.querySelector('#info-artist').value;
 	card.infoYear = document.querySelector('#info-year').value;
 	card.infoNote = document.querySelector('#info-note').value;
+	card.infoCopyright = document.querySelector('#info-copyright').value;
+	card.infoCopyrightFirstLineNoteStyle = document.querySelector('#copyrightFirstLineNoteStyle').checked;
 	var bottomTextObjects = Object.values(card.bottomInfo || {});
 	var previewCommitId = beginPreviewRenderCommit();
 	await ensureCanvasFontsReady(bottomTextObjects);
@@ -3504,6 +3614,7 @@ async function bottomInfoEdited() {
 			}
 			continue;
 		}
+		drawCollectorCopyright();
 	}
 
 	drawCard();
@@ -3549,9 +3660,9 @@ function toggleStarDot() {
 	defaultCollector.starDot = !defaultCollector.starDot;
 	bottomInfoEdited();
 }
-function enableNewCollectorInfoStyle() {
+async function enableNewCollectorInfoStyle() {
 	localStorage.setItem('enableNewCollectorStyle', document.querySelector('#enableNewCollectorStyle').checked);
-	setBottomInfoStyle();
+	await setBottomInfoStyle();
 	bottomInfoEdited();
 }
 function enableCollectorInfo() {
@@ -3608,6 +3719,8 @@ function setDefaultCollector() {
 		setCode: document.querySelector('#info-set').value,
 		lang: document.querySelector('#info-language').value,
 		note: document.querySelector('#info-note').value,
+		copyright: document.querySelector('#info-copyright').value,
+		copyrightFirstLineNoteStyle: document.querySelector('#copyrightFirstLineNoteStyle').checked,
 		starDot: starDot
 	};
 	localStorage.setItem('defaultCollector', JSON.stringify(defaultCollector));
@@ -5361,6 +5474,8 @@ async function loadCard(selectedCardKey) {
 		document.querySelector('#info-language').value = card.infoLanguage;
 		document.querySelector('#info-note').value = card.infoNote;
 		document.querySelector('#info-year').value = card.infoYear || date.getFullYear();
+		document.querySelector('#info-copyright').value = card.infoCopyright || '';
+		document.querySelector('#copyrightFirstLineNoteStyle').checked = Boolean(card.infoCopyrightFirstLineNoteStyle);
 		artistEdited(card.infoArtist);
 		loadTextOptions(card.text);
 		document.querySelector('#art-x').value = scaleX(card.artX) - scaleWidth(card.marginX);
@@ -5855,6 +5970,8 @@ if ('number' in defaultCollector) {
 	document.querySelector('#info-rarity').value = defaultCollector.rarity;
 	document.querySelector('#info-set').value = defaultCollector.setCode;
 	document.querySelector('#info-language').value = defaultCollector.lang;
+	document.querySelector('#info-copyright').value = defaultCollector.copyright || '';
+	document.querySelector('#copyrightFirstLineNoteStyle').checked = Boolean(defaultCollector.copyrightFirstLineNoteStyle);
 	if (defaultCollector.starDot) {setTimeout(function(){defaultCollector.starDot = false; toggleStarDot();}, 500);}
 } else {
 	document.querySelector('#info-number').value = date.getFullYear();

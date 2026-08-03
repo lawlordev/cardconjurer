@@ -567,6 +567,10 @@ textarea.input {
 	max-height: 20rem;
 	transition: height 0s;
 }
+textarea.collector-copyright-input {
+	min-height: 4.75rem;
+	max-height: 7rem;
+}
 /*Checkboxes*/
 .checkbox-container {
 	display: block;
