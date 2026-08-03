@@ -5,7 +5,7 @@
 })(typeof window !== 'undefined' ? window : globalThis, function() {
 	'use strict';
 
-	var SCHEMA_VERSION = 1;
+	var SCHEMA_VERSION = 2;
 	var RARITIES = ['common', 'uncommon', 'rare', 'mythic'];
 	var SET_SYMBOL_RARITY_CODES = {common: 'c', uncommon: 'u', rare: 'r', mythic: 'm'};
 	var SET_SYMBOL_ALIASES = {anb: 'ana', tsb: 'tsp', pmei: 'sld'};
@@ -194,7 +194,7 @@
 			id: id, setId: setId, cardData: clone(cardData || {}), uiState: {}, rarity: 'common', printingCategory: 'main',
 			frameGroupKey: 'main', frameGroupLabel: 'Main Set', classificationOverride: false,
 			logicalCardId: id, variantKind: null, variantOrder: 0, sortOrder: Date.now(), collectorNumber: '0001',
-			gameplayFingerprint: '', backFace: null, thumbnail: '', thumbnailDirty: true,
+			gameplayFingerprint: '', backFace: null, thumbnail: '', thumbnailDirty: true, printQuantity: 1,
 			createdAt: timestamp, updatedAt: timestamp
 		};
 		card = deriveCard(card);

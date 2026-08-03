@@ -1,0 +1,385 @@
+{
+  "pack": "StoneCutterDeluxeTransformAddons",
+  "frames": [
+    {
+      "name": "Transform Icon",
+      "src": "/img/frames/custom/classicshifted/transform/transformIcon.png",
+      "bounds": {
+        "x": 0.06417910447761194,
+        "y": 0.03695806680881308,
+        "width": 0.0681592039800995,
+        "height": 0.04868514570007108
+      }
+    },
+    {
+      "name": "Sun",
+      "src": "/img/frames/m15/transform/icons/sun.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04299928926794598,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Crescent Moon",
+      "src": "/img/frames/m15/transform/icons/moon.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04299928926794598,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Full Moon",
+      "src": "/img/frames/m15/transform/icons/fullmoon.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04299928926794598,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Emrakul",
+      "src": "/img/frames/m15/transform/icons/emrakul.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04299928926794598,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Compass",
+      "src": "/img/frames/m15/transform/icons/compass.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04299928926794598,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Land",
+      "src": "/img/frames/m15/transform/icons/land.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04299928926794598,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Planeswalker Ember",
+      "src": "/img/frames/m15/transform/icons/spark.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04299928926794598,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Planeswalker Spark",
+      "src": "/img/frames/m15/transform/icons/planeswalker.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04299928926794598,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Lesson",
+      "src": "/img/frames/m15/transform/icons/lesson.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04299928926794598,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Closed Fan",
+      "src": "/img/frames/m15/transform/icons/fanClosed.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04299928926794598,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Open Fan",
+      "src": "/img/frames/m15/transform/icons/fanOpen.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04299928926794598,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Up Arrow",
+      "src": "/img/frames/m15/transform/icons/default.png",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04299928926794598,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Down Arrow",
+      "src": "/img/frames/m15/transform/icons/downArrow.png",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04299928926794598,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Retro Arrow Up",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/retroUp.png",
+      "bounds": {
+        "x": 0.06467661691542288,
+        "y": 0.053304904051172705,
+        "width": 0.0349,
+        "height": 0.0185
+      }
+    },
+    {
+      "name": "Retro Arrow Down",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/retroDown.png",
+      "bounds": {
+        "x": 0.06467661691542288,
+        "y": 0.053304904051172705,
+        "width": 0.0349,
+        "height": 0.0185
+      }
+    },
+    {
+      "name": "White MDFC Arrow",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/transform/w.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Blue MDFC Arrow",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/transform/u.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Black MDFC Arrow",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/transform/b.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Red MDFC Arrow",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/transform/r.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Green MDFC Arrow",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/transform/g.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Multicolored MDFC Arrow",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/transform/m.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Colorless MDFC Arrow",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/transform/c.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Land MDFC Arrow",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/transform/L.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Legend Crown Transform Icon",
+      "src": "/img/frames/custom/classicshifted/transform/transformIcon.png",
+      "bounds": {
+        "x": 0.06417910447761194,
+        "y": 0.042643923240938165,
+        "width": 0.0681592039800995,
+        "height": 0.04868514570007108
+      }
+    },
+    {
+      "name": "Legend Crown Sun",
+      "src": "/img/frames/m15/transform/icons/sun.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04868514570007108,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Legend Crown Crescent Moon",
+      "src": "/img/frames/m15/transform/icons/moon.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04868514570007108,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Legend Crown Full Moon",
+      "src": "/img/frames/m15/transform/icons/fullmoon.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04868514570007108,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Legend Crown Emrakul",
+      "src": "/img/frames/m15/transform/icons/emrakul.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04868514570007108,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Legend Crown Compass",
+      "src": "/img/frames/m15/transform/icons/compass.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04868514570007108,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Legend Crown Land",
+      "src": "/img/frames/m15/transform/icons/land.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04868514570007108,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Legend Crown Planeswalker Ember",
+      "src": "/img/frames/m15/transform/icons/spark.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04868514570007108,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Legend Crown Planeswalker Spark",
+      "src": "/img/frames/m15/transform/icons/planeswalker.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04868514570007108,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Legend Crown Lesson",
+      "src": "/img/frames/m15/transform/icons/lesson.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04868514570007108,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Legend Crown Closed Fan",
+      "src": "/img/frames/m15/transform/icons/fanClosed.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04868514570007108,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Legend Crown Open Fan",
+      "src": "/img/frames/m15/transform/icons/fanOpen.svg",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04868514570007108,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Legend Crown Up Arrow",
+      "src": "/img/frames/m15/transform/icons/default.png",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04868514570007108,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Legend Crown Down Arrow",
+      "src": "/img/frames/m15/transform/icons/downArrow.png",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04868514570007108,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    }
+  ]
+}

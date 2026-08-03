@@ -1,4 +1,12 @@
-# Card Conjurer
+# Set Conjurer
+
+Set Conjurer is a local-first Electron desktop fork of Card Conjurer for building complete custom card sets. It preserves the existing canvas editor while adding application-owned storage, portable card/set files, independently downloadable frame packs, native printing, and user-approved updates. There are no accounts, cloud storage, telemetry, or hosted app.
+
+Card Conjurer was originally created by Kyle Burton (`@ImKyle4815`) and has been maintained by the contributors to this repository. Set Conjurer keeps that lineage explicit; the product rename does not remove their credit. Magic: The Gathering names, symbols, frames, and related assets belong to their respective owners, and this project is not affiliated with or endorsed by Wizards of the Coast.
+
+Desktop development and release instructions live in [docs/desktop-development.md](docs/desktop-development.md) and [docs/desktop-release.md](docs/desktop-release.md). This inherited repository does not currently contain a root open-source license; choosing and adding one is a required maintainer decision before a public release.
+
+## Card Conjurer history
 Card Conjurer was created by a passionate Magic the Gathering player and grew to become probably the most popular online card generator known to the game.
 In November of 2022, Wizards of the Coast served the original creator and webhost of the site with Ceas and Desist paperwork, forcing the site offline.
 This repository is for the purpose of making the application usable on your local machine and maintaining templates in perpetuity.

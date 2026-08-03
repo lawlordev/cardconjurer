@@ -52,9 +52,16 @@
 
 	function envelope(format, payload) {
 		var assets = {};
+		var cards = payload.cards || (payload.card ? [payload.card] : []);
+		var requiredPacks = Array.from(new Set(cards.map(function(card) {
+			var pack = card.uiState && (card.uiState.activeFrameCustomizationPack || card.uiState.activeFramePack);
+			return pack && typeof window !== 'undefined' && window.FRAME_REGISTRY ? window.FRAME_REGISTRY.category(pack) : null;
+		}).filter(Boolean))).map(function(id) { return {id:id, version:'1.0.0'}; });
 		return {
 			format: format,
 			schemaVersion: Model.SCHEMA_VERSION,
+			producer: {name: 'Set Conjurer', compatibility: 'Card Conjurer'},
+			requiredPacks: requiredPacks,
 			exportedAt: new Date().toISOString(),
 			payload: extractAssets(Model.clone(payload), assets),
 			assets: Object.values(assets)
@@ -74,7 +81,7 @@
 		if (!value || typeof value !== 'object') throw new Error('This file does not contain a Card Conjurer export.');
 		if (![CARD_FORMAT, SET_FORMAT].includes(value.format)) throw new Error('Unsupported Card Conjurer file type.');
 		if (expectedFormat && value.format !== expectedFormat) throw new Error('Choose a ' + (expectedFormat === CARD_FORMAT ? 'card' : 'set') + ' file.');
-		if (value.schemaVersion !== Model.SCHEMA_VERSION) throw new Error('Unsupported file schema version ' + value.schemaVersion + '.');
+		if (![1, Model.SCHEMA_VERSION].includes(value.schemaVersion)) throw new Error('Unsupported file schema version ' + value.schemaVersion + '.');
 		if (!value.payload || typeof value.payload !== 'object') throw new Error('The export payload is missing.');
 		var assets = {};
 		(value.assets || []).forEach(function(asset) {
@@ -85,7 +92,7 @@
 		var payload = hydrateAssets(value.payload, assets);
 		if (value.format === CARD_FORMAT && (!payload.card || !payload.setContext)) throw new Error('The card or its set context is missing.');
 		if (value.format === SET_FORMAT && (!payload.set || !Array.isArray(payload.cards))) throw new Error('The set or card list is missing.');
-		return {format: value.format, schemaVersion: value.schemaVersion, exportedAt: value.exportedAt, payload: payload};
+		return {format: value.format, schemaVersion: value.schemaVersion, exportedAt: value.exportedAt, producer: value.producer || null, requiredPacks: value.requiredPacks || [], payload: payload};
 	}
 
 	function cardMatchKey(card) {

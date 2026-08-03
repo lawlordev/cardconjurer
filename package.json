@@ -1,0 +1,54 @@
+{
+  "name": "set-conjurer",
+  "productName": "Set Conjurer",
+  "version": "0.1.0-beta.1",
+  "description": "A local-first desktop fork of Card Conjurer for creating custom card sets.",
+  "author": "Jake Lawlor",
+  "license": "SEE LICENSE IN README.md",
+  "private": true,
+  "engines": {
+    "node": ">=24 <26",
+    "npm": ">=11"
+  },
+  "main": "dist/desktop/main.js",
+  "scripts": {
+    "build:desktop": "tsc -p tsconfig.desktop.json",
+    "start": "npm run build:desktop && electron-forge start",
+    "start:browser": "python3 dev_server.py --host 127.0.0.1 --port 8081",
+    "package": "npm run build:desktop && electron-forge package",
+    "make": "npm run build:desktop && electron-forge make",
+    "make:local": "npm run packs:seed && npm run build:desktop && SET_CONJURER_INCLUDE_DEV_PACKS=1 electron-forge make",
+    "typecheck": "tsc -p tsconfig.desktop.json --noEmit",
+    "lint": "node scripts/check-desktop-security.mjs",
+    "test": "node --test tests/*.test.js tests/desktop/*.test.js tests/packs/*.test.js tests/print/*.test.js",
+    "test:packs": "node --test tests/packs/*.test.js",
+    "test:print": "node --test tests/print/*.test.js",
+    "test:electron": "node scripts/test-electron.mjs",
+    "packs:compile": "node scripts/compile-frame-packs.mjs",
+    "packs:seed": "node scripts/build-local-pack-seed.mjs standard",
+    "package:verify": "node scripts/verify-package.mjs"
+  },
+  "dependencies": {
+    "jszip": "3.10.1",
+    "semver": "7.8.5",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "7.11.2",
+    "@electron-forge/maker-dmg": "7.11.2",
+    "@electron-forge/maker-squirrel": "7.11.2",
+    "@electron-forge/maker-zip": "7.11.2",
+    "@electron-forge/plugin-fuses": "7.11.2",
+    "@electron/fuses": "1.8.0",
+    "@types/node": "24.10.13",
+    "@types/semver": "7.7.1",
+    "electron": "43.2.0",
+    "playwright": "1.62.1",
+    "typescript": "7.0.2"
+  },
+  "allowScripts": {
+    "macos-alias@0.2.12": true,
+    "fs-xattr@0.3.1": true,
+    "electron-winstaller@5.4.4": true
+  }
+}

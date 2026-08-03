@@ -54,6 +54,7 @@
 	}
 
 	async function loadState() {
+		if (typeof window !== 'undefined' && window.setConjurerDesktop) return window.setConjurerDesktop.storage.loadState();
 		var db = await open();
 		var transaction = db.transaction(['sets', 'cards', 'history', 'preferences'], 'readonly');
 		var setsRequest = transaction.objectStore('sets').getAll();
@@ -70,6 +71,7 @@
 	}
 
 	async function saveState(state) {
+		if (typeof window !== 'undefined' && window.setConjurerDesktop) return window.setConjurerDesktop.storage.saveState(state);
 		var db = await open();
 		var transaction = db.transaction(['sets', 'cards', 'history', 'preferences'], 'readwrite');
 		var setStore = transaction.objectStore('sets');
@@ -85,6 +87,7 @@
 	}
 
 	async function deleteDatabaseForTests() {
+		if (typeof window !== 'undefined' && window.setConjurerDesktop) throw new Error('Desktop workspace data can only be cleared from the application data folder.');
 		if (connection) { connection.close(); connection = null; }
 		return new Promise(function(resolve, reject) {
 			var request = indexedDB.deleteDatabase(DB_NAME);

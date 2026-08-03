@@ -1,0 +1,185 @@
+{
+  "pack": "M15Nickname-2",
+  "frames": [
+    {
+      "name": "White Nickname",
+      "src": "/img/frames/m15/nickname/addons/m15NicknameTitleW.png",
+      "masks": [
+        {
+          "src": "/img/frames/m15/nickname/m15MaskNicknameTitleStrokeless.png",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/m15/nickname/m15NicknameMaskTrueName.png",
+          "name": "True Title"
+        }
+      ],
+      "bounds": {
+        "x": 0.0494,
+        "y": 0.0405,
+        "width": 0.9014,
+        "height": 0.1053
+      }
+    },
+    {
+      "name": "Blue Nickname",
+      "src": "/img/frames/m15/nickname/addons/m15NicknameTitleU.png",
+      "masks": [
+        {
+          "src": "/img/frames/m15/nickname/m15MaskNicknameTitleStrokeless.png",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/m15/nickname/m15NicknameMaskTrueName.png",
+          "name": "True Title"
+        }
+      ],
+      "bounds": {
+        "x": 0.0494,
+        "y": 0.0405,
+        "width": 0.9014,
+        "height": 0.1053
+      }
+    },
+    {
+      "name": "Black Nickname",
+      "src": "/img/frames/m15/nickname/addons/m15NicknameTitleB.png",
+      "masks": [
+        {
+          "src": "/img/frames/m15/nickname/m15MaskNicknameTitleStrokeless.png",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/m15/nickname/m15NicknameMaskTrueName.png",
+          "name": "True Title"
+        }
+      ],
+      "bounds": {
+        "x": 0.0494,
+        "y": 0.0405,
+        "width": 0.9014,
+        "height": 0.1053
+      }
+    },
+    {
+      "name": "Red Nickname",
+      "src": "/img/frames/m15/nickname/addons/m15NicknameTitleR.png",
+      "masks": [
+        {
+          "src": "/img/frames/m15/nickname/m15MaskNicknameTitleStrokeless.png",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/m15/nickname/m15NicknameMaskTrueName.png",
+          "name": "True Title"
+        }
+      ],
+      "bounds": {
+        "x": 0.0494,
+        "y": 0.0405,
+        "width": 0.9014,
+        "height": 0.1053
+      }
+    },
+    {
+      "name": "Green Nickname",
+      "src": "/img/frames/m15/nickname/addons/m15NicknameTitleG.png",
+      "masks": [
+        {
+          "src": "/img/frames/m15/nickname/m15MaskNicknameTitleStrokeless.png",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/m15/nickname/m15NicknameMaskTrueName.png",
+          "name": "True Title"
+        }
+      ],
+      "bounds": {
+        "x": 0.0494,
+        "y": 0.0405,
+        "width": 0.9014,
+        "height": 0.1053
+      }
+    },
+    {
+      "name": "Multicolored Nickname",
+      "src": "/img/frames/m15/nickname/addons/m15NicknameTitleM.png",
+      "masks": [
+        {
+          "src": "/img/frames/m15/nickname/m15MaskNicknameTitleStrokeless.png",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/m15/nickname/m15NicknameMaskTrueName.png",
+          "name": "True Title"
+        }
+      ],
+      "bounds": {
+        "x": 0.0494,
+        "y": 0.0405,
+        "width": 0.9014,
+        "height": 0.1053
+      }
+    },
+    {
+      "name": "Artifact Nickname",
+      "src": "/img/frames/m15/nickname/addons/m15NicknameTitleA.png",
+      "masks": [
+        {
+          "src": "/img/frames/m15/nickname/m15MaskNicknameTitleStrokeless.png",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/m15/nickname/m15NicknameMaskTrueName.png",
+          "name": "True Title"
+        }
+      ],
+      "bounds": {
+        "x": 0.0494,
+        "y": 0.0405,
+        "width": 0.9014,
+        "height": 0.1053
+      }
+    },
+    {
+      "name": "Land Nickname",
+      "src": "/img/frames/m15/nickname/addons/m15NicknameTitleL.png",
+      "masks": [
+        {
+          "src": "/img/frames/m15/nickname/m15MaskNicknameTitleStrokeless.png",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/m15/nickname/m15NicknameMaskTrueName.png",
+          "name": "True Title"
+        }
+      ],
+      "bounds": {
+        "x": 0.0494,
+        "y": 0.0405,
+        "width": 0.9014,
+        "height": 0.1053
+      }
+    },
+    {
+      "name": "Colorless Nickname",
+      "src": "/img/frames/m15/nickname/addons/m15NicknameTitleC.png",
+      "masks": [
+        {
+          "src": "/img/frames/m15/nickname/m15MaskNicknameTitleStrokeless.png",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/m15/nickname/m15NicknameMaskTrueName.png",
+          "name": "True Title"
+        }
+      ],
+      "bounds": {
+        "x": 0.0494,
+        "y": 0.0405,
+        "width": 0.9014,
+        "height": 0.1053
+      }
+    }
+  ]
+}

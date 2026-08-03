@@ -1,0 +1,95 @@
+{
+  "pack": "PlaneswalkerTransformIcons",
+  "frames": [
+    {
+      "name": "Sun",
+      "src": "/img/frames/m15/transform/icons/sun.svg",
+      "bounds": {
+        "x": 0.0594,
+        "y": 0.0377,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Crescent Moon",
+      "src": "/img/frames/m15/transform/icons/moon.svg",
+      "bounds": {
+        "x": 0.0594,
+        "y": 0.0377,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Full Moon",
+      "src": "/img/frames/m15/transform/icons/fullmoon.svg",
+      "bounds": {
+        "x": 0.0594,
+        "y": 0.0377,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Emrakul",
+      "src": "/img/frames/m15/transform/icons/emrakul.svg",
+      "bounds": {
+        "x": 0.0594,
+        "y": 0.0377,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Compass",
+      "src": "/img/frames/m15/transform/icons/compass.svg",
+      "bounds": {
+        "x": 0.0594,
+        "y": 0.0377,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Land",
+      "src": "/img/frames/m15/transform/icons/land.svg",
+      "bounds": {
+        "x": 0.0594,
+        "y": 0.0377,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Planeswalker Ember",
+      "src": "/img/frames/m15/transform/icons/spark.svg",
+      "bounds": {
+        "x": 0.0594,
+        "y": 0.0377,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Planeswalker Spark",
+      "src": "/img/frames/m15/transform/icons/planeswalker.svg",
+      "bounds": {
+        "x": 0.0594,
+        "y": 0.0377,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Lesson",
+      "src": "/img/frames/m15/transform/icons/lesson.svg",
+      "bounds": {
+        "x": 0.0594,
+        "y": 0.0377,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    }
+  ]
+}

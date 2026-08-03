@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "compiled": [
+    {
+      "pack": "Brawl",
+      "frameCount": 9
+    },
+    {
+      "pack": "ClassicshiftedCIPips",
+      "frameCount": 6
+    },
+    {
+      "pack": "ClassicshiftedDFC",
+      "frameCount": 11
+    },
+    {
+      "pack": "ClassicshiftedPlaneswalkerTransform",
+      "frameCount": 20
+    },
+    {
+      "pack": "ClassicshiftedTransform",
+      "frameCount": 23
+    },
+    {
+      "pack": "InnerCrownsEtched",
+      "frameCount": 14
+    },
+    {
+      "pack": "LegendCrownsEtched",
+      "frameCount": 10
+    },
+    {
+      "pack": "M15Borders",
+      "frameCount": 3
+    },
+    {
+      "pack": "M15CIPips",
+      "frameCount": 6
+    },
+    {
+      "pack": "M15HoloStamps",
+      "frameCount": 15
+    },
+    {
+      "pack": "M15InnerCrowns",
+      "frameCount": 21
+    },
+    {
+      "pack": "M15LegendCrowns",
+      "frameCount": 10
+    },
+    {
+      "pack": "M15LegendCrownsFloating",
+      "frameCount": 13
+    },
+    {
+      "pack": "M15Miracle",
+      "frameCount": 8
+    },
+    {
+      "pack": "M15Nickname-2",
+      "frameCount": 9
+    },
+    {
+      "pack": "M15SmoothNickname",
+      "frameCount": 26
+    },
+    {
+      "pack": "M15TransformTypes",
+      "frameCount": 14
+    },
+    {
+      "pack": "M15TransformTypesBack",
+      "frameCount": 14
+    },
+    {
+      "pack": "ModalLegendCrowns",
+      "frameCount": 9
+    },
+    {
+      "pack": "ModalLegendCrownsBrawl",
+      "frameCount": 10
+    },
+    {
+      "pack": "ModalLegendCrownsFloating",
+      "frameCount": 11
+    },
+    {
+      "pack": "ModalLegendCrownsNickname",
+      "frameCount": 9
+    },
+    {
+      "pack": "PlaneswalkerHoloStamps",
+      "frameCount": 8
+    },
+    {
+      "pack": "PlaneswalkerMDFC",
+      "frameCount": 12
+    },
+    {
+      "pack": "PlaneswalkerTransformIcons",
+      "frameCount": 9
+    },
+    {
+      "pack": "ShatteredGlass",
+      "frameCount": 4
+    },
+    {
+      "pack": "StoneCutterDeluxeDFC",
+      "frameCount": 28
+    },
+    {
+      "pack": "StoneCutterDeluxeNicknameAddons",
+      "frameCount": 8
+    },
+    {
+      "pack": "StoneCutterDeluxePlaneswalkerTransformAddons",
+      "frameCount": 24
+    },
+    {
+      "pack": "StoneCutterDeluxeTransformAddons",
+      "frameCount": 38
+    },
+    {
+      "pack": "TheList",
+      "frameCount": 2
+    },
+    {
+      "pack": "TransformLegendCrowns",
+      "frameCount": 19
+    },
+    {
+      "pack": "TransformLegendCrownsFloating",
+      "frameCount": 11
+    },
+    {
+      "pack": "TransformLegendCrownsFloatingBackRight",
+      "frameCount": 12
+    },
+    {
+      "pack": "TransformLegendCrownsNickname",
+      "frameCount": 10
+    },
+    {
+      "pack": "UBLegendCrowns",
+      "frameCount": 10
+    },
+    {
+      "pack": "UBLegendCrownsFloating",
+      "frameCount": 12
+    }
+  ],
+  "failed": []
+}

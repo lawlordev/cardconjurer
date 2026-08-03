@@ -1,0 +1,62 @@
+{
+  "pack": "M15Borders",
+  "frames": [
+    {
+      "name": "White Border",
+      "src": "/img/frames/white.png",
+      "masks": [
+        {
+          "src": "/img/frames/m15/m15MaskBorderSliver.png",
+          "name": "Border"
+        },
+        {
+          "src": "/img/frames/m15/m15MaskBorderSliverCrown.png",
+          "name": "Border (With Crown)"
+        },
+        {
+          "src": "/img/frames/m15/regular/m15MaskBorder.png",
+          "name": "Full Border"
+        }
+      ],
+      "noDefaultMask": true
+    },
+    {
+      "name": "Silver Border",
+      "src": "/img/frames/silver.png",
+      "masks": [
+        {
+          "src": "/img/frames/m15/m15MaskBorderSliver.png",
+          "name": "Border"
+        },
+        {
+          "src": "/img/frames/m15/m15MaskBorderSliverCrown.png",
+          "name": "Border (With Crown)"
+        },
+        {
+          "src": "/img/frames/m15/regular/m15MaskBorder.png",
+          "name": "Full Border"
+        }
+      ],
+      "noDefaultMask": true
+    },
+    {
+      "name": "Gold Border",
+      "src": "/img/frames/gold.png",
+      "masks": [
+        {
+          "src": "/img/frames/m15/m15MaskBorderSliver.png",
+          "name": "Border"
+        },
+        {
+          "src": "/img/frames/m15/m15MaskBorderSliverCrown.png",
+          "name": "Border (With Crown)"
+        },
+        {
+          "src": "/img/frames/m15/regular/m15MaskBorder.png",
+          "name": "Full Border"
+        }
+      ],
+      "noDefaultMask": true
+    }
+  ]
+}

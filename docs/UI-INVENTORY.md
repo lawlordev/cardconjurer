@@ -37,6 +37,9 @@
 | Keep card thumbnails current | Final canvas renders patch the active card thumbnail in place and persist it for reloads | `js/creator-23.js`, `js/setWorkspace.js` |
 | Resize workspace panels | `.workspace-resizer` draggable separators with persisted widths | `creator/index.html`, `js/setWorkspace.js` |
 | Hydrate the saved workspace | Full-screen `.creator-loading-screen` until preferences, set data, and the active card finish rendering | `creator/index.html`, `js/setWorkspace.js` |
+| Manage desktop settings and frame packs | Left `.desktop-drawer` built from the existing `.textbox-editor.layout-drawer` header and compact section controls | `js/desktopBridge.js`, `css/style-9.css` |
+| Complete first-run setup | Workspace-themed `.sets-dialog` with compact multi-select pack rows and one primary action | `js/desktopBridge.js`, `css/style-9.css` |
+| Configure and preview print jobs | Full-workspace print view, familiar app-bar controls, card-list thumbnails, and exact-size page previews | `js/desktopBridge.js`, `css/style-9.css` |
 
 ## Framework-widget theming
 - Dialogs: `.sets-dialog` uses workspace surfaces, borders, type, and button treatments — `js/setWorkspace.js`, `css/style-9.css`.

@@ -1,0 +1,55 @@
+name: Desktop CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run packs:compile
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build:desktop
+      - run: npm run test:electron
+
+  package:
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            arch: arm64
+          - os: macos-13
+            arch: x64
+          - os: windows-2025
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run packs:compile
+      - run: npm run build:desktop
+      - run: npx electron-forge package --arch=${{ matrix.arch }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-${{ runner.os }}-${{ matrix.arch }}
+          path: out/**
+          retention-days: 7

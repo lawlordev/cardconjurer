@@ -1,0 +1,247 @@
+{
+  "pack": "StoneCutterDeluxePlaneswalkerTransformAddons",
+  "frames": [
+    {
+      "name": "White Transform Indicator",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/planeswalker/transform/w.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "complementary": 8
+    },
+    {
+      "name": "Blue Transform Indicator",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/planeswalker/transform/u.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "complementary": 8
+    },
+    {
+      "name": "Black Transform Indicator",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/planeswalker/transform/b.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "complementary": 8
+    },
+    {
+      "name": "Red Transform Indicator",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/planeswalker/transform/r.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "complementary": 8
+    },
+    {
+      "name": "Green Transform Indicator",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/planeswalker/transform/g.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "complementary": 8
+    },
+    {
+      "name": "Multicolored Transform Indicator",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/planeswalker/transform/m.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "complementary": 8
+    },
+    {
+      "name": "Colorless Transform Indicator",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/planeswalker/transform/c.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "complementary": 8
+    },
+    {
+      "name": "Frame Cutout",
+      "src": "/img/frames/custom/classicshifted/planeswalker/transform/cutout.svg",
+      "erase": true
+    },
+    {
+      "name": "Transform Icon",
+      "src": "/img/frames/custom/classicshifted/planeswalker/transform/transformIcon.png",
+      "bounds": {
+        "x": 0.0574,
+        "y": 0.041,
+        "width": 0.068,
+        "height": 0.0486
+      }
+    },
+    {
+      "name": "Sun",
+      "src": "/img/frames/m15/transform/icons/sun.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Crescent Moon",
+      "src": "/img/frames/m15/transform/icons/moon.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Full Moon",
+      "src": "/img/frames/m15/transform/icons/fullmoon.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Emrakul",
+      "src": "/img/frames/m15/transform/icons/emrakul.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Compass",
+      "src": "/img/frames/m15/transform/icons/compass.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Land",
+      "src": "/img/frames/m15/transform/icons/land.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Planeswalker Ember",
+      "src": "/img/frames/m15/transform/icons/spark.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Planeswalker Spark",
+      "src": "/img/frames/m15/transform/icons/planeswalker.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Lesson",
+      "src": "/img/frames/m15/transform/icons/lesson.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Closed Fan",
+      "src": "/img/frames/m15/transform/icons/fanClosed.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Open Fan",
+      "src": "/img/frames/m15/transform/icons/fanOpen.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Up Arrow",
+      "src": "/img/frames/m15/transform/icons/default.png",
+      "bounds": {
+        "x": 0.0655,
+        "y": 0.047,
+        "width": 0.05195,
+        "height": 0.0368
+      }
+    },
+    {
+      "name": "Down Arrow",
+      "src": "/img/frames/m15/transform/icons/downArrow.png",
+      "bounds": {
+        "x": 0.0655,
+        "y": 0.047,
+        "width": 0.05195,
+        "height": 0.0368
+      }
+    },
+    {
+      "name": "Retro Arrow Up",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/retroUp.png",
+      "bounds": {
+        "x": 0.0649,
+        "y": 0.0532,
+        "width": 0.0349,
+        "height": 0.0185
+      }
+    },
+    {
+      "name": "Retro Arrow Down",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/retroDown.png",
+      "bounds": {
+        "x": 0.0649,
+        "y": 0.0532,
+        "width": 0.0349,
+        "height": 0.0185
+      }
+    }
+  ]
+}

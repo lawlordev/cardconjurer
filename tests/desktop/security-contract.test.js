@@ -1,0 +1,21 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+
+test('desktop window is sandboxed and preload is context-isolated', () => {
+	const main = fs.readFileSync(path.join(__dirname, '../../desktop/main.ts'), 'utf8');
+	assert.match(main, /nodeIntegration:\s*false/);
+	assert.match(main, /contextIsolation:\s*true/);
+	assert.match(main, /sandbox:\s*true/);
+	assert.match(main, /setWindowOpenHandler/);
+	assert.match(main, /validateSender/);
+});
+
+test('downloaded packs verify checksums and block unsafe archive paths', () => {
+	const service = fs.readFileSync(path.join(__dirname, '../../desktop/services/pack-service.ts'), 'utf8');
+	assert.match(service, /sha256/);
+	assert.match(service, /checkCRC32:\s*true/);
+	assert.match(service, /split\('\/'\)\.includes\('\.\.'\)/);
+	assert.match(service, /symbolic links are not allowed/);
+});

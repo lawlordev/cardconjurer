@@ -1,0 +1,85 @@
+{
+  "pack": "StoneCutterDeluxeNicknameAddons",
+  "frames": [
+    {
+      "name": "White Nickname",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/nickname/w.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Blue Nickname",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/nickname/u.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Black Nickname",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/nickname/b.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Red Nickname",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/nickname/r.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Green Nickname",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/nickname/g.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Multicolored Nickname",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/nickname/m.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Colorless Nickname",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/nickname/c.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Land Nickname",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/nickname/L.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    }
+  ]
+}

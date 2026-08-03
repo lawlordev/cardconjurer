@@ -1,0 +1,365 @@
+{
+  "pack": "PlaneswalkerMDFC",
+  "frames": [
+    {
+      "name": "White Frame (Front)",
+      "src": "/img/frames/planeswalker/mdfc/wf.png",
+      "masks": [
+        {
+          "src": "/img/frames/planeswalker/mdfc/pinline.svg",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/modal/modalMaskReminder.png",
+          "name": "Reminder"
+        },
+        {
+          "src": "/img/frames/planeswalker/mdfc/title.svg",
+          "name": "Title"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskType.png",
+          "name": "Type"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskBorder.png",
+          "name": "Border"
+        },
+        {
+          "src": "/img/frames/planeswalker/maskLoyalty.png",
+          "name": "Loyalty"
+        }
+      ]
+    },
+    {
+      "name": "Blue Frame (Front)",
+      "src": "/img/frames/planeswalker/mdfc/uf.png",
+      "masks": [
+        {
+          "src": "/img/frames/planeswalker/mdfc/pinline.svg",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/modal/modalMaskReminder.png",
+          "name": "Reminder"
+        },
+        {
+          "src": "/img/frames/planeswalker/mdfc/title.svg",
+          "name": "Title"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskType.png",
+          "name": "Type"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskBorder.png",
+          "name": "Border"
+        },
+        {
+          "src": "/img/frames/planeswalker/maskLoyalty.png",
+          "name": "Loyalty"
+        }
+      ]
+    },
+    {
+      "name": "Black Frame (Front)",
+      "src": "/img/frames/planeswalker/mdfc/bf.png",
+      "masks": [
+        {
+          "src": "/img/frames/planeswalker/mdfc/pinline.svg",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/modal/modalMaskReminder.png",
+          "name": "Reminder"
+        },
+        {
+          "src": "/img/frames/planeswalker/mdfc/title.svg",
+          "name": "Title"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskType.png",
+          "name": "Type"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskBorder.png",
+          "name": "Border"
+        },
+        {
+          "src": "/img/frames/planeswalker/maskLoyalty.png",
+          "name": "Loyalty"
+        }
+      ]
+    },
+    {
+      "name": "Red Frame (Front)",
+      "src": "/img/frames/planeswalker/mdfc/rf.png",
+      "masks": [
+        {
+          "src": "/img/frames/planeswalker/mdfc/pinline.svg",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/modal/modalMaskReminder.png",
+          "name": "Reminder"
+        },
+        {
+          "src": "/img/frames/planeswalker/mdfc/title.svg",
+          "name": "Title"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskType.png",
+          "name": "Type"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskBorder.png",
+          "name": "Border"
+        },
+        {
+          "src": "/img/frames/planeswalker/maskLoyalty.png",
+          "name": "Loyalty"
+        }
+      ]
+    },
+    {
+      "name": "Green Frame (Front)",
+      "src": "/img/frames/planeswalker/mdfc/gf.png",
+      "masks": [
+        {
+          "src": "/img/frames/planeswalker/mdfc/pinline.svg",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/modal/modalMaskReminder.png",
+          "name": "Reminder"
+        },
+        {
+          "src": "/img/frames/planeswalker/mdfc/title.svg",
+          "name": "Title"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskType.png",
+          "name": "Type"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskBorder.png",
+          "name": "Border"
+        },
+        {
+          "src": "/img/frames/planeswalker/maskLoyalty.png",
+          "name": "Loyalty"
+        }
+      ]
+    },
+    {
+      "name": "Multicolored Frame (Front)",
+      "src": "/img/frames/planeswalker/mdfc/mf.png",
+      "masks": [
+        {
+          "src": "/img/frames/planeswalker/mdfc/pinline.svg",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/modal/modalMaskReminder.png",
+          "name": "Reminder"
+        },
+        {
+          "src": "/img/frames/planeswalker/mdfc/title.svg",
+          "name": "Title"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskType.png",
+          "name": "Type"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskBorder.png",
+          "name": "Border"
+        },
+        {
+          "src": "/img/frames/planeswalker/maskLoyalty.png",
+          "name": "Loyalty"
+        }
+      ]
+    },
+    {
+      "name": "White Frame (Back)",
+      "src": "/img/frames/planeswalker/mdfc/wb.png",
+      "masks": [
+        {
+          "src": "/img/frames/planeswalker/mdfc/pinline.svg",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/modal/modalMaskReminder.png",
+          "name": "Reminder"
+        },
+        {
+          "src": "/img/frames/planeswalker/mdfc/title.svg",
+          "name": "Title"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskType.png",
+          "name": "Type"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskBorder.png",
+          "name": "Border"
+        },
+        {
+          "src": "/img/frames/planeswalker/maskLoyalty.png",
+          "name": "Loyalty"
+        }
+      ]
+    },
+    {
+      "name": "Blue Frame (Back)",
+      "src": "/img/frames/planeswalker/mdfc/ub.png",
+      "masks": [
+        {
+          "src": "/img/frames/planeswalker/mdfc/pinline.svg",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/modal/modalMaskReminder.png",
+          "name": "Reminder"
+        },
+        {
+          "src": "/img/frames/planeswalker/mdfc/title.svg",
+          "name": "Title"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskType.png",
+          "name": "Type"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskBorder.png",
+          "name": "Border"
+        },
+        {
+          "src": "/img/frames/planeswalker/maskLoyalty.png",
+          "name": "Loyalty"
+        }
+      ]
+    },
+    {
+      "name": "Black Frame (Back)",
+      "src": "/img/frames/planeswalker/mdfc/bb.png",
+      "masks": [
+        {
+          "src": "/img/frames/planeswalker/mdfc/pinline.svg",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/modal/modalMaskReminder.png",
+          "name": "Reminder"
+        },
+        {
+          "src": "/img/frames/planeswalker/mdfc/title.svg",
+          "name": "Title"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskType.png",
+          "name": "Type"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskBorder.png",
+          "name": "Border"
+        },
+        {
+          "src": "/img/frames/planeswalker/maskLoyalty.png",
+          "name": "Loyalty"
+        }
+      ]
+    },
+    {
+      "name": "Red Frame (Back)",
+      "src": "/img/frames/planeswalker/mdfc/rb.png",
+      "masks": [
+        {
+          "src": "/img/frames/planeswalker/mdfc/pinline.svg",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/modal/modalMaskReminder.png",
+          "name": "Reminder"
+        },
+        {
+          "src": "/img/frames/planeswalker/mdfc/title.svg",
+          "name": "Title"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskType.png",
+          "name": "Type"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskBorder.png",
+          "name": "Border"
+        },
+        {
+          "src": "/img/frames/planeswalker/maskLoyalty.png",
+          "name": "Loyalty"
+        }
+      ]
+    },
+    {
+      "name": "Green Frame (Back)",
+      "src": "/img/frames/planeswalker/mdfc/gb.png",
+      "masks": [
+        {
+          "src": "/img/frames/planeswalker/mdfc/pinline.svg",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/modal/modalMaskReminder.png",
+          "name": "Reminder"
+        },
+        {
+          "src": "/img/frames/planeswalker/mdfc/title.svg",
+          "name": "Title"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskType.png",
+          "name": "Type"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskBorder.png",
+          "name": "Border"
+        },
+        {
+          "src": "/img/frames/planeswalker/maskLoyalty.png",
+          "name": "Loyalty"
+        }
+      ]
+    },
+    {
+      "name": "Multicolored Frame (Back)",
+      "src": "/img/frames/planeswalker/mdfc/mb.png",
+      "masks": [
+        {
+          "src": "/img/frames/planeswalker/mdfc/pinline.svg",
+          "name": "Pinline"
+        },
+        {
+          "src": "/img/frames/modal/modalMaskReminder.png",
+          "name": "Reminder"
+        },
+        {
+          "src": "/img/frames/planeswalker/mdfc/title.svg",
+          "name": "Title"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskType.png",
+          "name": "Type"
+        },
+        {
+          "src": "/img/frames/planeswalker/regular/planeswalkerMaskBorder.png",
+          "name": "Border"
+        },
+        {
+          "src": "/img/frames/planeswalker/maskLoyalty.png",
+          "name": "Loyalty"
+        }
+      ]
+    }
+  ]
+}

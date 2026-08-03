@@ -6530,6 +6530,6 @@ updateWatermarkColorControls();
 syncAutomaticWatermarkColors();
 
 // Load / init whatever
-loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+loadScript('/node_modules/jszip/dist/jszip.min.js');
 initDraggableArt();
 window.dispatchEvent(new CustomEvent('cardconjurer:creator-ready'));

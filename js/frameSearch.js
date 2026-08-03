@@ -1086,13 +1086,10 @@ async function loadFrameComponentDefinitions(pack) {
 	const assetPack = FRAME_REGISTRY?.components?.[pack]?.assetPack || pack;
 	if (frameComponentPackCache.has(assetPack)) return frameComponentPackCache.get(assetPack);
 	const localDevelopment = ['127.0.0.1', 'localhost'].includes(window.location.hostname);
-	const response = await fetch('/js/frames/pack' + assetPack + '.js', localDevelopment ? {cache:'no-store'} : undefined);
-	if (!response.ok) throw new Error('Could not load component pack ' + pack);
-	const source = await response.text();
-	const fakeElement = {disabled:false, onclick:null, checked:false, value:''};
-	const fakeDocument = {querySelector:() => fakeElement, querySelectorAll:() => []};
-	const evaluatePack = new Function('document', 'loadFramePack', 'loadFramePacks', 'notify', 'availableFrames', source + '\nreturn availableFrames;');
-	const frames = evaluatePack(fakeDocument, () => {}, () => {}, () => {}, []);
+	const response = await fetch('/generated/frame-definitions/' + encodeURIComponent(assetPack) + '.json', localDevelopment ? {cache:'no-store'} : undefined);
+	if (!response.ok) throw new Error('Could not load compiled component pack ' + pack);
+	const compiled = await response.json();
+	const frames = compiled.frames || [];
 	frameComponentPackCache.set(assetPack, frames);
 	return frames;
 }

@@ -31,6 +31,18 @@ test('rejects unknown versions, malformed envelopes and missing assets', () => {
 	assert.throws(() => Files.validateEnvelope(broken), /missing uploaded asset/);
 });
 
+test('exports schema two metadata and remains compatible with schema one', () => {
+	const {set, card} = fixture();
+	const envelope = Files.createCardEnvelope(card, set);
+	assert.equal(envelope.schemaVersion, 2);
+	assert.equal(envelope.producer.name, 'Set Conjurer');
+	const legacy = structuredClone(envelope);
+	legacy.schemaVersion = 1;
+	delete legacy.producer;
+	delete legacy.requiredPacks;
+	assert.equal(Files.validateEnvelope(legacy).schemaVersion, 1);
+});
+
 test('card import replaces matching gameplay/frame printing', () => {
 	const {set, card} = fixture();
 	const envelope = Files.createCardEnvelope({...card, id: 'foreign'}, set);
@@ -50,4 +62,3 @@ test('set merge gives imported metadata/cards precedence and keeps local-only ca
 	assert.equal(merged.cards.length, 2);
 	assert.equal(merged.cards.find(item => item.id === card.id).cardData.infoArtist, 'Imported Artist');
 });
-
