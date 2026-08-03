@@ -21,6 +21,7 @@ availableFrames = [
 	{name:'Green Enchantment Frame', src:'/img/frames/m15/new/nyx/g.png', masks:masks},
 	{name:'Multicolored Enchantment Frame', src:'/img/frames/m15/new/nyx/m.png', masks:masks},
 	{name:'Artifact Enchantment Frame', src:'/img/frames/m15/new/nyx/a.png', masks:masks},
+	{name:'Colorless Enchantment Frame', src:'/img/frames/m15/nyx/m15FrameCNyx.png', masks:masks},
 
 	{name:'White Power/Toughness', src:'/img/frames/m15/regular/m15PTW.png', bounds:bounds},
 	{name:'Blue Power/Toughness', src:'/img/frames/m15/regular/m15PTU.png', bounds:bounds},

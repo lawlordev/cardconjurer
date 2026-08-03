@@ -84,6 +84,19 @@ window.FRAME_REGISTRY = (() => {
 		StoneCutterDeluxeTransformAddons: {slot:'transform-addons', family:'stonecutter'}
 	};
 
+	// Metadata for catalog profiles that need deterministic, non-color-based
+	// composition. Keeping this here prevents one-off layout packs from silently
+	// failing when the global default color changes.
+	const profiles = {
+		Leveler: {powerToughnessPattern:'{color} PT'},
+		Planechase: {
+			standaloneFrame:'Planar Frame (1)',
+			standaloneFrameByType:{phenomenon:'Planar Frame (Phenomenon)'}
+		},
+		Vanguard: {standaloneFrame:'Vanguard Frame'},
+		Cardback: {standaloneFrame:'Cardback'}
+	};
+
 	const variants = {
 		M15Nyx: {parent:'M15Regular-1', when:'enchantment', precedence:30},
 		M15Snow: {parent:'M15Regular-1', when:'snow', precedence:40},
@@ -91,9 +104,11 @@ window.FRAME_REGISTRY = (() => {
 		Class: {parent:'M15Regular-1', when:'class', precedence:60},
 		Case: {parent:'M15Regular-1', when:'case', precedence:60},
 		SagaRegular: {parent:'M15Regular-1', when:'saga', precedence:60},
+		SagaCreature: {parent:'SagaRegular', groupParent:'M15Regular-1', when:'saga-creature', precedence:80},
 		ClassUB: {parent:'UB', when:'class', precedence:60},
 		CaseUB: {parent:'UB', when:'case', precedence:60},
 		SagaUB: {parent:'UB', when:'saga', precedence:60},
+		SagaCreatureUB: {parent:'SagaUB', groupParent:'UB', when:'saga-creature', precedence:80},
 		EtchedNyx: {parent:'Etched', when:'enchantment', precedence:30},
 		EtchedSnow: {parent:'Etched', when:'snow', precedence:40},
 		M15DarkPT: {parent:'M15Regular-1', mode:'checkbox', control:'Power/Toughness Box', option:'Dark'},
@@ -104,6 +119,12 @@ window.FRAME_REGISTRY = (() => {
 		M15ClearTextboxes: {parent:'M15Regular-1', mode:'select', control:'Style', value:'Full Art'},
 		M15BoxTopper: {parent:'M15Regular-1', mode:'select', control:'Style', value:'Extended Art'},
 		M15ExtendedArtShort: {parent:'M15Regular-1', mode:'select', control:'Style', value:'Extended Art (Shorter Textbox)'},
+		SDCC15: {
+			parent:'M15Regular-1', mode:'select', control:'Style', value:'Blackout', standaloneFrame:'Frame',
+			standaloneAccessories:[{name:'Power/Toughness', when:'creature-or-pt'}]
+		},
+		UBFull: {parent:'UB', mode:'select', control:'Style', value:'Full Art', whenBaseOnly:true},
+		UBExtendedArt: {parent:'UB', mode:'select', control:'Style', value:'Extended Art', whenBaseOnly:true},
 		DoubleFeatureTransform: {parent:'DoubleFeature', mode:'select', control:'Transform', value:'Front'},
 		EquinoxFront: {parent:'Equinox', mode:'select', control:'Transform', value:'Front'},
 		EquinoxBack: {parent:'Equinox', mode:'select', control:'Transform', value:'Back'},
@@ -131,6 +152,8 @@ window.FRAME_REGISTRY = (() => {
 		M15TransformFront: {parent:'M15Regular-1', mode:'select', control:'Style', value:'Transform (Front)'},
 		M15TransformBack: {parent:'M15Regular-1', mode:'select', control:'Style', value:'Transform (Back)'},
 		M15TransformBackNew: {parent:'M15Regular-1', mode:'select', control:'Style', value:'Transform (Back - New)'},
+		'8thTransformFront': {parent:'8th', mode:'select', control:'Style', value:'Transform (Front)'},
+		'8thTransformBack': {parent:'8th', mode:'select', control:'Style', value:'Transform (Back)'},
 		SagaDFC: {parent:'SagaRegular', mode:'select', control:'Transform', value:'Front'},
 		TransformBorderlessFront: {parent:'GenericShowcase', groupParent:'M15Regular-1', mode:'select', control:'Style', value:'Borderless — Transform (Front)'},
 		TransformBorderlessBack: {parent:'GenericShowcase', groupParent:'M15Regular-1', mode:'select', control:'Style', value:'Borderless — Transform (Back)'},
@@ -167,10 +190,10 @@ window.FRAME_REGISTRY = (() => {
 		'booster-fun': new Set([
 			'ShowcasePanel','PixelTMT','SewerTMT','MysticalArchiveSOA','FableECL','NeonInk','Elemental','BorderlessStellarSights','PosterStellarSights','FCA','Draconic','Ghostfire','JapanShowcase','JapanShowcaseNicknames','Paranormal','BloomburrowBorderless','Woodland','MemoryCorridor','BreakingNews','Vault','Wanted','ShowcaseMagnified','Dossier','IxalanLegends1','IxalanLegends2','IxalanLegends3','Scroll','Pipboy','EnchantingTales','TARDIS','Ring','IxalanCoin','Crystal','Ravnica','Tarkir','OilSlick','DMUStainedGlass','SNCGilded','SNCArtDeco','SNCSkyscraper','NeoNinja','NeoSamurai','NeoNeon','DoubleFeature','Fang','Equinox','EternalNight','DNDSourcebook','DNDModule','MH2','MysticalArchive','MysticalArchiveJP','Praetors','Kaldheim-2','KaldheimNonleg','CommanderLegends','ZendikarRising','M21','M15NyxShowcase','Storybook','StorybookWOE','StorybookMUL','ExpeditionZNR-1','SignatureSpellbook','Ixalan','Invocation','InvocationMUL','Invention','ExpeditionBFZ-1','SDCC15','SagaLTR','GenericShowcase','MagicFest','AKHInvocationExtended','TextlessInvention','SeventhTextless','NeonInkTextless','BurningRevelation','NEONeonShort','SNCGildedColored','SNCGildedTextless','EquinoxTextless','MysticalArchiveJPEN'
 		]),
-		tokens: new Set(['ModalHelper','TokenRegular-1','TokenTextless-1','TokenTextlessBorderless','TokenTall-1','TokenShort-1','TokenMonarch','TokenMarker','TokenInitiative','TokenDayNight','Emblem','JMPFront','J22Front','TokenRegularM15','TokenTextlessM15','TokenOld','TokenUnglued','Dungeon']),
+		tokens: new Set(['ModalHelper','TokenRegular-1','TokenTextless-1','TokenTextlessBorderless','TokenTall-1','TokenShort-1','TokenMonarch','TokenMarker','TokenInitiative','TokenDayNight','Emblem','JMPFront','J22Front','TokenRegularM15','TokenTextlessM15','TokenOld','TokenUnglued','Dungeon','Cardback']),
 		basics: new Set(['EOEBasics','NeoBasics','TextlessBasics2022','TextlessBasics2022UB','TextlessBasicsSNC','TextlessBasics','ZendikarBasic-1','FullartBasicRoundBottom','Unfinity','Unstable','Unhinged','SeventhSnowLands']),
-		legacy: new Set(['8thColorshifted','8th','8thUB','Seventh','SeventhButFifth','Fourth','Legends','ABU','FutureRegular','OldSaga','OldFloating']),
-		custom: new Set(['Classicshifted','ClassicshiftedSaga','StoneCutterDeluxe','StoneCutterDeluxeExtended','StoneCutterDeluxeSaga','StoneCutterDeluxeClass','StoneCutterDeluxeCase','Cartoony','CustomNeon','FeuerAmeiseIxalan','FeuerAmeiseKaldheim','CustomCelidAsap','CustomMagraoKaldheim','Pokemon','Circuit','MiscCustom','CustomDeckCover','SimpleInventions','Tapped','CustomDualLands'])
+		legacy: new Set(['8thColorshifted','8th','8thUB','8thPlaytest','Planechase','Seventh','SeventhButFifth','Fourth','Legends','ABU','FutureRegular','OldSaga','OldFloating']),
+		custom: new Set(['Classicshifted','ClassicshiftedSaga','StoneCutterDeluxe','StoneCutterDeluxeExtended','StoneCutterDeluxeSaga','StoneCutterDeluxeClass','StoneCutterDeluxeCase','Cartoony','CustomNeon','FeuerAmeiseIxalan','FeuerAmeiseKaldheim','CustomCelidAsap','CustomMagraoKaldheim','Pokemon','Circuit','MiscCustom','CustomDeckCover','SimpleInventions','Tapped','CustomDualLands','Vanguard'])
 	};
 
 	const families = {
@@ -248,7 +271,7 @@ window.FRAME_REGISTRY = (() => {
 			category: category(pack),
 			family: family(pack),
 			engine: engines.get(pack) || null,
-			details: components[pack] || variants[pack] || null
+			details: components[pack] || variants[pack] || profiles[pack] || null
 		};
 	}
 
@@ -268,6 +291,11 @@ window.FRAME_REGISTRY = (() => {
 			if (packFamily === 'regular') return 'PlaneswalkerRegular';
 			if (packFamily === 'borderless' || packFamily === 'borderless-alt') return 'PlaneswalkerBorderless';
 			return null;
+		}
+
+		if (/\bsaga\b/.test(normalizedType) && /\bcreature\b/.test(normalizedType)) {
+			if (packFamily === 'universes-beyond') return 'SagaCreatureUB';
+			if (packFamily === 'regular') return 'SagaCreature';
 		}
 
 		const enchantmentSubtype = /\b(class|case|saga)\b/.exec(normalizedType)?.[1];
@@ -423,6 +451,7 @@ window.FRAME_REGISTRY = (() => {
 
 	return Object.freeze({
 		components,
+		profiles,
 		variants,
 		families,
 		categories,

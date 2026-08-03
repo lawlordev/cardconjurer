@@ -49,9 +49,7 @@ document.querySelector('#loadFrameVersion').onclick = async function() {
 		pt2: {name:'Reverse PT', text:'', x:257/2100, y:1219/1500, width:1667/2100, height:43/1500, size:(0.0291*2100)/1500, oneLine:true, color:'#666', align:'right', font:'belerenbsc'},
 		defense: {name:'Defense', text:'', x:1920/2100, y:1320/1500, width:86/2100, height:123/1500, size:(0.0372*2100)/1500, color:'white', font:'belerenbsc', oneLine:true, align:'center'}
 	});
-	if (card.text.rules.text == '') {
-		card.text.rules.text = '{i}(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it’s defeated, exile it, then cast it transformed.){/i}\n';
-	}
+	setLayoutOwnedTextDefault('rules', '{i}(As a Siege enters, choose an opponent to protect it. You and others can attack it. When it’s defeated, exile it, then cast it transformed.){/i}\n', 'battle');
 	card.bottomInfoTranslate = {x: -123, y:-2814};
 	card.bottomInfoRotate = 90;
 	card.bottomInfoZoom = 1.4;

@@ -33,7 +33,6 @@ document.querySelector('#loadFrameVersion').onclick = async function() {
 	//sets card version
 	card.version = 'sagaCreature';
 	card.onload = '/js/frames/versionSaga.js';
-	loadScript('/js/frames/versionSaga.js');
 	//art bounds
 	card.artBounds = {x:1009/2010, y:588/2814, width:844/2010, height:1533/2814};
 	autoFitArt();
@@ -44,7 +43,7 @@ document.querySelector('#loadFrameVersion').onclick = async function() {
 	card.watermarkBounds = {x:0.3027, y:0.4748, width:0.3547, height:0.6767};
 	resetWatermark();
 	//text
-	if (card.text.reminder.text == "{i}(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)") {
+	if (card.text?.reminder?.text == "{i}(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)") {
 		card.text.reminder.text = "{i}(As this Saga enters and after your draw step,//{right40}add a lore counter. Sacrifice after III.)";
 	}
 	loadTextOptions({
@@ -59,6 +58,7 @@ document.querySelector('#loadFrameVersion').onclick = async function() {
 		reminder: {name:'Reminder Text', text:'{i}(As this Saga enters and after your draw step,//{right40}add a lore counter. Sacrifice after III.)', x:0.0867, y:0.1160, width:0.844, height:0.0828, size:0.0312, shadowColor:'white'},
 		pt: {name:'Power/Toughness', text:'', x:0.7928, y:0.902, width:0.1367, height:0.0372, size:0.0372, font:'belerenbsc', oneLine:true, align:'center'}
 	});
+	await loadScript('/js/frames/versionSaga.js');
 }
 //loads available frames
 loadFramePack();

@@ -546,6 +546,7 @@ function renderFrameCustomize(basePack = activeFramePack) {
 	const customizations = Object.entries(FRAME_REGISTRY.variants).filter(([pack, details]) => {
 		const groupParent = details.groupParent || details.parent;
 		if ((!roots.has(details.parent) && !roots.has(groupParent)) || !['select', 'checkbox'].includes(details.mode)) return false;
+		if (details.whenBaseOnly && automaticPack && automaticPack !== basePack) return false;
 		if (planeswalkerContext && details.control === 'Transform') return false;
 		if (planeswalkerContext && groupParent === 'M15Regular-1' && details.control === 'Style') return false;
 		if (planeswalkerContext && pack === 'M15DarkPT') return false;

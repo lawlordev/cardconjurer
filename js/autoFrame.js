@@ -334,6 +334,7 @@ function getFrameLetterConfig(frameType) {
 				if (mask === 'Inner Crown') return `innerCrowns/m15InnerCrown${letter}${style}.png`;
 				if (mask === 'PT') return `regular/m15PT${letter}.png`;
 				if (mask === 'Stamp') return `holoStamps/m15HoloStamp${letter}.png`;
+				if (style === 'regular' && letter === 'C') return 'regular/eldrazi.png';
 
 				// Main frame
 				let path = `${style.toLowerCase()}/m15Frame${letter}.png`;
@@ -382,6 +383,10 @@ function getFrameLetterConfig(frameType) {
 					if (style === 'ub') return `ub/pt/${letter.toLowerCase()}.png`;
 					return `regular/m15PT${letter}.png`;
 				}
+				// The accurate M15 set predates a renamed colorless Nyx asset. Reuse
+				// the existing full-resolution texture instead of falling back to a
+				// regular, land, or artifact frame for colorless enchantments.
+				if (style === 'Nyx' && letter === 'C') return 'nyx/m15FrameCNyx.png';
 				
 				// Main frame
 				let stylePath = style !== 'regular' ? `${style.toLowerCase()}/` : '';
@@ -994,6 +999,9 @@ function makeFrameByLetterUnified(frameType, letter, mask = false, maskToRightHa
 	}
 
 	letter = letter.toUpperCase();
+	const requestedLetter = letter;
+	const requestedMask = mask;
+	const requestedStyle = style;
 	
 	// Apply letter transformation (handles stripping land/enchantment indicators, style changes, etc.)
 	let transformResult = config.letterTransform ? config.letterTransform(letter, mask, style) : letter;
@@ -1008,6 +1016,30 @@ function makeFrameByLetterUnified(frameType, letter, mask = false, maskToRightHa
 	// Get human-readable frame name for display
 	let frameNameKey = originalFrameName || letter;
 	var frameName = config.frameNames[frameNameKey];
+
+	// Colorless is the global default, but not every historical frame family
+	// ships a dedicated colorless texture. Give every generated colorless layer
+	// deterministic neutral fallbacks so a missing asset can never blank the
+	// frame: Artifact first, then White as the universal last resort.
+	const withColorlessFallbacks = (frame, pathMask = mask) => {
+		if (!frame || requestedLetter !== 'C' || !frame.src) return frame;
+		frame.fallbackSrcs = ['A', 'W'].map(fallbackLetter => {
+			let fallbackStyle = requestedStyle;
+			let transformedLetter = fallbackLetter;
+			const fallbackTransform = config.letterTransform
+				? config.letterTransform(fallbackLetter, requestedMask, fallbackStyle)
+				: fallbackLetter;
+			if (typeof fallbackTransform === 'object') {
+				transformedLetter = fallbackTransform.letter || transformedLetter;
+				fallbackStyle = fallbackTransform.style !== undefined ? fallbackTransform.style : fallbackStyle;
+			} else {
+				transformedLetter = fallbackTransform;
+			}
+			const fallbackPath = config.pathBuilder(transformedLetter, pathMask, fallbackStyle, extraParam);
+			return fallbackPath ? config.basePath + fallbackPath : null;
+		}).filter((source, index, sources) => source && source !== frame.src && sources.indexOf(source) === index);
+		return frame;
+	};
 
 	// ----------------------------------------------------------------
 	// SPECIAL FRAME ELEMENT HANDLERS
@@ -1050,7 +1082,7 @@ function makeFrameByLetterUnified(frameType, letter, mask = false, maskToRightHa
 		if (maskToRightHalf) {
 			frame.masks.push({'src': '/img/frames/maskRightHalf.png', 'name': 'Right Half'});
 		}
-		return frame;
+		return withColorlessFallbacks(frame, mask);
 	}
 
 	// Inner Crown: The inner Nyx starfield pattern inside legendary crowns
@@ -1064,7 +1096,7 @@ function makeFrameByLetterUnified(frameType, letter, mask = false, maskToRightHa
 		if (maskToRightHalf) {
 			frame.masks.push({'src': '/img/frames/maskRightHalf.png', 'name': 'Right Half'});
 		}
-		return frame;
+		return withColorlessFallbacks(frame, mask);
 	}
 
 	// Holo Stamp
@@ -1092,7 +1124,7 @@ function makeFrameByLetterUnified(frameType, letter, mask = false, maskToRightHa
 		if (maskToRightHalf) {
 			frame.masks.push({'src': '/img/frames/maskRightHalf.png', 'name': 'Right Half'});
 		}
-		return frame;
+		return withColorlessFallbacks(frame, mask);
 	}
 
 	// Plain Stamp: Base holo stamp for Vault frames
@@ -1125,12 +1157,12 @@ function makeFrameByLetterUnified(frameType, letter, mask = false, maskToRightHa
 
 	// Power/Toughness Box: The P/T box for creatures
 	if (mask === 'PT') {
-		return {
+		return withColorlessFallbacks({
 			'name': frameName + ' Power/Toughness',
 			'src': config.basePath + config.pathBuilder(letter, mask, style, extraParam),
 			'masks': [],
 			'bounds': config.bounds.pt
-		};
+		}, mask);
 	}
 
 	// Omen Mask: Special overlay mask for Omen frame type - applies to colored base frame
@@ -1138,7 +1170,7 @@ function makeFrameByLetterUnified(frameType, letter, mask = false, maskToRightHa
 		let maskPathResult = config.maskPath(mask);
 		if (!maskPathResult) return null;
 		
-		return {
+		return withColorlessFallbacks({
 			'name': frameName + ' Frame',
 			'src': config.basePath + config.pathBuilder(letter, false, style, extraParam),
 			'masks': [{
@@ -1146,7 +1178,7 @@ function makeFrameByLetterUnified(frameType, letter, mask = false, maskToRightHa
 				'name': mask
 			}],
 			'bounds': {x: 0, y: 0, width: 1, height: 1}
-		};
+		}, false);
 	}
 
 	// ----------------------------------------------------------------
@@ -1185,7 +1217,7 @@ function makeFrameByLetterUnified(frameType, letter, mask = false, maskToRightHa
 		frame.masks = [];
 	}
 
-	return frame;
+	return withColorlessFallbacks(frame, false);
 }
 
 
@@ -1723,16 +1755,20 @@ async function autoFrame() {
 	var frame = autoFrameInput.value;
 	var selectedProfile = autoFrameInput.dataset.profile || frame;
 	if (frame == 'false') { autoFramePack = null; return; }
+	var typeLineText = card.text?.type?.text || '';
+	var rulesText = card.text?.rules?.text || '';
+	var manaText = card.text?.mana?.text || '';
+	var powerText = card.text?.pt?.text || '';
 
 	if (typeof FRAME_REGISTRY !== 'undefined') {
-		var compatibleProfile = FRAME_REGISTRY.profileForType(selectedProfile, card.text.type.text);
+		var compatibleProfile = FRAME_REGISTRY.profileForType(selectedProfile, typeLineText);
 		if (compatibleProfile !== selectedProfile) {
 			// A Planeswalker style is a temporary specialization of the catalog
 			// frame. When the type stops being a Planeswalker, return to that
 			// catalog frame so its other semantic variants (Saga, Class, etc.) can
 			// be selected normally.
 			var catalogProfile = typeof activeFramePack === 'undefined' ? compatibleProfile : activeFramePack;
-			selectedProfile = FRAME_REGISTRY.profileForType(catalogProfile, card.text.type.text);
+			selectedProfile = FRAME_REGISTRY.profileForType(catalogProfile, typeLineText);
 			frame = FRAME_REGISTRY.engine(selectedProfile) || selectedProfile;
 			autoFrameInput.value = frame;
 			autoFrameInput.dataset.profile = selectedProfile;
@@ -1750,8 +1786,8 @@ async function autoFrame() {
 	// LAND COLOR DETECTION
 	// ----------------------------------------------------------------
 	// For lands, we detect colors from rules text (mana abilities, basic land types)
-	if (card.text.type.text.toLowerCase().includes('land')) {
-		var rules = card.text.rules.text;
+	if (typeLineText.toLowerCase().includes('land')) {
+		var rules = rulesText;
 		
 		// Strip flavor text to avoid false positives
 		var flavorIndex = rules.indexOf('{flavor}');
@@ -1783,19 +1819,19 @@ async function autoFrame() {
 		});
 
 		// Check for basic land types mentioned (Plains, Island, Swamp, Mountain, Forest)
-		if (!colors.includes('W') && (rules.toLowerCase().includes('plains') || card.text.type.text.toLowerCase().includes('plains'))) {
+		if (!colors.includes('W') && (rules.toLowerCase().includes('plains') || typeLineText.toLowerCase().includes('plains'))) {
 			colors.push('W');
 		}
-		if (!colors.includes('U') && (rules.toLowerCase().includes('island') || card.text.type.text.toLowerCase().includes('island'))) {
+		if (!colors.includes('U') && (rules.toLowerCase().includes('island') || typeLineText.toLowerCase().includes('island'))) {
 			colors.push('U');
 		}
-		if (!colors.includes('B') && (rules.toLowerCase().includes('swamp') || card.text.type.text.toLowerCase().includes('swamp'))) {
+		if (!colors.includes('B') && (rules.toLowerCase().includes('swamp') || typeLineText.toLowerCase().includes('swamp'))) {
 			colors.push('B');
 		}
-		if (!colors.includes('R') && (rules.toLowerCase().includes('mountain') || card.text.type.text.toLowerCase().includes('mountain'))) {
+		if (!colors.includes('R') && (rules.toLowerCase().includes('mountain') || typeLineText.toLowerCase().includes('mountain'))) {
 			colors.push('R');
 		}
-		if (!colors.includes('G') && (rules.toLowerCase().includes('forest') || card.text.type.text.toLowerCase().includes('forest'))) {
+		if (!colors.includes('G') && (rules.toLowerCase().includes('forest') || typeLineText.toLowerCase().includes('forest'))) {
 			colors.push('G');
 		}
 
@@ -1823,7 +1859,7 @@ async function autoFrame() {
 		// NON-LAND COLOR DETECTION
 		// ----------------------------------------------------------------
 		// For non-lands, extract colors from mana cost (W, U, B, R, G)
-		colors = [...new Set(card.text.mana.text.toUpperCase().split('').filter(char => ['W', 'U', 'B', 'R', 'G'].includes(char)))];
+		colors = [...new Set(manaText.toUpperCase().split('').filter(char => ['W', 'U', 'B', 'R', 'G'].includes(char)))];
 	}
 	const colorIdentityOverride = typeof getActiveFrameColorIdentityColors === 'function' ? getActiveFrameColorIdentityColors() : null;
 	if (colorIdentityOverride?.length) colors = colorIdentityOverride;
@@ -1835,13 +1871,13 @@ async function autoFrame() {
 	// ----------------------------------------------------------------
 	// FRAME BUILDING & PACK LOADING
 	// ----------------------------------------------------------------
-	const typeVariant = typeof FRAME_REGISTRY == 'undefined' ? null : FRAME_REGISTRY.automaticVariant(selectedProfile, card.text.type.text);
+	const typeVariant = typeof FRAME_REGISTRY == 'undefined' ? null : FRAME_REGISTRY.automaticVariant(selectedProfile, typeLineText);
 	if (typeVariant) {
 		const variantFrames = await loadAutomaticVariantPack(typeVariant, requestId);
 		if (!variantFrames || requestId != autoFrameRequestId) return;
-		await autoFrameFromAvailableFrames(colors, card.text.type.text, typeVariant, variantFrames, requestId);
+		await autoFrameFromAvailableFrames(colors, typeLineText, typeVariant, variantFrames, requestId);
 		if (requestId != autoFrameRequestId) return;
-		if (typeof applyActiveFrameComponents === 'function') await applyActiveFrameComponents(colors, card.text.type.text, requestId);
+		if (typeof applyActiveFrameComponents === 'function') await applyActiveFrameComponents(colors, typeLineText, requestId);
 		return;
 	}
 	const selectedFrames = await restoreSelectedFramePack(selectedProfile, frame, requestId);
@@ -1851,23 +1887,23 @@ async function autoFrame() {
 	const config = getFrameTypeConfig(frame);
 	if (config) {
 		// Build the frame with detected colors
-		await autoFrameUnified(frame, colors, card.text.mana.text, card.text.type.text, card.text.pt.text);
+		await autoFrameUnified(frame, colors, manaText, typeLineText, powerText);
 		
 		// Load the appropriate frame pack script if not already loaded
 		// BorderlessUB uses the Borderless pack
 		var packFrame = (frame == 'BorderlessUB') ? 'Borderless' : frame;
 		
-		const currentTypeVariant = typeof FRAME_REGISTRY == 'undefined' ? null : FRAME_REGISTRY.automaticVariant(selectedProfile, card.text.type.text);
+		const currentTypeVariant = typeof FRAME_REGISTRY == 'undefined' ? null : FRAME_REGISTRY.automaticVariant(selectedProfile, typeLineText);
 		if (!currentTypeVariant && autoFramePack != packFrame) {
 			await loadScript('/js/frames/pack' + packFrame + '.js');
 			if (requestId != autoFrameRequestId) return;
 			autoFramePack = packFrame;
 		}
 	} else {
-		await autoFrameFromAvailableFrames(colors, card.text.type.text, selectedProfile, selectedFrames, requestId);
+		await autoFrameFromAvailableFrames(colors, typeLineText, selectedProfile, selectedFrames, requestId);
 	}
 	if (requestId != autoFrameRequestId) return;
-	if (typeof applyActiveFrameComponents === 'function') await applyActiveFrameComponents(colors, card.text.type.text, requestId);
+	if (typeof applyActiveFrameComponents === 'function') await applyActiveFrameComponents(colors, typeLineText, requestId);
 }
 
 function findAutoFrameColorVariant(frameOptions, desiredColor, typeLine, colors, selectedProfile, requestedFace) {
@@ -1883,7 +1919,6 @@ function findAutoFrameColorVariant(frameOptions, desiredColor, typeLine, colors,
 	const desiredName = desiredColor.toLowerCase();
 	const matchesRequestedFace = entry => !requestedFace || entry.item.name.toLowerCase().includes(`(${requestedFace})`);
 	const colorName = colors.length === 1 ? ({W:'white', U:'blue', B:'black', R:'red', G:'green'})[colors[0]] : null;
-	const isPlaneswalkerProfile = String(selectedProfile || '').startsWith('Planeswalker');
 	return (normalizedType.includes('land') && colorName ? variantFrames.find(entry => {
 		const name = entry.item.name.toLowerCase();
 		return matchesRequestedFace(entry) && name.includes(`${colorName} land frame`);
@@ -1892,7 +1927,7 @@ function findAutoFrameColorVariant(frameOptions, desiredColor, typeLine, colors,
 		return matchesRequestedFace(entry) && name.includes(desiredName) && name.includes('frame');
 	}) || variantFrames.find(entry => matchesRequestedFace(entry) && entry.item.name.toLowerCase().includes(desiredName)) ||
 		(desiredColor === 'Colorless' ? variantFrames.find(entry => matchesRequestedFace(entry) && entry.item.name.toLowerCase().includes('eldrazi frame')) : null) ||
-		(desiredColor === 'Colorless' && isPlaneswalkerProfile ? variantFrames.find(entry => matchesRequestedFace(entry) && entry.item.name.toLowerCase().includes('artifact frame')) : null) ||
+		(desiredColor === 'Colorless' ? variantFrames.find(entry => matchesRequestedFace(entry) && entry.item.name.toLowerCase().includes('artifact frame')) : null) ||
 		(desiredColor === 'Colorless' ? variantFrames.find(entry => matchesRequestedFace(entry) && entry.item.name.toLowerCase().includes('white frame')) : null);
 }
 
@@ -1900,7 +1935,16 @@ async function autoFrameFromAvailableFrames(colors, typeLine, selectedProfile, f
 	if (!frameOptions || !frameOptions.length || requestId != autoFrameRequestId) return;
 	const profileDetails = typeof FRAME_REGISTRY == 'undefined' ? null : FRAME_REGISTRY.definition(selectedProfile)?.details;
 	if (profileDetails?.standaloneFrame) {
-		await autoFrameStandaloneFromAvailableFrames(profileDetails.standaloneFrame, frameOptions, requestId);
+		const normalizedType = String(typeLine || '').toLowerCase();
+		const matchedStandaloneFrame = Object.entries(profileDetails.standaloneFrameByType || {})
+			.find(([type]) => normalizedType.includes(type))?.[1];
+		await autoFrameStandaloneFromAvailableFrames(
+			matchedStandaloneFrame || profileDetails.standaloneFrame,
+			frameOptions,
+			requestId,
+			profileDetails.standaloneAccessories || [],
+			typeLine
+		);
 		return;
 	}
 	if (selectedProfile === 'Prototype' || selectedProfile === 'PrototypeExtended') {
@@ -1955,8 +1999,34 @@ async function autoFrameFromAvailableFrames(colors, typeLine, selectedProfile, f
 		semanticComponents.splice(ptIndex < 0 ? semanticComponents.length : ptIndex, 0, profileStamp);
 	}
 
+	if (profileDetails?.powerToughnessPattern) {
+		// Leveler P/T artwork is a single three-box layer. It belongs to the
+		// Creature card type, not merely to the presence of saved P/T values.
+		// Remove the regular semantic P/T layer first so deleting the final "e"
+		// from Creature removes every box while preserving the entered values.
+		semanticComponents = semanticComponents.filter(frame => !String(frame.name || '').includes('Power/Toughness'));
+		if (/\bcreature\b/.test(normalizedType)) {
+			const profilePTColors = [desiredColor].concat(desiredColor === 'Colorless' ? ['Artifact', 'White'] : []);
+			const profilePT = profilePTColors.map(color => {
+				const name = profileDetails.powerToughnessPattern.replace('{color}', color);
+				return frameOptions.find(frame => frame.name === name);
+			}).find(Boolean);
+			if (profilePT) {
+				const profilePTLayer = JSON.parse(JSON.stringify(profilePT));
+				profilePTLayer.masks = [];
+				semanticComponents.push(profilePTLayer);
+			}
+		}
+	}
+
 	const baseFrame = JSON.parse(JSON.stringify(selectedVariant.item));
 	baseFrame.masks = [];
+	if (desiredColor === 'Colorless') {
+		const neutralFallbacks = ['Artifact', 'White'].map(fallbackColor =>
+			findAutoFrameColorVariant(frameOptions, fallbackColor, typeLine, colors, selectedProfile, requestedFace)?.item?.src
+		).filter((source, index, sources) => source && source !== baseFrame.src && sources.indexOf(source) === index);
+		baseFrame.fallbackSrcs = [...new Set([...(baseFrame.fallbackSrcs || []), ...neutralFallbacks])];
+	}
 	let composedParentFrames = [];
 	if (profileDetails?.composeParent && typeof loadFrameComponentDefinitions === 'function') {
 		const parentComposition = profileDetails.composeParent;
@@ -2031,13 +2101,27 @@ async function autoFramePrototypeFromAvailableFrames(typeLine, frameOptions = av
 	card.frames.reverse();
 }
 
-async function autoFrameStandaloneFromAvailableFrames(frameName, frameOptions = availableFrames, requestId = autoFrameRequestId) {
+async function autoFrameStandaloneFromAvailableFrames(frameName, frameOptions = availableFrames, requestId = autoFrameRequestId, accessories = [], typeLine = '') {
 	const source = frameOptions.find(frame => frame.name === frameName);
 	if (!source) return;
 	const baseFrame = JSON.parse(JSON.stringify(source));
 	baseFrame.masks = [];
 	if (requestId != autoFrameRequestId) return;
-	card.frames = [baseFrame];
+	const normalizedType = String(typeLine || '').toLowerCase();
+	const accessoryFrames = accessories.filter(accessory => {
+		if (!accessory.when) return true;
+		if (accessory.when === 'creature-or-pt') {
+			return normalizedType.includes('creature') || Object.entries(card.text || {}).some(([key, value]) => /^pt\d*$/.test(key) && String(value?.text || '').trim());
+		}
+		return normalizedType.includes(accessory.when);
+	}).map(accessory => frameOptions.find(frame => frame.name === accessory.name)).filter(Boolean).map(frame => {
+		const result = JSON.parse(JSON.stringify(frame));
+		result.masks = [];
+		return result;
+	});
+	const frames = [...accessoryFrames, baseFrame];
+	card.frames = frames.slice().reverse();
 	document.querySelector('#frame-list').innerHTML = '';
-	await addFrame([], baseFrame);
+	for (const frame of card.frames) await addFrame([], frame);
+	card.frames.reverse();
 }

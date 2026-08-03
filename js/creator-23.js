@@ -287,6 +287,7 @@ var savedRollYPosition = null;
 var savedFont = null;
 var savedTextContents = {};
 var savedTextFontSizes = {};
+var layoutOwnedTextDefaults = {};
 //for misc
 var date = new Date();
 card.infoYear = date.getFullYear();
@@ -582,12 +583,16 @@ function getManaSymbol(key) {
 	return mana.get(key);
 }
 //FRAME TAB
+function isDrawableImage(image) {
+	return Boolean(image && image.complete && image.naturalWidth > 0 && image.naturalHeight > 0);
+}
+
 function drawFrames() {
 	frameContext.clearRect(0, 0, frameCanvas.width, frameCanvas.height);
 	var frameToDraw = card.frames.slice().reverse();
 	var haveDrawnPrePTCanvas = false;
 	frameToDraw.forEach(item => {
-		if (item.image) {
+		if (isDrawableImage(item.image) && (item.masks || []).every(mask => isDrawableImage(mask.image))) {
 			if (!haveDrawnPrePTCanvas && drawTextBetweenFrames && item.name.includes('Power/Toughness')) {
 				haveDrawnPrePTCanvas = true;
 				frameContext.globalCompositeOperation = 'source-over';
@@ -844,10 +849,10 @@ function cardFrameProperties(colors, manaCost, typeLine, power, style) {
 			}
 		} else if (colors.length != 0) {
 			rules = colors[0];
-		} else if (style == 'Borderless' && !typeLine.includes('Artifact')) {
-			rules = 'C';
-		} else {
+		} else if (typeLine.includes('Artifact')) {
 			rules = 'A';
+		} else {
+			rules = 'C';
 		}
 	}
 
@@ -895,10 +900,10 @@ function cardFrameProperties(colors, manaCost, typeLine, power, style) {
 		}
 	} else if (colors.length == 1) {
 		typeTitle = colors[0];
-	} else if (style == 'Borderless' && !typeLine.includes('Artifact')) {
-		typeTitle = 'C';
-	} else {
+	} else if (typeLine.includes('Artifact')) {
 		typeTitle = 'A';
+	} else {
+		typeTitle = 'C';
 	}
 
 	var pt;
@@ -946,7 +951,7 @@ function cardFrameProperties(colors, manaCost, typeLine, power, style) {
 	} else if (colors.length == 1) {
 		frame = colors[0];
 	} else {
-		frame = 'L';
+		frame = 'C';
 	}
 
 	var frameRight;
@@ -974,6 +979,30 @@ function setAutoframeNyx(value) {
 }
 
 var autoFramePack;
+
+function frameThumbnailSource(frame, source = frame.src) {
+	if (frame.noThumb || source.includes('/img/black.png')) return fixUri(source);
+	return fixUri(source.replace('.png', 'Thumb.png').replace('.svg', 'Thumb.png'));
+}
+
+function frameFallbackSources(frame) {
+	const sources = [frame.fallbackSrc, ...(Array.isArray(frame.fallbackSrcs) ? frame.fallbackSrcs : [])];
+	const frameName = String(frame.name || '');
+	if (/\b(?:colorless|eldrazi)\b/i.test(frameName)) {
+		const signature = frameName.replace(/\b(?:colorless|eldrazi)\b/i, '').replace(/\s+/g, ' ').trim().toLowerCase();
+		for (const neutralColor of ['Artifact', 'White']) {
+			const exactName = `${neutralColor} ${signature}`.replace(/\s+/g, ' ').trim().toLowerCase();
+			const exactMatch = availableFrames.find(candidate => String(candidate.name || '').toLowerCase() === exactName);
+			const variantMatch = exactMatch || availableFrames.find(candidate => {
+				const candidateName = String(candidate.name || '').toLowerCase();
+				return candidateName.includes(neutralColor.toLowerCase()) && candidateName.includes('frame') &&
+					candidateName.includes('enchantment') === frameName.toLowerCase().includes('enchantment');
+			});
+			if (variantMatch?.src) sources.push(variantMatch.src);
+		}
+	}
+	return sources.filter((source, index) => source && source !== frame.src && sources.indexOf(source) === index);
+}
 
 async function addFrame(additionalMasks = [], loadingFrame = false) {
 	var frameToAdd = JSON.parse(JSON.stringify(availableFrames[selectedFrameIndex]));
@@ -1043,6 +1072,21 @@ async function addFrame(additionalMasks = [], loadingFrame = false) {
 	frameToAdd.image.crossOrigin = 'anonymous'
 	frameToAdd.image.src = blank.src;
 	frameToAdd.image.onload = drawFrames;
+	const fallbackSources = frameFallbackSources(frameToAdd);
+	let fallbackIndex = 0;
+	frameToAdd.image.onerror = function() {
+		const fallbackSource = fallbackSources[fallbackIndex++];
+		if (!fallbackSource) {
+			console.warn(`Could not load frame image or any fallback: ${frameToAdd.src}`);
+			this.onerror = null;
+			this.src = blank.src;
+			return;
+		}
+		console.warn(`Could not load frame image ${this.src}; using ${fallbackSource}`);
+		ImageLoadTracker.track(fixUri(fallbackSource));
+		this.src = fixUri(fallbackSource);
+		if (frameElementImage) frameElementImage.src = frameThumbnailSource(frameToAdd, fallbackSource);
+	};
 	if ('stretch' in frameToAdd) {
 		stretchSVG(frameToAdd);
 	} else {
@@ -1063,11 +1107,16 @@ async function addFrame(additionalMasks = [], loadingFrame = false) {
 	frameElement.ontouchmove = touchMove;
 	frameElement.onclick = frameElementClicked;
 	var frameElementImage = document.createElement('img');
-	if (frameToAdd.noThumb || frameToAdd.src.includes('/img/black.png')) {
-		frameElementImage.src = fixUri(frameToAdd.src);
-	} else {
-		frameElementImage.src = fixUri(frameToAdd.src.replace('.png', 'Thumb.png'));
-	}
+	frameElementImage.src = frameThumbnailSource(frameToAdd);
+	let thumbnailFallbackIndex = 0;
+	frameElementImage.onerror = function() {
+		const fallbackSource = fallbackSources[thumbnailFallbackIndex++];
+		if (!fallbackSource) {
+			this.onerror = null;
+			return;
+		}
+		this.src = frameThumbnailSource(frameToAdd, fallbackSource);
+	};
 	frameElement.appendChild(frameElementImage);
 	var frameElementMask = document.createElement('img');
 	if (maskThumbnail) {
@@ -1338,6 +1387,13 @@ function textFieldFocusState() {
 function loadTextOptions(textObject, replace=true) {
 	var focusState = textFieldFocusState();
 	var oldCardText = card.text || {};
+	Object.entries(layoutOwnedTextDefaults).forEach(([key, ownedDefault]) => {
+		if (oldCardText[key]?.text?.includes(ownedDefault.text)) {
+			oldCardText[key].text = oldCardText[key].text.replace(ownedDefault.text, '');
+			savedTextContents[key] = oldCardText[key].text;
+		}
+		delete layoutOwnedTextDefaults[key];
+	});
 	Object.entries(oldCardText).forEach(item => {
 		savedTextContents[item[0]] = oldCardText[item[0]].text;
 		if (oldCardText[item[0]].fontSize !== undefined) savedTextFontSizes[item[0]] = oldCardText[item[0]].fontSize;
@@ -1375,6 +1431,15 @@ function loadTextOptions(textObject, replace=true) {
 	renderTextFieldForm(focusState);
 	drawTextBuffer();
 	drawNewGuidelines();
+}
+
+function setLayoutOwnedTextDefault(key, text, owner) {
+	if (!card.text?.[key] || card.text[key].text !== '') return false;
+	card.text[key].text = text;
+	layoutOwnedTextDefaults[key] = {text:text, owner:owner || card.version || ''};
+	if (typeof syncTextFieldValues === 'function') syncTextFieldValues();
+	drawTextBuffer();
+	return true;
 }
 
 function setSelectedTextKey(key) {
@@ -5199,16 +5264,20 @@ async function restoreLiveDraftCard() {
 					(frame.frameComposedParentMasks || []).includes(maskName)))
 				: !composedParentFrames.some(frame => frame.frameComposedParentProfile === requiredComposedParent));
 		var obsoleteComposedParent = !restoredDetails?.composeParent && composedParentFrames.length > 0;
-		var savedStyleReapplied = false;
-		if (savedUi?.activeFrameCustomizationPack && typeof applyFrameCustomization === 'function') {
-			await applyFrameCustomization(savedUi.activeFrameCustomizationPack);
-			savedStyleReapplied = true;
+		var savedProfileReapplied = false;
+		// Loading the serialized card restores its frame images, but version-specific
+		// editor fields (Leveler levels, Saga chapters, Mutate cost, etc.) are created
+		// by the pack layout script. Reapply the selected profile on every restore,
+		// then copy the saved field values back into that freshly-created layout.
+		if (restoredProfile && typeof applyFrameCustomization === 'function') {
+			await applyFrameCustomization(restoredProfile);
+			savedProfileReapplied = true;
 		}
-		if (!savedStyleReapplied && (missingComposedParent || obsoleteComposedParent)) {
+		if (!savedProfileReapplied && (missingComposedParent || obsoleteComposedParent)) {
 			if (restoredProfile && typeof applyFrameCustomization === 'function') await applyFrameCustomization(restoredProfile);
 			else if (typeof autoFrame === 'function') await autoFrame();
 		}
-		if (savedStyleReapplied) {
+		if (savedProfileReapplied) {
 			restoreLiveDraftLayout(savedCardObject);
 			await renderLoadedCard(false);
 		}
@@ -5544,9 +5613,9 @@ function loadScript(scriptPath) {
 	}
 	var scriptSource = scriptPath;
 	if (/^\/js\/frames\/pack.+\.js$/.test(scriptPath)) {
-		scriptSource += '?v=20260802-render-engine-2';
+		scriptSource += '?v=20260802-render-engine-4';
 	} else if (/^\/js\/frames\/version.+\.js$/.test(scriptPath)) {
-		scriptSource += '?v=20260802-render-engine-2';
+		scriptSource += '?v=20260802-render-engine-4';
 	}
 	script.setAttribute('src', scriptSource);
 	document.querySelectorAll('head')[0].appendChild(script);
@@ -5554,15 +5623,27 @@ function loadScript(scriptPath) {
 }
 // Stretchable SVGs
 function stretchSVG(frameObject) {
-	xhr = new XMLHttpRequest();
-	xhr.open('GET', fixUri(frameObject.src), true);
-	xhr.overrideMimeType('image/svg+xml');
-	xhr.onload = function(e) {
-		if (this.readyState == 4 && this.status == 200) {
-			frameObject.image.src = 'data:image/svg+xml;charset=utf-8,' + stretchSVGReal((new XMLSerializer).serializeToString(this.responseXML.documentElement), frameObject);
+	const sources = [frameObject.src, ...frameFallbackSources(frameObject)];
+	const trySource = (index) => {
+		if (index >= sources.length) {
+			console.warn(`Could not load stretchable frame image or any fallback: ${frameObject.src}`);
+			frameObject.image.src = blank.src;
+			return;
 		}
-	}
-	xhr.send();
+		const xhr = new XMLHttpRequest();
+		xhr.open('GET', fixUri(sources[index]), true);
+		xhr.overrideMimeType('image/svg+xml');
+		xhr.onload = function() {
+			if (this.readyState == 4 && this.status == 200 && this.responseXML?.documentElement) {
+				frameObject.image.src = 'data:image/svg+xml;charset=utf-8,' + stretchSVGReal((new XMLSerializer).serializeToString(this.responseXML.documentElement), frameObject);
+			} else {
+				trySource(index + 1);
+			}
+		};
+		xhr.onerror = () => trySource(index + 1);
+		xhr.send();
+	};
+	trySource(0);
 }
 function stretchSVGReal(data, frameObject) {
 	var returnData = data;
