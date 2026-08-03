@@ -94,3 +94,23 @@ For example if you add the file:
 You can load it in the "Via URL" box by typing:
 `my_art.jpg`
 then hitting enter.
+
+## Sets workspace
+
+The card creator stores every card inside a set. On first launch it creates `Untitled Set` (`UT1`) with one blank Common card numbered `0001`. New sets continue with `UT2`, `UT3`, and so on.
+
+Sets and cards save continuously in the browser's IndexedDB storage. There are no Save or Cancel buttons. Undo and redo also persist across reloads, with the latest 40 actions retained for each set. This data is local to the browser profile and device, so export important work regularly before clearing browser data or moving to another computer.
+
+The Sets panel provides:
+
+- a searchable card list with collector, alphabetical, and mana-value sorting;
+- color, color-identity, rarity, and card-type filters;
+- shared set details, Markdown story preview, rarity symbols, set code, language, copyright, and collector format;
+- automatic Post-ONE (`0001`) or Pre-ONE (`001/123`) numbering;
+- duplicate, same-frame art variant, treatment variant, move, copy, delete, and universal undo actions;
+- one-card `.cardconjurer-card` and whole-set `.cardconjurer-set` imports and exports;
+- a separate ZIP download containing the rendered images for every card in the active set.
+
+Lettered art variants such as `002a` and `002b` share one collector slot. In Pre-ONE formatting they therefore share the same denominator; a following independent card is `003/003`, even though four image files exist. Treatment variants receive independent collector slots.
+
+Portable card and set files retain external image URLs as URLs and embed images that were uploaded from disk. They preserve frame choice, layers, art positioning, text layout, symbol placement, and the other card-specific rendering settings. Importing a card into a set applies that set's shared symbol, code, language, and copyright values. When a set import matches an existing name or code, the app asks whether to merge or replace it.

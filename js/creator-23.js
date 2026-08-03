@@ -3726,7 +3726,8 @@ function setDefaultCollector() {
 	localStorage.setItem('defaultCollector', JSON.stringify(defaultCollector));
 }
 function drawSetSymbol(cardContext, setSymbol, bounds) {
-    if (!bounds) return;
+	const isImageElement = typeof HTMLImageElement !== 'undefined' && setSymbol instanceof HTMLImageElement;
+	if (!bounds || !setSymbol || !setSymbol.width || !setSymbol.height || (isImageElement && (!setSymbol.complete || !setSymbol.naturalWidth || !setSymbol.naturalHeight))) return;
     
     const symbolWidth = setSymbol.width * card.setSymbolZoom;
     const symbolHeight = setSymbol.height * card.setSymbolZoom; 
@@ -3788,6 +3789,8 @@ function drawSetSymbol(cardContext, setSymbol, bounds) {
     }
 }
 function drawRotatedSetSymbol(context, image, x, y, width, height, rotation = 0) {
+	const isImageElement = typeof HTMLImageElement !== 'undefined' && image instanceof HTMLImageElement;
+	if (!image || !width || !height || (isImageElement && (!image.complete || !image.naturalWidth || !image.naturalHeight))) return;
 	if (!rotation) {
 		context.drawImage(image, x, y, width, height);
 		return;
@@ -5240,11 +5243,13 @@ function loadAvailableCards(cardKeys = JSON.parse(localStorage.getItem('cardKeys
 		cardKeys.sort();
 		localStorage.setItem('cardKeys', JSON.stringify(cardKeys));
 	}
-	document.querySelector('#load-card-options').innerHTML = '<option selected="selected" disabled>None selected</option>';
+	var select = document.querySelector('#load-card-options');
+	if (!select) return;
+	select.innerHTML = '<option selected="selected" disabled>None selected</option>';
 	cardKeys.forEach(item => {
 		var cardKeyOption = document.createElement('option');
 		cardKeyOption.innerHTML = item;
-		document.querySelector('#load-card-options').appendChild(cardKeyOption);
+		select.appendChild(cardKeyOption);
 	});
 }
 
@@ -5271,6 +5276,10 @@ function liveDraftUiSnapshot() {
 
 function saveLiveDraftCard() {
 	if (liveDraftResetInProgress || !card) return;
+	if (window.CardConjurerSets && typeof window.CardConjurerSets.captureActiveCard === 'function') {
+		window.CardConjurerSets.captureActiveCard('Edit card', 'card-edit');
+		return;
+	}
 	try {
 		var liveDraftSnapshot = cardStorageSnapshot();
 		localStorage.setItem(liveDraftCardStorageKey, JSON.stringify(liveDraftSnapshot));
@@ -5281,6 +5290,10 @@ function saveLiveDraftCard() {
 }
 
 function queueLiveDraftSave(delay = 250) {
+	if (window.CardConjurerSets && typeof window.CardConjurerSets.queueCapture === 'function') {
+		window.CardConjurerSets.queueCapture(delay);
+		return;
+	}
 	clearTimeout(liveDraftSaveTimer);
 	liveDraftSaveTimer = setTimeout(saveLiveDraftCard, delay);
 }
@@ -5402,6 +5415,10 @@ async function restoreLiveDraftCard() {
 }
 
 function resetLiveDraftCard() {
+	if (window.CardConjurerSets && typeof window.CardConjurerSets.resetActiveCard === 'function') {
+		window.CardConjurerSets.resetActiveCard();
+		return;
+	}
 	if (!confirm('Reset the current card to the default card?')) return;
 	liveDraftResetInProgress = true;
 	localStorage.removeItem(liveDraftCardStorageKey);
@@ -5458,13 +5475,14 @@ function saveCard(saveFromFile) {
 		notify('You have exceeded your 5MB of local storage, and your card has failed to save. If you would like to continue saving cards, please download all saved cards, then delete all saved cards to free up space.<br><br>Local storage is most often exceeded by uploading large images directly from your computer. If possible/convenient, using a URL avoids the need to save these large images.<br><br>Apologies for the inconvenience.');
 	}
 }
-async function loadCard(selectedCardKey) {
+async function loadCardData(cardData, uiState) {
 	clearCardSpecificTextTools();
 	//clear the draggable frames
 	document.querySelector('#frame-list').innerHTML = null;
 	//clear the existing card, then replace it with the new JSON
 	card = {};
-	card = JSON.parse(localStorage.getItem(selectedCardKey));
+	card = JSON.parse(JSON.stringify(cardData || {}));
+	if (uiState) applyLiveDraftUi(uiState);
 	//if the card was loaded properly...
 	if (card) {
 		//load values from card into html inputs
@@ -5519,8 +5537,17 @@ async function loadCard(selectedCardKey) {
 		});
 		await renderLoadedCard(canvasesResized);
 	} else {
-		notify(selectedCardKey + ' failed to load.', 5)
+		notify('The selected card failed to load.', 5)
 	}
+}
+
+async function loadCard(selectedCardKey) {
+	var saved = localStorage.getItem(selectedCardKey);
+	if (!saved) {
+		notify(selectedCardKey + ' failed to load.', 5);
+		return;
+	}
+	return loadCardData(JSON.parse(saved));
 }
 
 function loadedCardRenderableImages() {
@@ -6041,6 +6068,5 @@ bindInputs('#show-guidelines', '#show-guidelines-2', true);
 
 // Load / init whatever
 loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
-loadAvailableCards();
 initDraggableArt();
-setTimeout(restoreLiveDraftCard, 0);
+window.dispatchEvent(new CustomEvent('cardconjurer:creator-ready'));

@@ -2,7 +2,7 @@
 
 ## Planning metadata
 
-- Status: decision-complete and ready for product review; implementation has not started.
+- Status: implemented and locally verified on `codex/feat/sets`; awaiting human acceptance review.
 - Planning branch: `codex/feat/sets`
 - Base branch: `origin/master`
 - Base commit: `cf1b74cc` (`Add optional copyright text to collector card information`)
@@ -41,7 +41,7 @@ The center remains the live preview and the right remains the card editor. Set S
 - Standard-frame cards are always the first collector group and follow colorless nonartifact, W, U, B, R, G, multicolor, colorless artifact, nonbasic land, and basic land ordering, alphabetically within each bucket.
 - After the main group, the default reorderable group order is Tokens, Borderless, non-Booster-Fun Special Treatments grouped by frame, Booster Fun grouped by frame, and Custom grouped by frame. Cards within every frame group use the standard bucket ordering.
 - Frame group and printing category are inferred from the frame registry when possible and can be corrected manually in Card Details.
-- Post-ONE formatting displays a four-digit number such as `0200`; Pre-ONE displays a three-digit number and the three-digit total of every printing, such as `200/275`.
+- Post-ONE formatting displays a four-digit number such as `0200`; Pre-ONE displays a three-digit number and the three-digit total of collector slots, such as `200/275`. Lettered art variants share one slot in that denominator.
 - Same-frame art variants are linked list entries with `a`, `b`, and subsequent suffixes, occupy the same alphabetical position, and relabel consecutively after deletion.
 - Treatment variants are linked gameplay identities with their own collector numbers in their inferred frame groups.
 - An art or treatment variant automatically unlinks if a gameplay field diverges; an art variant also unlinks if its frame treatment changes.

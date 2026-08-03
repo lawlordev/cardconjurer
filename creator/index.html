@@ -145,26 +145,19 @@
 				</div>
 				<div class='creator-app-context' aria-label='Workspace status'>
 					<span class='creator-status-dot' aria-hidden='true'></span>
-					<span>Local workspace</span>
+					<span id='sets-global-status'>Local workspace</span>
+					<button id='sets-undo-app' type='button' class='creator-app-action' onclick='CardConjurerSets.undo();' aria-label='Undo' title='Undo (Ctrl or Command Z)'>↶</button>
+					<button id='sets-redo-app' type='button' class='creator-app-action' onclick='CardConjurerSets.redo();' aria-label='Redo' title='Redo (Ctrl or Command Shift Z)'>↷</button>
+					<label id='sets-drawer-open' class='creator-app-action sets-drawer-open' for='sets-drawer-toggle' role='button' tabindex='0' aria-controls='sets-workspace' aria-expanded='false'>Sets</label>
 				</div>
 			</div>
+			<input id='sets-drawer-toggle' class='sets-drawer-toggle' type='checkbox' hidden aria-hidden='true'>
 			<div class='creator-grid'>
-				<aside class='creator-library' aria-label='Future set and card workspace'>
-					<div class='creator-panel-heading'>
-						<div>
-							<span class='creator-eyebrow'>Library</span>
-							<h2>Sets &amp; Cards</h2>
-						</div>
-						<span class='creator-future-badge'>Future</span>
+				<label id='sets-drawer-overlay' class='sets-drawer-overlay' for='sets-drawer-toggle' aria-label='Close sets drawer'></label>
+				<aside id='sets-workspace' class='creator-library sets-workspace' aria-label='Sets and cards workspace'>
+					<div id='sets-workspace-content' class='sets-workspace-content' aria-busy='true'>
+						<div class='creator-library-empty'><h3>Opening your sets…</h3><p>Preparing local autosave.</p></div>
 					</div>
-					<div class='creator-library-empty'>
-						<div class='creator-empty-icon' aria-hidden='true'>
-							<span></span><span></span><span></span>
-						</div>
-						<h3>Workspace reserved</h3>
-						<p>This panel is intentionally empty and ready for a future set and card list.</p>
-					</div>
-					<div class='creator-library-foot'>No set data is created or stored here.</div>
 				</aside>
 				<section class='creator-stage' aria-label='Live card preview'>
 					<div class='creator-stage-heading'>
@@ -184,10 +177,9 @@
 					<h3 class='selectable readable-background selected' onclick='toggleCreatorTabs(event, "frame")'>Frame</h3>
 					<h3 class='selectable readable-background' onclick='toggleCreatorTabs(event, "text")'>Text</h3>
 					<h3 class='selectable readable-background' onclick='toggleCreatorTabs(event, "art")'>Art</h3>
-					<h3 class='selectable readable-background' onclick='toggleCreatorTabs(event, "setSymbol")'>Set Symbol</h3>
 					<h3 class='selectable readable-background' onclick='toggleCreatorTabs(event, "watermark")'>Watermark</h3>
-					<h3 class='selectable readable-background' onclick='toggleCreatorTabs(event, "bottomInfo")'>Collector</h3>
-					<h3 class='selectable readable-background' onclick='toggleCreatorTabs(event, "import")'>Import/Save</h3>
+					<h3 class='selectable readable-background' onclick='toggleCreatorTabs(event, "cardDetails")'>Card Details</h3>
+					<h3 class='selectable readable-background' onclick='toggleCreatorTabs(event, "import")'>Import</h3>
 					<h3 class='selectable readable-background' onclick='toggleCreatorTabs(event, "tutorial"); loadTutorialVideo();'>Tutorial</h3>
 				</div>
 				<div id='creator-menu-sections' class='margin-bottom'>
@@ -678,7 +670,8 @@
 							<button class='input margin-bottom' onclick='uploadWatermark(blank.src);'>Remove Watermark</button>
 						</div>
 					</div>
-					<div id='creator-menu-bottomInfo' class='hidden'>
+					<div id='creator-menu-cardDetails' class='hidden'>
+						<div id='sets-card-details-summary' class='readable-background padding margin-bottom'></div>
 						<div class='readable-background padding margin-bottom'>
 							<h5 class='padding margin-bottom input-description'>Enter the card number, rarity, set code, language, artist's name, and optional copyright</h5>
 							<div class='padding input-grid'>
@@ -749,16 +742,6 @@
 								<button class='input padding' onclick='toggleStarDot();'>Toggle Star/Dot</button>
 							</div>
 						</div>
-						<div class='readable-background padding margin-bottom'>
-							<h5 class='input-description padding margin-bottom'>Save current collector info as default</h5>
-							<div class='padding'>
-								<button class='input padding' onclick='setDefaultCollector();'>Save as Default</button>
-							</div>
-							<h5 class='input-description padding margin-bottom'>Clear your saved default collector info</h5>
-							<div class='padding'>
-								<button class='input padding' onclick='removeDefaultCollector();'>Clear Saved Defaults</button>
-							</div>
-						</div>
 					</div>
 					<div id='creator-menu-import' class='hidden'>
 						<div class='readable-background margin-bottom padding'>
@@ -790,33 +773,10 @@
 							<h5 class='padding margin-bottom input-description'>Paste full text</h5>
 							<button class='input margin-bottom' onclick='pasteCardText();'>Paste card</button>
 						</div>
-						<div class='readable-background margin-bottom padding'>
-							<h5 class='padding margin-bottom input-description'>Save your current card</h5>
-							<button class='input margin-bottom' onclick='saveCard();'>Save Card</button>
-							<h5 class='padding margin-bottom input-description'>Load a saved card</h5>
-							<select id='load-card-options' class='input margin-bottom' type='text' onchange='loadCard(this.value);' aria-label='Load a saved card'></select>
-							<h5 class='padding margin-bottom input-description'>Delete selected card</h5>
-							<button class='input' onclick='deleteCard();'>Delete Card</button>
-						</div>
 						<div class='readable-background padding margin-bottom'>
-							<h5 class='padding margin-bottom input-description'>Download all saved cards as a file</h5>
-							<button class='input margin-bottom' onclick='downloadSavedCards();'>Download Cards File</button>
-							<h5 class='padding margin-bottom input-description'>Download all saved card images as a zip file(can take a long time)</h5>
-							<button class='input margin-bottom' onclick="bulkDownloadZip();">Download All Images</button>
-							<h5 class='padding margin-bottom input-description'>Upload previously downloaded file of saved cards (downloaded from above)</h5>
-							<input type='file' accept='.cardconjurer,.txt' class='input margin-bottom' oninput='uploadSavedCards(event);' aria-label='Upload saved cards file'>
-							<h5 class='padding margin-bottom input-description'>Delete ALL saved cards</h5>
-							<button class='input margin-bottom' onclick='deleteSavedCards();'>Delete All</button>
-						</div>
-						<div class='readable-background padding margin-bottom'>
-							<h5 class='collapsible collapsed padding input-description' onclick='toggleCollapse(event);'>
-								How are my cards saved?
-							</h5>
+							<h5 class='padding margin-bottom'>Set-aware imports</h5>
 							<div class='padding'>
-								<h5 class='margin-top'>Cards are saved on your computer under your browser's localstorage, which usually has a limit of 5MB and cannot be changed.</h5>
-								<h5 class='margin-top'>Unfortunately, this means that if you save a lot of cards, you could run out of space.</h5>
-								<h5 class='margin-top'>Your localstorage runs out of space especially fast when you upload images directly from your computer, because the image itself has to be saved. However, if possible, uploading images via URL will save massive amounts of space, allowing you to save many more cards.</h5>
-								<h5 class='margin-top'>And if you do run out of space, don't worry! You can download all saved cards then delete all saved cards,  freeing up all 5MB of space. And when you'd like to edit the cards you previously downloaded/deleted, you can reupload them via the file upload (under "Upload previously downloaded cards").</h5>
+								<p class='input-description'>Card and set files are imported from the Sets &amp; Cards workspace. The active set supplies its symbol, code, language, copyright, and collector style.</p>
 							</div>
 						</div>
 					</div>
@@ -1033,8 +993,5 @@
 	-->
 
 	</div>
-	<script defer src='/js/frameRegistry.js?v=20260802-render-engine-4'></script>
-	<script defer src='/js/autoFrame.js?v=20260802-render-engine-4'></script>
-	<script defer src='/js/creator-23.js?v=20260802-render-engine-4'></script>
-	<script defer src='/js/frameSearch.js?v=20260802-render-engine-4'></script>
+	<div id='creator-script-manifest' hidden data-scripts='/js/frameRegistry.js?v=20260803-sets-4,/js/setModel.js?v=20260803-sets-4,/js/setStorage.js?v=20260803-sets-4,/js/setFiles.js?v=20260803-sets-4,/js/autoFrame.js?v=20260803-sets-4,/js/creator-23.js?v=20260803-sets-4,/js/frameSearch.js?v=20260803-sets-4,/js/setWorkspace.js?v=20260803-sets-4'></div>
 <!-- END OF CONTENT -->

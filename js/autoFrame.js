@@ -1878,6 +1878,7 @@ async function autoFrame() {
 		await autoFrameFromAvailableFrames(colors, typeLineText, typeVariant, variantFrames, requestId);
 		if (requestId != autoFrameRequestId) return;
 		if (typeof applyActiveFrameComponents === 'function') await applyActiveFrameComponents(colors, typeLineText, requestId);
+		if (window.CardConjurerSets?.automaticFrameSettled) window.CardConjurerSets.automaticFrameSettled();
 		return;
 	}
 	const selectedFrames = await restoreSelectedFramePack(selectedProfile, frame, requestId);
@@ -1904,6 +1905,7 @@ async function autoFrame() {
 	}
 	if (requestId != autoFrameRequestId) return;
 	if (typeof applyActiveFrameComponents === 'function') await applyActiveFrameComponents(colors, typeLineText, requestId);
+	if (window.CardConjurerSets?.automaticFrameSettled) window.CardConjurerSets.automaticFrameSettled();
 }
 
 function findAutoFrameColorVariant(frameOptions, desiredColor, typeLine, colors, selectedProfile, requestedFace) {
