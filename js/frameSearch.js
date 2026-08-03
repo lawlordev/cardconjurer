@@ -435,30 +435,111 @@ async function loadFrameCatalogPreview(image) {
 		const response = await fetch('/js/frames/pack' + image.dataset.pack + '.js');
 		if (!response.ok) throw new Error('Preview source could not be loaded');
 		const source = await response.text();
-		const availableFramesIndex = source.search(/availableFrames\s*=/);
-		const frameSource = availableFramesIndex >= 0 ? source.slice(availableFramesIndex) : source;
-		const sourceMatch = frameSource.match(/\bsrc\s*:\s*(['"])([^'"]+)\1/);
-		if (!sourceMatch) throw new Error('Preview image could not be found');
-		setFrameCatalogPreview(image, sourceMatch[2]);
+		const previewSources = selectFrameCatalogPreviewSources(source);
+		if (!previewSources.length) throw new Error('Preview image could not be found');
+		setFrameCatalogPreview(image, previewSources);
 	} catch (error) {
 		image.closest('.frame-catalog-item').classList.add('preview-unavailable');
 	}
 }
 
-function setFrameCatalogPreview(image, source) {
-	const thumbnail = source.replace(/\.png$/i, 'Thumb.png').replace(/\.svg$/i, 'Thumb.png');
-	image.dataset.fallbackStep = '0';
+function selectFrameCatalogPreviewSources(source) {
+	const availableFramesIndex = source.search(/availableFrames\s*=/);
+	const frameSource = availableFramesIndex >= 0 ? source.slice(availableFramesIndex) : source;
+	const arrayStart = frameSource.indexOf('[');
+	const arrayEnd = arrayStart < 0 ? -1 : findFrameCatalogArrayEnd(frameSource, arrayStart);
+	const arraySource = arrayStart < 0 || arrayEnd < 0 ? '' : frameSource.slice(arrayStart + 1, arrayEnd)
+		.replace(/\/\*[\s\S]*?\*\//g, '')
+		.replace(/\/\/.*$/gm, '');
+	const options = parseFrameCatalogOptions(arraySource);
+	const accessoryPattern = /power\s*\/\s*toughness|\bpinline\b|\bholostamp\b|\bholo stamp\b|\bstamp\b|\bcrown\b|\boutline\b|\btextbox\b|\bmask\b|\btype icon\b/i;
+	const previewOptions = options.filter(option => !accessoryPattern.test(option.name));
+	const preferredNames = [/\bcolorless\b/i, /\beldrazi\b/i, /\bartifact\b/i, /\bwhite\b/i];
+	const orderedOptions = [];
+	for (const namePattern of preferredNames) {
+		orderedOptions.push(...previewOptions.filter(option => namePattern.test(option.name)));
+	}
+	orderedOptions.push(...previewOptions.filter(option => /\bframe\b/i.test(option.name)), ...previewOptions, ...options);
+	const fallbackSource = arraySource.match(/\bsrc\s*:\s*(['"])([^'"]+)\1/)?.[2];
+	if (fallbackSource) orderedOptions.push({name:'Fallback', src:fallbackSource});
+	return orderedOptions.map(option => option.src).filter((src, index, sources) => src && sources.indexOf(src) == index);
+}
+
+function findFrameCatalogArrayEnd(source, arrayStart) {
+	let depth = 0;
+	let quote = '';
+	let escaped = false;
+	for (let index = arrayStart; index < source.length; index++) {
+		const character = source[index];
+		if (quote) {
+			if (escaped) escaped = false;
+			else if (character == '\\') escaped = true;
+			else if (character == quote) quote = '';
+			continue;
+		}
+		if (character == "'" || character == '"' || character == '`') {
+			quote = character;
+			continue;
+		}
+		if (character == '[') depth++;
+		else if (character == ']' && --depth == 0) return index;
+	}
+	return -1;
+}
+
+function parseFrameCatalogOptions(arraySource) {
+	const options = [];
+	let objectStart = -1;
+	let objectDepth = 0;
+	let quote = '';
+	let escaped = false;
+	for (let index = 0; index < arraySource.length; index++) {
+		const character = arraySource[index];
+		if (quote) {
+			if (escaped) escaped = false;
+			else if (character == '\\') escaped = true;
+			else if (character == quote) quote = '';
+			continue;
+		}
+		if (character == "'" || character == '"' || character == '`') {
+			quote = character;
+			continue;
+		}
+		if (character == '{') {
+			if (objectDepth++ == 0) objectStart = index;
+		} else if (character == '}' && --objectDepth == 0 && objectStart >= 0) {
+			const objectSource = arraySource.slice(objectStart, index + 1);
+			const name = frameCatalogLiteralProperty(objectSource, 'name');
+			const src = frameCatalogLiteralProperty(objectSource, 'src');
+			if (name && src) options.push({name:name, src:src});
+			objectStart = -1;
+		}
+	}
+	return options;
+}
+
+function frameCatalogLiteralProperty(source, property) {
+	const match = source.match(new RegExp('\\b' + property + '\\s*:\\s*([\\\'"])((?:\\\\.|(?!\\1)[\\s\\S])*)\\1'));
+	return match ? match[2].replace(/\\(['"\\])/g, '$1') : '';
+}
+
+function setFrameCatalogPreview(image, sources) {
+	const candidates = sources.flatMap(source => {
+		const thumbnail = source.replace(/\.png$/i, 'Thumb.png').replace(/\.svg$/i, 'Thumb.png');
+		return thumbnail == source ? [source] : [thumbnail, source];
+	}).filter((source, index, allSources) => allSources.indexOf(source) == index);
+	let candidateIndex = 0;
 	image.onerror = function() {
-		if (this.dataset.fallbackStep == '0' && thumbnail != source) {
-			this.dataset.fallbackStep = '1';
-			this.src = frameCatalogUri(source);
+		candidateIndex++;
+		if (candidateIndex < candidates.length) {
+			this.src = frameCatalogUri(candidates[candidateIndex]);
 			return;
 		}
 		this.onerror = null;
 		this.closest('.frame-catalog-item').classList.add('preview-unavailable');
 		this.src = '/img/blackThumb.png';
 	};
-	image.src = frameCatalogUri(thumbnail);
+	image.src = frameCatalogUri(candidates[0]);
 }
 
 function frameCatalogUri(source) {
@@ -489,6 +570,7 @@ async function selectFrameCatalogItem(name, pack, tile) {
 		if (status) status.textContent = name + ' loaded. Choose an image and mask below.';
 	} catch (error) {
 		if (selectionToken != frameCatalogSelectionToken) return;
+		console.error('Failed to load frame pack "' + pack + '".', error);
 		if (tile) tile.classList.add('load-failed');
 		if (status) status.textContent = name + ' could not be loaded.';
 	} finally {
@@ -1054,6 +1136,7 @@ async function applyActiveFrameComponents(colors, typeLine, requestId) {
 
 	const colorName = frameCustomizeColorName(colors, typeLine);
 	const layers = [];
+	let borderPlacement = null;
 	for (const [slot, selection] of selections) {
 		const definitions = await loadFrameComponentDefinitions(selection.pack);
 		const clone = frame => {
@@ -1078,8 +1161,23 @@ async function applyActiveFrameComponents(colors, typeLine, requestId) {
 			const source = definitions.find(frame => frame.name === selection.frame);
 			if (source) {
 				const border = clone(source);
-				border.masks = border.masks.filter(mask => mask.name === 'Full Border');
-				layers.push(border);
+				const borderIndex = card.frames.findIndex(frame =>
+					(frame.masks || []).some(mask => /^(?:full )?border$/i.test(mask.name || ''))
+				);
+				if (borderIndex >= 0) {
+					border.masks = JSON.parse(JSON.stringify(card.frames[borderIndex].masks || []));
+					borderPlacement = {layer:border, index:borderIndex, replace:true};
+				} else {
+					border.masks = border.masks.filter(mask => mask.name === 'Full Border');
+					const baseFrameIndex = card.frames.findIndex(frame => {
+						const bounds = frame.bounds || {};
+						const isFullCard = (bounds.x || 0) === 0 && (bounds.y || 0) === 0 &&
+							(bounds.width || 1) === 1 && (bounds.height || 1) === 1;
+						return isFullCard && !(frame.masks || []).length && /\bframe\b/i.test(frame.name || '');
+					});
+					if (baseFrameIndex >= 0) borderPlacement = {layer:border, index:baseFrameIndex, replace:false};
+					else layers.push(border);
+				}
 			}
 		} else if (selection.pack === 'M15CIPips' || selection.pack === 'ClassicshiftedCIPips') {
 			const pipColors = colors.length ? colors.slice(0, 5) : ['W'];
@@ -1138,8 +1236,20 @@ async function applyActiveFrameComponents(colors, typeLine, requestId) {
 			if (source) layers.unshift(clone(source));
 		}
 	}
-	if (!layers.length) return;
+	if (!layers.length && !borderPlacement) return;
 	if (requestId && typeof autoFrameRequestId !== 'undefined' && requestId !== autoFrameRequestId) return;
+	if (borderPlacement) {
+		const frameList = document.querySelector('#frame-list');
+		const currentElement = frameList?.children[borderPlacement.index] || null;
+		if (borderPlacement.replace) card.frames.splice(borderPlacement.index, 1, borderPlacement.layer);
+		else card.frames.splice(borderPlacement.index, 0, borderPlacement.layer);
+		await addFrame([], borderPlacement.layer);
+		const borderElement = frameList?.firstElementChild;
+		if (borderElement && currentElement) {
+			if (borderPlacement.replace) currentElement.replaceWith(borderElement);
+			else currentElement.before(borderElement);
+		}
+	}
 	card.frames.unshift(...layers);
 	for (const layer of layers.slice().reverse()) await addFrame([], layer);
 }

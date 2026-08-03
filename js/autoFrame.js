@@ -1303,6 +1303,13 @@ function makePrepareFrameByLetter(letter, mask = false, maskToRightHalf = false,
 	return makeFrameByLetterUnified('Prepare', letter, mask, maskToRightHalf, style);
 }
 
+function automaticHoloStampAllowed() {
+	if (typeof activeFrameComponentOptions === 'undefined') return true;
+	const borderSelection = activeFrameComponentOptions['border-color'];
+	if (!borderSelection || typeof FRAME_REGISTRY === 'undefined') return true;
+	return !FRAME_REGISTRY.components?.[borderSelection.pack]?.suppressHoloStamp;
+}
+
 
 // ============================================================================
 // SECTION 5: AUTO FRAME ORCHESTRATION
@@ -1438,7 +1445,7 @@ function buildAutoFrames(frameType, colors, mana_cost, type_line, power, mana2Te
 
 	// HOLO STAMPS (security stamps at bottom center)
 	const rarity = (card.infoRarity || document.querySelector('#info-rarity')?.value || '').trim().toUpperCase();
-	if (config.supportsStamp && ['R', 'M', 'S'].includes(rarity)) {
+	if (config.supportsStamp && ['R', 'M', 'S'].includes(rarity) && automaticHoloStampAllowed()) {
 		// M15EighthUB uses special multicolor stamp handling
 		// Lands and multicolor cards get colored pinlines over a base multicolor stamp
 		if (frameType === 'M15EighthUB') {
@@ -1933,6 +1940,41 @@ function findAutoFrameColorVariant(frameOptions, desiredColor, typeLine, colors,
 		(desiredColor === 'Colorless' ? variantFrames.find(entry => matchesRequestedFace(entry) && entry.item.name.toLowerCase().includes('white frame')) : null);
 }
 
+function findAutoFrameDefaultVariant(frameOptions, desiredColor, typeLine, requestedFace) {
+	const entries = (frameOptions || []).map((item, index) => ({item:item, index:index}));
+	const matchesRequestedFace = entry => !requestedFace || entry.item.name.toLowerCase().includes('(' + requestedFace + ')');
+	const accessoryPattern = /power\s*\/\s*toughness|\bpt\b|\bpinline\b|\bholostamp\b|\bholo stamp\b|\bstamp\b|\bcrown\b|\baccent\b|\boutline\b|\btextbox\b|\bmask\b|\btype icon\b|\bmana bracket\b|\bset symbol cover\b|\bcutout\b/i;
+	const candidates = entries.filter(entry => matchesRequestedFace(entry) && !accessoryPattern.test(entry.item.name));
+	const normalizedType = String(typeLine || '').toLowerCase();
+	const findName = pattern => candidates.find(entry => pattern.test(entry.item.name));
+
+	if (normalizedType.includes('creature')) {
+		const creatureFrame = findName(/\bcreature frame\b/i);
+		if (creatureFrame) return creatureFrame;
+	} else {
+		const noncreatureFrame = findName(/\bnoncreature frame\b/i);
+		if (noncreatureFrame) return noncreatureFrame;
+	}
+	if (normalizedType.includes('legendary')) {
+		const legendaryFrame = findName(/\blegendary frame\b/i);
+		if (legendaryFrame) return legendaryFrame;
+	} else {
+		const regularFrame = findName(/\bregular frame\b/i);
+		if (regularFrame) return regularFrame;
+	}
+
+	const desiredNames = desiredColor === 'Colorless'
+		? [/\bcolorless\b/i, /\beldrazi\b/i, /\bartifact\b/i, /\bwhite\b/i]
+		: [new RegExp('\\b' + desiredColor + '\\b', 'i')];
+	for (const desiredName of desiredNames) {
+		const matchingFrame = candidates.find(entry => desiredName.test(entry.item.name) && /\bframe\b/i.test(entry.item.name)) ||
+			candidates.find(entry => desiredName.test(entry.item.name));
+		if (matchingFrame) return matchingFrame;
+	}
+	return candidates.find(entry => /\bframe\b/i.test(entry.item.name)) || candidates[0] ||
+		entries.find(matchesRequestedFace) || entries[0] || null;
+}
+
 async function autoFrameFromAvailableFrames(colors, typeLine, selectedProfile, frameOptions = availableFrames, requestId = autoFrameRequestId) {
 	if (!frameOptions || !frameOptions.length || requestId != autoFrameRequestId) return;
 	const profileDetails = typeof FRAME_REGISTRY == 'undefined' ? null : FRAME_REGISTRY.definition(selectedProfile)?.details;
@@ -1966,12 +2008,13 @@ async function autoFrameFromAvailableFrames(colors, typeLine, selectedProfile, f
 	else if (colors.length == 1) desiredColor = ({W:'White', U:'Blue', B:'Black', R:'Red', G:'Green'})[colors[0]];
 
 	const requestedFace = profileDetails?.face;
-	const selectedVariant = findAutoFrameColorVariant(frameOptions, desiredColor, typeLine, colors, selectedProfile, requestedFace);
+	const selectedVariant = findAutoFrameColorVariant(frameOptions, desiredColor, typeLine, colors, selectedProfile, requestedFace) ||
+		findAutoFrameDefaultVariant(frameOptions, desiredColor, typeLine, requestedFace);
 	if (!selectedVariant) return;
 
 	const rarity = (card.infoRarity || document.querySelector('#info-rarity')?.value || '').trim().toUpperCase();
 	let profileStamp = null;
-	if (['R', 'M', 'S'].includes(rarity)) {
+	if (['R', 'M', 'S'].includes(rarity) && automaticHoloStampAllowed()) {
 		const availableStamps = frameOptions.filter(item => (item.name || '').toLowerCase().includes('holo stamp'));
 		const matchingStamp = availableStamps.find(item => item.name.toLowerCase() === desiredName + ' holo stamp') ||
 			availableStamps.find(item => item.name.toLowerCase() === 'holo stamp') || availableStamps[0];

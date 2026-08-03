@@ -48,7 +48,7 @@ window.FRAME_REGISTRY = (() => {
 		M15HoloStamps: {slot:'holo-stamp', family:'all', when:'rarity:R|M|S'},
 		'M15Nickname-2': {slot:'nickname', family:'regular', when:'hasNickname'},
 		M15SmoothNickname: {slot:'nickname-crown', family:'borderless', when:'hasNickname && legendary'},
-		M15Borders: {slot:'border-color', family:'regular', mode:'select', control:'Border Color', default:'Black', choices:['White Border','Silver Border','Gold Border']},
+		M15Borders: {slot:'border-color', family:'regular', mode:'select', control:'Border Color', default:'Black', choices:['White Border','Silver Border','Gold Border'], suppressHoloStamp:true},
 		M15CIPips: {slot:'color-identity', family:'regular', mode:'select', control:'Color Indicator', default:'None', choices:colorIdentityChoices, whenNoMana:true, cascade:true},
 		TheList: {slot:'list-stamp', family:'regular', mode:'checkbox', label:'The List', layer:'top'},
 		Brawl: {slot:'crown-variant', family:'regular', mode:'select', control:'Legend Crown', default:'Normal Legend Crown', value:'Brawl'},

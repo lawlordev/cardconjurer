@@ -74,9 +74,7 @@
 		</div>
 		<div id='textbox-editor' class='textbox-editor layout-drawer'>
 			<div class='textbox-editor-heading'>
-				<span class='creator-eyebrow'>Field Layout</span>
 				<h2 id='textbox-editor-title' class='textbox-editor-title'>Text Layout</h2>
-				<p>Position and size this text field on the card.</p>
 			</div>
 			<button type='button' class='textbox-editor-close' aria-label='Close text layout' onclick='this.parentElement.classList.remove("opened");'>×</button>
 			<div class='layout-drawer-body'>
@@ -126,9 +124,7 @@
 		</div>
 		<div id='card-specific-layout-drawer' class='textbox-editor layout-drawer' role='dialog' aria-modal='true' aria-labelledby='card-specific-layout-title'>
 			<div class='textbox-editor-heading'>
-				<span class='creator-eyebrow'>Card Layout</span>
 				<h2 id='card-specific-layout-title' class='textbox-editor-title'>Card Layout</h2>
-				<p id='card-specific-layout-description'>Adjust the placement and dimensions used by this card type.</p>
 			</div>
 			<button type='button' class='textbox-editor-close' aria-label='Close card layout' onclick='closeCardSpecificLayoutDrawer();'>×</button>
 			<div id='card-specific-layout-body' class='layout-drawer-body'></div>
@@ -196,6 +192,7 @@
 					</section>
 					<div class='creator-canvas-well'>
 						<canvas class='creator-canvas box-shadow' id='previewCanvas' width='1005' height='1407'></canvas>
+						<canvas class='creator-canvas creator-canvas-transition' id='preview-transition-canvas' width='1005' height='1407' aria-hidden='true'></canvas>
 					</div>
 				</section>
 				<div class='workspace-resizer workspace-resizer-right' role='separator' aria-orientation='vertical' aria-label='Resize preview and editor panels' tabindex='0'></div>
@@ -206,7 +203,6 @@
 					<h3 class='selectable readable-background' onclick='toggleCreatorTabs(event, "art")'>Art</h3>
 					<h3 class='selectable readable-background' onclick='toggleCreatorTabs(event, "watermark")'>Watermark</h3>
 					<h3 class='selectable readable-background' onclick='toggleCreatorTabs(event, "cardDetails")'>Card Details</h3>
-					<h3 class='selectable readable-background' onclick='toggleCreatorTabs(event, "import")'>Import</h3>
 				</div>
 				<div id='creator-menu-sections' class='margin-bottom'>
 					<div id='creator-menu-frame'>
@@ -323,9 +319,7 @@
 						</div>
 						<div id='formatting-help-drawer' class='textbox-editor formatting-help-drawer' role='dialog' aria-labelledby='formatting-help-title'>
 							<div class='textbox-editor-heading'>
-								<span class='creator-eyebrow'>Text Reference</span>
-								<h2 id='formatting-help-title'>Formatting Help</h2>
-								<p>Codes for styling card text and inserting mana or game symbols.</p>
+								<h2 id='formatting-help-title' class='textbox-editor-title'>Formatting Help</h2>
 							</div>
 							<button type='button' class='textbox-editor-close' aria-label='Close formatting help' onclick='this.parentElement.classList.remove("opened");'>×</button>
 							<div class='formatting-help-body'>
@@ -823,29 +817,11 @@
 						</div>
 					</div>
 				</div>
-				<div class='readable-background padding creator-download-panel'>
-					<div class='creator-download-heading'>
-						<span class='creator-eyebrow'>Export</span>
-						<h3>Download your card</h3>
-					</div>
-					<label class='creator-field-label' for='download-format'>Download as...</label>
-					<select id='download-format' class='input creator-download-format'>
-						<option value='png'>PNG — best image quality</option>
-						<option value='jpeg'>JPEG — smaller file size</option>
-						<option value='preview'>PNG — open in a new tab</option>
-					</select>
-					<button type='button' class='input creator-download-button' onclick='downloadCardFromMenu();'>Download card</button>
-					<!-- <label class='checkbox-container input margin-bottom'>800 DPI
-						<input id='high-res' type='checkbox' onchange='toggleHighRes();'>
-						<span class='checkmark'></span>
-					</label> -->
-				</div>
-
 				</div>
 			</div>
 			<div id='card-search-drawer' class='textbox-editor layout-drawer card-search-drawer' role='dialog' aria-modal='true' aria-labelledby='card-search-title' aria-hidden='true'>
 				<div class='textbox-editor-heading'>
-					<span id='card-search-title' class='creator-eyebrow'>Import Card</span>
+					<h2 id='card-search-title' class='textbox-editor-title'>Import Card</h2>
 				</div>
 				<button type='button' class='textbox-editor-close' aria-label='Close card search' onclick='CardConjurerSets.closeCardSearch();'>×</button>
 				<form class='layout-drawer-body card-search-drawer-body' onsubmit='event.preventDefault(); CardConjurerSets.searchScryfallCards();'>

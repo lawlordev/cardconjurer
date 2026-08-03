@@ -11,16 +11,22 @@
 - Header: `.creator-app-bar` with left-side set controls and right-side workspace status — `creator/index.html`.
 - Workspace: three-column `.creator-grid` containing the set library, live preview, and editor menu — `creator/index.html` and `css/style-9.css`.
 - Primary and secondary buttons: teal `.sets-primary` for primary actions; dark bordered compact buttons for secondary actions — `creator/index.html` and `css/style-9.css`.
+- Drawers: shared `.textbox-editor` left drawer with a close-button row followed by one `.textbox-editor-title` and a divider — `creator/index.html` and `css/style-9.css`.
 
 ## Workflow to component map
 | Workflow | Component | Exemplar |
 |---|---|---|
 | Pick an active set | Native `.input` select | `creator/index.html` |
-| Switch editor sections | Compact selected tabs | `creator/index.html`, `js/setWorkspace.js` |
+| Switch editor sections | Compact selected tabs matching the Set Editor tabs' fixed 1.85rem height | `creator/index.html`, `js/setWorkspace.js`, `css/style-9.css` |
 | Show secondary actions | `.creator-action-dropdown` | `creator/index.html`, `js/setWorkspace.js` |
 | Confirm destructive action | Native confirm followed by history-backed action | `js/setWorkspace.js` |
 | Search a card list | Pinned `.sets-search` above `.sets-card-scroll` | `js/setWorkspace.js` |
-| Search and import a real card | Scryfall-backed `.card-search-drawer` using the existing `.textbox-editor` left-drawer scaffold | `creator/index.html`, `js/setWorkspace.js` |
+| Scan card metadata | Three-line card rows with title, type line, rendered mana symbols, rarity, and collector number | `js/setWorkspace.js`, `css/style-9.css` |
+| Browse frame styles | Lazy-loaded `.frame-catalog` tiles try each pack's available neutral assets in colorless, Eldrazi, artifact, white, then first-frame order, skipping accessory layers and missing files | `js/frameSearch.js`, `css/style-9.css` |
+| Apply catalog frames | The automatic renderer uses color variants when available, then type-aware creature/noncreature, legendary/regular, neutral, and first-frame defaults for standalone packs | `js/autoFrame.js`, `js/frameSearch.js` |
+| Search and import a real card | Scryfall-backed `.card-search-drawer` that creates a new card before applying the selected printing | `creator/index.html`, `js/setWorkspace.js` |
+| Switch between rendered cards | Frozen `.creator-canvas-transition` snapshot fully covers a hidden live canvas until pending assets settle and the next card receives a final render | `creator/index.html`, `js/creator-23.js`, `js/setWorkspace.js`, `css/style-9.css` |
+| Keep card thumbnails current | Final canvas renders patch the active card thumbnail in place and persist it for reloads | `js/creator-23.js`, `js/setWorkspace.js` |
 | Resize workspace panels | `.workspace-resizer` draggable separators with persisted widths | `creator/index.html`, `js/setWorkspace.js` |
 | Hydrate the saved workspace | Full-screen `.creator-loading-screen` until preferences, set data, and the active card finish rendering | `creator/index.html`, `js/setWorkspace.js` |
 

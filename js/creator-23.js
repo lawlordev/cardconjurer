@@ -238,7 +238,7 @@ async function ensureCanvasFontsReady(textObjects) {
 	await document.fonts.ready;
 }
 
-function waitForRenderableImage(image) {
+function waitForRenderableImage(image, timeoutMs = 2500) {
 	if (!image || image.complete) {
 		return image?.decode ? image.decode().catch(() => {}) : Promise.resolve();
 	}
@@ -252,7 +252,7 @@ function waitForRenderableImage(image) {
 			image.removeEventListener('error', finish);
 			resolve();
 		};
-		var timeout = setTimeout(finish, 2500);
+		var timeout = setTimeout(finish, Math.max(0, Number(timeoutMs) || 2500));
 		image.addEventListener('load', finish, {once:true});
 		image.addEventListener('error', finish, {once:true});
 	});
@@ -1633,7 +1633,6 @@ function renderCardSpecificTextTools() {
 		` : ''}`;
 
 	document.querySelector('#card-specific-layout-title').textContent = `${tools.title || 'Card'} Layout`;
-	document.querySelector('#card-specific-layout-description').textContent = tools.layoutDescription || 'Adjust the placement and dimensions used by this card type.';
 	drawerBody.innerHTML = layoutHTML || '';
 	if (typeof tools.onRender === 'function') tools.onRender();
 }
@@ -2510,8 +2509,11 @@ function writeText(textObject, targetContext) {
 						wordToWrite = document.querySelector('#' + word.replace('{elemid', '').replace('}', '')).value || '';
 					}
 					if (word.includes('set')) {
-						var bottomTextSubstring = card.bottomInfo.midLeft.text.substring(0, card.bottomInfo.midLeft.text.indexOf('  {savex}')).replace('{elemidinfo-set}', document.querySelector('#info-set').value || '').replace('{elemidinfo-language}', document.querySelector('#info-language').value || '');
-						justifyWidth = lineContext.measureText(bottomTextSubstring).width;
+						var midLeftText = card.bottomInfo?.midLeft?.text;
+						if (midLeftText) {
+							var bottomTextSubstring = midLeftText.substring(0, midLeftText.indexOf('  {savex}')).replace('{elemidinfo-set}', document.querySelector('#info-set').value || '').replace('{elemidinfo-language}', document.querySelector('#info-language').value || '');
+							justifyWidth = lineContext.measureText(bottomTextSubstring).width;
+						}
 					} else if (word.includes('number') && wordToWrite.includes('/') && !textObject.compactCollectorNumber && !['pokemon', '8thPlaytest'].includes(card.version)) {
 						fillJustify = true;
 						wordToWrite = Array.from(wordToWrite).join(' ');
@@ -3999,6 +4001,7 @@ function drawCard() {
 	// show preview
 	previewContext.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
 	previewContext.drawImage(cardCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
+	window.dispatchEvent(new CustomEvent('cardconjurer:preview-rendered'));
 
 	if (window.cardDrawingPromiseResolver) {
         window.cardDrawingPromiseResolver();
@@ -4006,17 +4009,6 @@ function drawCard() {
 	}
 }
 //DOWNLOADING
-function downloadCardFromMenu() {
-	const format = document.getElementById('download-format')?.value || 'png';
-	if (format === 'jpeg') {
-		downloadCard(false, true);
-	} else if (format === 'preview') {
-		downloadCard(true);
-	} else {
-		downloadCard();
-	}
-}
-
 function downloadCard(alt = false, jpeg = false) {
 	if (card.infoArtist.replace(/ /g, '') == '' && !card.artSource.includes('/img/blank.png') && !card.artZoom == 0) {
 		notify('You must credit an artist before downloading!', 5);
@@ -5650,6 +5642,13 @@ function loadedCardRenderableImages() {
 			.forEach(name => images.push(window[name]));
 	}
 	return images.filter(Boolean);
+}
+
+async function waitForLoadedCardAssets(timeoutMs = 6000) {
+	var pendingImages = loadedCardRenderableImages().filter(image => !image.complete);
+	if (!pendingImages.length) return;
+	await Promise.all(pendingImages.map(image => waitForRenderableImage(image, timeoutMs)));
+	await renderLoadedCard(false);
 }
 
 async function renderLoadedCard(canvasesResized = false) {
