@@ -13,6 +13,7 @@
   "main": "dist/desktop/main.js",
   "scripts": {
     "build:desktop": "tsc -p tsconfig.desktop.json",
+    "dev": "npm start",
     "start": "npm run build:desktop && electron-forge start",
     "start:browser": "python3 dev_server.py --host 127.0.0.1 --port 8081",
     "package": "npm run build:desktop && electron-forge package",

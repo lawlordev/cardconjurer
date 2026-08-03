@@ -56,7 +56,9 @@
 	}
 	function packCard(pack, selectable) {
 		var checked = pack.required || pack.installed;
-		return '<label class="desktop-pack-row"><input type="checkbox" data-pack-id="' + pack.id + '" ' + (checked ? 'checked ' : '') + (pack.required ? 'disabled ' : '') + '><span><strong>' + escapeHtml(pack.displayName) + (pack.required ? ' <em>Required</em>' : '') + '</strong><small>' + escapeHtml(pack.description) + '</small><small>' + (pack.installed ? 'Installed · ' + escapeHtml(pack.installedVersion || '') : 'Not installed') + '</small></span>' + (selectable && pack.installed && !pack.required ? '<button type="button" data-remove-pack="' + pack.id + '" class="danger">Remove</button>' : '') + '</label>';
+		var disabled = pack.required || !pack.available;
+		var status = pack.installed ? 'Installed · ' + escapeHtml(pack.installedVersion || '') : pack.available ? 'Available to download' : 'Not available in this build yet';
+		return '<label class="desktop-pack-row"><input type="checkbox" data-pack-id="' + pack.id + '" ' + (checked ? 'checked ' : '') + (disabled ? 'disabled ' : '') + '><span><strong>' + escapeHtml(pack.displayName) + (pack.required ? ' <em>Required</em>' : '') + '</strong><small>' + escapeHtml(pack.description) + '</small><small>' + status + '</small></span>' + (selectable && pack.installed && !pack.required ? '<button type="button" data-remove-pack="' + pack.id + '" class="danger">Remove</button>' : '') + '</label>';
 	}
 	async function openPacks(trigger) {
 		var packs = await api.packs.list(); openDrawer('Frame Packs', '<p class="desktop-drawer-intro">Install only the frame families you want. Existing cards stay saved if a pack is removed.</p><div class="desktop-pack-list">' + packs.map(function(pack) { return packCard(pack, true); }).join('') + '</div><div id="desktop-pack-progress" class="desktop-inline-status"></div><button type="button" id="desktop-pack-install" class="sets-primary">Apply Changes</button>', trigger);

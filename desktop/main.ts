@@ -2,7 +2,7 @@ import {
   app, BrowserWindow, dialog, ipcMain, net, protocol, session, shell
 } from 'electron';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync, renameSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, watch, writeFileSync, renameSync, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -22,6 +22,7 @@ let mainWindow: BrowserWindow | null = null;
 let storage: StorageService | null = null;
 let packs: PackService | null = null;
 let updates: UpdateService | null = null;
+const liveReloadWatchers: FSWatcher[] = [];
 const files = new FileService();
 const pendingAssociatedFiles: string[] = [];
 let rendererReady = false;
@@ -189,6 +190,29 @@ function createWindow(appRoot: string): BrowserWindow {
   return window;
 }
 
+function installLiveReload(appRoot: string): void {
+  if (app.isPackaged) return;
+  const targets = ['index.html', 'creator', 'css', 'js', 'core', 'data', 'fonts', 'generated/frame-definitions', 'img/frames'];
+  let reloadTimer: NodeJS.Timeout | null = null;
+  const reload = () => {
+    if (reloadTimer) clearTimeout(reloadTimer);
+    reloadTimer = setTimeout(() => {
+      rendererReady = false;
+      mainWindow?.webContents.reloadIgnoringCache();
+    }, 120);
+  };
+  for (const relativePath of targets) {
+    const target = path.join(appRoot, relativePath);
+    if (!existsSync(target)) continue;
+    try {
+      const watcher = watch(target, statSync(target).isDirectory() ? {recursive: true} : {}, reload);
+      liveReloadWatchers.push(watcher);
+    } catch (error) {
+      console.warn(`Live reload could not watch ${relativePath}:`, error);
+    }
+  }
+}
+
 function registerIPC(): void {
   const trusted = <T extends unknown[], R>(handler: (event: Electron.IpcMainInvokeEvent, ...args: T) => R | Promise<R>) =>
     async (event: Electron.IpcMainInvokeEvent, ...args: T): Promise<R> => { validateSender(event); return handler(event, ...args); };
@@ -276,8 +300,9 @@ app.whenReady().then(async () => {
   await registerApplicationProtocol(appRoot);
   registerIPC();
   mainWindow = createWindow(appRoot);
+  installLiveReload(appRoot);
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow(appRoot); });
 });
 
 app.on('window-all-closed', () => app.quit());
-app.on('before-quit', () => { void storage?.flush(); });
+app.on('before-quit', () => { for (const watcher of liveReloadWatchers) watcher.close(); void storage?.flush(); });

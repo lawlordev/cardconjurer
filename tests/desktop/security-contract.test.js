@@ -19,3 +19,15 @@ test('downloaded packs verify checksums and block unsafe archive paths', () => {
 	assert.match(service, /split\('\/'\)\.includes\('\.\.'\)/);
 	assert.match(service, /symbolic links are not allowed/);
 });
+
+test('unpublished optional frame packs cannot be selected in desktop UI', () => {
+	const bridge = fs.readFileSync(path.join(__dirname, '../../js/desktopBridge.js'), 'utf8');
+	assert.match(bridge, /pack\.required \|\| !pack\.available/);
+	assert.match(bridge, /Not available in this build yet/);
+});
+
+test('development mode reloads renderer changes without weakening packaged builds', () => {
+	const main = fs.readFileSync(path.join(__dirname, '../../desktop/main.ts'), 'utf8');
+	assert.match(main, /if \(app\.isPackaged\) return/);
+	assert.match(main, /reloadIgnoringCache/);
+});
