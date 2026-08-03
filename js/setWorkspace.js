@@ -10,14 +10,49 @@
 	var editorDirty = false;
 	var persistTimer = null;
 	var drawerReturnFocus = null;
+	var cardSearchReturnFocus = null;
 	var initialBlankCardData = null;
 	var zipCanceled = false;
 	var pendingTransferMode = null;
 	var pendingSetImport = null;
+	var scryfallSearchResults = [];
+	var WORKSPACE_LAYOUT_KEY = 'card-conjurer-workspace-layout-v1';
+	var workspaceLayout = {leftWidth: null, rightWidth: null, collapsed: false};
 	var DEFAULT_SET_SYMBOL_BOUNDS = {x: 0.9213, y: 0.5910, width: 0.12, height: 0.0410, vertical: 'center', horizontal: 'right'};
 	var channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('card-conjurer-sets') : null;
 
 	function clone(value) { return Model.clone(value); }
+	function clamp(value, minimum, maximum) { return Math.min(Math.max(value, minimum), maximum); }
+	function loadWorkspaceLayout() {
+		try {
+			var saved = JSON.parse(localStorage.getItem(WORKSPACE_LAYOUT_KEY) || 'null');
+			if (saved && typeof saved === 'object') workspaceLayout = {
+				leftWidth: Number.isFinite(Number(saved.leftWidth)) ? Number(saved.leftWidth) : null,
+				rightWidth: Number.isFinite(Number(saved.rightWidth)) ? Number(saved.rightWidth) : null,
+				collapsed: Boolean(saved.collapsed)
+			};
+		} catch (error) {}
+	}
+	function saveWorkspaceLayout() {
+		try { localStorage.setItem(WORKSPACE_LAYOUT_KEY, JSON.stringify(workspaceLayout)); } catch (error) {}
+	}
+	function applyWorkspaceLayout() {
+		var grid = document.querySelector('.creator-workspace .creator-grid'); if (!grid) return;
+		if (workspaceLayout.leftWidth) grid.style.setProperty('--sets-panel-width', Math.round(workspaceLayout.leftWidth) + 'px');
+		if (workspaceLayout.rightWidth) grid.style.setProperty('--editor-panel-width', Math.round(workspaceLayout.rightWidth) + 'px');
+		grid.classList.toggle('sets-panel-collapsed', workspaceLayout.collapsed);
+	}
+	function revealWorkspace() {
+		return new Promise(function(resolve) {
+			requestAnimationFrame(function() {
+				requestAnimationFrame(function() {
+					var workspace = document.querySelector('.creator-workspace');
+					if (workspace) workspace.classList.add('is-ready');
+					resolve();
+				});
+			});
+		});
+	}
 	function activeSet() { return state.sets.find(function(set) { return set.id === state.activeSetId; }) || null; }
 	function cardsFor(setId) { return state.cards.filter(function(card) { return card.setId === setId; }); }
 	function collectorSlotCount(setId) {
@@ -29,6 +64,29 @@
 	function activeCardRecord() {
 		var set = activeSet();
 		return set ? state.cards.find(function(card) { return card.id === set.activeCardId; }) || cardsFor(set.id)[0] : null;
+	}
+
+	function updateCardEditorActions() {
+		var button = document.querySelector('#card-editor-add-variant');
+		var duplicateButton = document.querySelector('#card-editor-duplicate');
+		var record = activeCardRecord();
+		if (!record) return;
+		var collectorMatch = String(record.collectorNumber || '').match(/^(\d+)([a-z]*)/i);
+		var match = collectorMatch && collectorMatch[1] ? collectorMatch : null;
+		var base = String(Number(match ? match[1] : 1)).padStart(4, '0');
+		if (duplicateButton) {
+			var currentNumber = base + (match ? match[2] || '' : '');
+			var duplicateNumber = String(Number(match ? match[1] : 1) + 1).padStart(4, '0');
+			duplicateButton.title = 'This card keeps its collector number ' + currentNumber + '; the duplicate will be ' + duplicateNumber;
+		}
+		if (!button) return;
+		var logicalId = record.logicalCardId || record.id;
+		var family = state.cards.filter(function(card) { return (card.logicalCardId || card.id) === logicalId; });
+		if (family.length === 1) {
+			button.title = 'Make this card ' + base + 'a and the variant will be ' + base + 'b';
+		} else {
+			button.title = 'Add variant ' + base + Model.suffixFor(family.length) + ' to this card';
+		}
 	}
 
 	function yearFor(set) {
@@ -230,29 +288,34 @@
 		var host = document.querySelector('#sets-workspace-content');
 		var set = activeSet();
 		if (!host || !set) return;
+		var topSwitcher = document.querySelector('#sets-switcher');
+		if (topSwitcher) topSwitcher.innerHTML = state.sets.map(function(item) { return '<option value="' + item.id + '"' + (item.id === set.id ? ' selected' : '') + '>' + escapeHtml(item.name) + ' · ' + escapeHtml(item.code) + '</option>'; }).join('');
 		host.setAttribute('aria-busy', 'false');
-		var history = ensureHistory(set.id);
+		var cardCount = cardsFor(set.id).length;
+		var railCards = Model.selectCards(cardsFor(set.id), {sort:'collector', direction:'asc'});
 		host.innerHTML = '<div class="sets-header">' +
 			'<label class="sets-drawer-close" for="sets-drawer-toggle" role="button" tabindex="0" aria-label="Close sets drawer">×</label>' +
-			'<div><span class="creator-eyebrow">Sets &amp; Cards</span><select id="sets-switcher" class="input" aria-label="Active set" onchange="CardConjurerSets.selectSet(this.value)">' +
-			state.sets.map(function(item) { return '<option value="' + item.id + '"' + (item.id === set.id ? ' selected' : '') + '>' + escapeHtml(item.name) + ' · ' + escapeHtml(item.code) + '</option>'; }).join('') + '</select></div>' +
-			'<div class="sets-header-actions"><button type="button" class="input" onclick="CardConjurerSets.newSet()">New set</button><button type="button" class="sets-icon-button" onclick="CardConjurerSets.undo()"' + (history.cursor ? '' : ' disabled') + ' aria-label="Undo">↶</button><button type="button" class="sets-icon-button" onclick="CardConjurerSets.redo()"' + (history.cursor < history.entries.length ? '' : ' disabled') + ' aria-label="Redo">↷</button></div></div>' +
+			'<div><span class="creator-eyebrow">' + cardCount + ' card' + (cardCount === 1 ? '' : 's') + ' in set</span></div>' +
+			'<div class="sets-header-controls"><details class="creator-action-dropdown sets-options-dropdown"><summary class="input">Set Options <span class="card-specific-chevron" aria-hidden="true"></span></summary><div class="creator-action-dropdown-menu"><button type="button" onclick="this.closest(\'details\').removeAttribute(\'open\'); CardConjurerSets.exportSet()">Export Set</button><button type="button" onclick="this.closest(\'details\').removeAttribute(\'open\'); CardConjurerSets.downloadSetImages()">Download Images</button><button type="button" onclick="this.closest(\'details\').removeAttribute(\'open\'); CardConjurerSets.duplicateSet()">Duplicate Set</button><button type="button" class="danger" onclick="this.closest(\'details\').removeAttribute(\'open\'); CardConjurerSets.deleteSet()">Delete Set</button></div></details>' +
+			'<button type="button" class="sets-panel-toggle sets-panel-collapse" onclick="CardConjurerSets.toggleSetsPanel()" aria-label="Collapse set panel" title="Collapse set panel"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4v16M18 7l-5 5 5 5"/></svg></button></div></div>' +
 			'<div id="sets-error" class="sets-error" role="alert" hidden></div>' +
 			'<div class="sets-tabs" role="tablist">' + tabButton('cards', 'Cards', set.activeTab === 'cards') + tabButton('details', 'Set Details', set.activeTab === 'details') + tabButton('symbol', 'Set Symbol', set.activeTab === 'symbol') + tabButton('collector', 'Collector', set.activeTab === 'collector') + '</div>' +
 			'<div id="sets-tab-panel" class="sets-tab-panel" role="tabpanel"></div>' +
-			'<div class="sets-footer"><span id="sets-status" role="status" aria-live="polite">Saved locally</span><span>' + cardsFor(set.id).length + ' printing' + (cardsFor(set.id).length === 1 ? '' : 's') + '</span></div>' +
 			'<input id="sets-card-import" type="file" accept=".cardconjurer-card,application/json" hidden onchange="CardConjurerSets.importCardFile(event)">' +
 			'<input id="sets-set-import" type="file" accept=".cardconjurer-set,application/json" hidden onchange="CardConjurerSets.importSetFile(event)">' +
 			'<dialog id="sets-transfer-dialog" class="sets-dialog"><form method="dialog"><div><span class="creator-eyebrow">Card action</span><h3 id="sets-transfer-title">Move card</h3></div><label>Destination set<select id="sets-transfer-target" class="input"></select></label><div class="sets-dialog-actions"><button value="cancel">Cancel</button><button id="sets-transfer-confirm" type="button" class="sets-confirm" onclick="CardConjurerSets.confirmMoveOrCopy()">Move card</button></div></form></dialog>' +
-			'<dialog id="sets-import-dialog" class="sets-dialog"><form method="dialog"><div><span class="creator-eyebrow">Set import</span><h3>Matching set found</h3><p id="sets-import-message">Choose how to import this set.</p></div><div class="sets-dialog-actions"><button value="cancel" onclick="CardConjurerSets.cancelSetImport()">Cancel</button><button type="button" onclick="CardConjurerSets.resolveSetImport(\'merge\')">Merge</button><button type="button" class="sets-confirm" onclick="CardConjurerSets.resolveSetImport(\'replace\')">Replace</button></div></form></dialog>';
+			'<dialog id="sets-import-dialog" class="sets-dialog"><form method="dialog"><div><span class="creator-eyebrow">Set import</span><h3>Matching set found</h3><p id="sets-import-message">Choose how to import this set.</p></div><div class="sets-dialog-actions"><button value="cancel" onclick="CardConjurerSets.cancelSetImport()">Cancel</button><button type="button" onclick="CardConjurerSets.resolveSetImport(\'merge\')">Merge</button><button type="button" class="sets-confirm" onclick="CardConjurerSets.resolveSetImport(\'replace\')">Replace</button></div></form></dialog>' +
+			'<div class="sets-collapsed-rail"><button type="button" class="sets-panel-toggle sets-panel-expand" onclick="CardConjurerSets.toggleSetsPanel(false)" aria-label="Expand set panel" title="Expand set panel"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4v16M11 7l5 5-5 5"/></svg></button><div class="sets-rail-cards" role="listbox" aria-label="Cards in ' + escapeHtml(set.name) + '">' + railCards.map(function(card) { var title = card.derived.title || 'Untitled Card'; var thumbnail = card.thumbnail ? '<img src="' + card.thumbnail + '" alt="">' : '<span class="sets-rail-placeholder" aria-hidden="true"></span>'; return '<button type="button" class="sets-rail-card' + (card.id === set.activeCardId ? ' selected' : '') + '" onclick="CardConjurerSets.selectCard(\'' + card.id + '\')" title="' + escapeHtml(card.collectorNumber + ' · ' + title) + '">' + thumbnail + '</button>'; }).join('') + '</div></div>';
 		renderActiveTab();
 		updateUndoButtons();
+		updateCardEditorActions();
 	}
 
 	function renderActiveTab() {
 		var set = activeSet();
 		var panel = document.querySelector('#sets-tab-panel');
 		if (!set || !panel) return;
+		panel.classList.toggle('sets-cards-panel', set.activeTab === 'cards');
 		if (set.activeTab === 'details') renderDetailsTab(panel, set);
 		else if (set.activeTab === 'symbol') renderSymbolTab(panel, set);
 		else if (set.activeTab === 'collector') renderCollectorTab(panel, set);
@@ -261,21 +324,9 @@
 
 	function renderCardsTab(panel, set) {
 		var view = Object.assign({}, Model.DEFAULT_LIST_STATE, set.listState || {});
-		panel.innerHTML = '<div class="sets-card-toolbar"><button type="button" class="input sets-primary" onclick="CardConjurerSets.newCard()">+ New card</button><button type="button" class="input" onclick="CardConjurerSets.duplicateCard()">Duplicate</button><button type="button" class="input" onclick="CardConjurerSets.addVariant(\'art\')">Art variant</button><button type="button" class="input" onclick="CardConjurerSets.addVariant(\'treatment\')">Treatment</button></div>' +
-			'<label class="sets-search"><span class="sr-only">Search cards</span><input class="input" value="' + escapeHtml(view.search) + '" placeholder="Search title, type, rules, artist…" oninput="CardConjurerSets.updateListState(\'search\', this.value)"></label>' +
-			'<details class="sets-list-options"><summary>Sort &amp; filters</summary><div class="sets-filter-grid">' +
-			'<label>Sort<select class="input" onchange="CardConjurerSets.updateListState(\'sort\', this.value)">' + selectOptions(['collector','alphabetical','mana-value'], view.sort, {'collector':'Collector','alphabetical':'Alphabetical','mana-value':'Mana Value'}) + '</select></label>' +
-			'<label>Direction<select class="input" onchange="CardConjurerSets.updateListState(\'direction\', this.value)">' + selectOptions(['asc','desc'], view.direction, {asc:'Ascending',desc:'Descending'}) + '</select></label>' +
-			'<label>Color<select class="input" onchange="CardConjurerSets.updateListState(\'color\', this.value)">' + selectOptions(['','W','U','B','R','G','C'], view.color, {'':'Any',W:'White',U:'Blue',B:'Black',R:'Red',G:'Green',C:'Colorless'}) + '</select></label>' +
-			'<label>Color match<select class="input" onchange="CardConjurerSets.updateListState(\'colorMode\', this.value)">' + selectOptions(['includes','only'], view.colorMode, {includes:'Includes',only:'Only'}) + '</select></label>' +
-			'<label>Identity<select class="input" onchange="CardConjurerSets.updateListState(\'identity\', this.value)">' + selectOptions(['','W','U','B','R','G','C'], view.identity, {'':'Any',W:'White',U:'Blue',B:'Black',R:'Red',G:'Green',C:'Colorless'}) + '</select></label>' +
-			'<label>Identity match<select class="input" onchange="CardConjurerSets.updateListState(\'identityMode\', this.value)">' + selectOptions(['includes','only'], view.identityMode, {includes:'Includes',only:'Only'}) + '</select></label>' +
-			'<label>Rarity<select class="input" onchange="CardConjurerSets.updateListState(\'rarity\', this.value)">' + selectOptions(['','common','uncommon','rare','mythic'], view.rarity, {'':'Any',common:'Common',uncommon:'Uncommon',rare:'Rare',mythic:'Mythic Rare'}) + '</select></label>' +
-			'<label>Card type<select class="input" onchange="CardConjurerSets.updateListState(\'cardType\', this.value)">' + selectOptions(['','artifact','battle','creature','enchantment','instant','land','planeswalker','sorcery','tribal'], view.cardType, {'':'Any'}) + '</select></label></div></details>' +
-			'<div id="sets-card-list" class="sets-card-list" role="listbox" aria-label="Cards in ' + escapeHtml(set.name) + '"></div>' +
-			'<div class="sets-card-actions"><button type="button" onclick="CardConjurerSets.moveOrCopy(\'move\')">Move</button><button type="button" onclick="CardConjurerSets.moveOrCopy(\'copy\')">Copy</button><button type="button" onclick="CardConjurerSets.exportCard()">Export card</button><button type="button" onclick="document.querySelector(\'#sets-card-import\').click()">Import card</button><button type="button" class="danger" onclick="CardConjurerSets.deleteCard()">Delete</button></div>' +
-			'<div class="sets-set-actions"><button type="button" onclick="CardConjurerSets.exportSet()">Export set</button><button type="button" onclick="document.querySelector(\'#sets-set-import\').click()">Import set</button><button type="button" onclick="CardConjurerSets.downloadSetImages()">Download images</button><button type="button" class="danger" onclick="CardConjurerSets.deleteSet()">Delete set</button></div>' +
-			'<div id="sets-zip-progress" class="sets-zip-progress" hidden><span></span><button type="button" onclick="CardConjurerSets.cancelZip()">Cancel</button></div>';
+		panel.innerHTML = '<label class="sets-search"><span class="sr-only">Search cards</span><svg class="sets-search-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg><input type="search" class="input" value="' + escapeHtml(view.search) + '" placeholder="Search title, type, rules, artist…" oninput="CardConjurerSets.updateListState(\'search\', this.value)"><button type="button" class="sets-search-clear" aria-label="Clear search" onclick="var input=this.parentElement.querySelector(\'input\'); input.value=\'\'; input.dispatchEvent(new Event(\'input\',{bubbles:true})); input.focus();"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"></path></svg></button></label>' +
+			'<div class="sets-card-scroll"><div id="sets-card-list" class="sets-card-list" role="listbox" aria-label="Cards in ' + escapeHtml(set.name) + '"></div>' +
+			'<div id="sets-zip-progress" class="sets-zip-progress" hidden><span></span><button type="button" onclick="CardConjurerSets.cancelZip()">Cancel</button></div></div>';
 		renderCardList();
 	}
 
@@ -458,6 +509,31 @@
 			newSetRecord.activeCardId = newCardRecord.id;
 			state.sets.push(newSetRecord); state.cards.push(newCardRecord); state.activeSetId = newSetRecord.id; state.histories[newSetRecord.id] = Model.createHistory();
 		}, [state.activeSetId], {immediate: true});
+		await loadActiveCard();
+	}
+
+	async function duplicateSet() {
+		await captureActiveCard();
+		var source = activeSet(); if (!source) return;
+		var sourceCards = cardsFor(source.id);
+		await commit('Duplicate set', '', function() {
+			var defaults = Model.createDefaultSet(state.sets);
+			var copy = clone(source);
+			var baseName = source.name + ' Copy';
+			var copyName = baseName; var copyIndex = 2;
+			while (state.sets.some(function(item) { return Model.normalizeText(item.name) === Model.normalizeText(copyName); })) copyName = baseName + ' ' + copyIndex++;
+			copy.id = defaults.id; copy.name = copyName; copy.code = defaults.code; copy.createdAt = copy.updatedAt = new Date().toISOString();
+			var idMap = {};
+			sourceCards.forEach(function(card) { idMap[card.id] = Model.createId('card'); });
+			var copiedCards = sourceCards.map(function(card) {
+				var cardCopy = clone(card); var oldLogicalId = card.logicalCardId || card.id;
+				cardCopy.id = idMap[card.id]; cardCopy.setId = copy.id; cardCopy.logicalCardId = idMap[oldLogicalId] || cardCopy.id; cardCopy.originId = null;
+				cardCopy.createdAt = cardCopy.updatedAt = new Date().toISOString();
+				return cardCopy;
+			});
+			copy.activeCardId = idMap[source.activeCardId] || (copiedCards[0] && copiedCards[0].id);
+			state.sets.push(copy); state.cards.push.apply(state.cards, copiedCards); state.activeSetId = copy.id; state.histories[copy.id] = Model.createHistory();
+		}, [source.id], {immediate: true});
 		await loadActiveCard();
 	}
 
@@ -712,8 +788,166 @@
 	}
 
 	function safeFilename(value) { return String(value || 'Untitled').replace(/[<>:"/\\|?*\x00-\x1F]/g, '-').replace(/[. ]+$/g, '').slice(0, 120) || 'Untitled'; }
-	function exportCardAction() { var record = activeCardRecord(), set = activeSet(); if (record && set) downloadJson(Files.createCardEnvelope(record, set), safeFilename(record.derived.title || 'Untitled Card') + '.cardconjurer-card'); }
+	async function exportCardAction() { await captureActiveCard(); var record = activeCardRecord(), set = activeSet(); if (record && set) downloadJson(Files.createCardEnvelope(record, set), safeFilename(record.derived.title || 'Untitled Card') + '.cardconjurer-card'); }
+	function exportCardImage(format) {
+		if (typeof downloadCard !== 'function') return;
+		if (format === 'jpeg') downloadCard(false, true);
+		else if (format === 'preview') downloadCard(true);
+		else downloadCard();
+	}
 	function exportSetAction() { var set = activeSet(); if (set) downloadJson(Files.createSetEnvelope(set, cardsFor(set.id)), safeFilename(set.name) + '.cardconjurer-set'); }
+
+	function setCardSearchStatus(message, kind) {
+		var status = document.querySelector('#card-search-status');
+		if (!status) return;
+		status.textContent = message;
+		status.dataset.kind = kind || '';
+		status.hidden = !message;
+	}
+
+	function openCardSearch(trigger) {
+		var drawer = document.querySelector('#card-search-drawer');
+		var query = document.querySelector('#card-search-query');
+		var language = document.querySelector('#card-search-language');
+		var set = activeSet();
+		if (!drawer || !query) return;
+		cardSearchReturnFocus = trigger || document.activeElement;
+		scryfallSearchResults = [];
+		query.value = '';
+		if (language && set) {
+			var setLanguage = String(set.language || 'en').toLowerCase();
+			language.value = Array.from(language.options).some(function(option) { return option.value === setLanguage; }) ? setLanguage : 'en';
+		}
+		var results = document.querySelector('#card-search-results');
+		var resultsLabel = document.querySelector('#card-search-results-label');
+		var importButton = document.querySelector('#card-search-import');
+		if (results) results.innerHTML = '';
+		if (resultsLabel) resultsLabel.hidden = true;
+		if (importButton) importButton.disabled = true;
+		setCardSearchStatus('');
+		drawer.classList.add('opened');
+		drawer.setAttribute('aria-hidden', 'false');
+		setTimeout(function() { query.focus(); }, 0);
+	}
+
+	function closeCardSearch(returnFocus) {
+		var drawer = document.querySelector('#card-search-drawer');
+		if (drawer) {
+			drawer.classList.remove('opened');
+			drawer.setAttribute('aria-hidden', 'true');
+		}
+		if (returnFocus !== false && cardSearchReturnFocus && cardSearchReturnFocus.isConnected) cardSearchReturnFocus.focus();
+		cardSearchReturnFocus = null;
+	}
+
+	async function searchScryfallCards() {
+		var queryInput = document.querySelector('#card-search-query');
+		var languageInput = document.querySelector('#card-search-language');
+		var results = document.querySelector('#card-search-results');
+		var resultsLabel = document.querySelector('#card-search-results-label');
+		var importButton = document.querySelector('#card-search-import');
+		var searchButton = document.querySelector('#card-search-submit');
+		var query = String(queryInput && queryInput.value || '').trim();
+		if (!query) { setCardSearchStatus('Card name required.', 'error'); queryInput && queryInput.focus(); return; }
+		if (searchButton) searchButton.disabled = true;
+		if (importButton) importButton.disabled = true;
+		if (resultsLabel) resultsLabel.hidden = true;
+		setCardSearchStatus('Searching Scryfall…');
+		try {
+			var language = languageInput && languageInput.value || 'en';
+			var params = new URLSearchParams({order:'released', include_extras:'true', q:'name=' + query + ' lang=' + language});
+			params.set('unique', 'prints');
+			var response = await fetch('https://api.scryfall.com/cards/search?' + params.toString());
+			if (!response.ok) {
+				if (response.status === 404) throw new Error('No cards found for “' + query + '”.');
+				throw new Error('Scryfall search failed. Try again.');
+			}
+			var payload = await response.json();
+			var processed = [];
+			(payload.data || []).forEach(function(cardResult) {
+				if (typeof processScryfallCard === 'function') processScryfallCard(cardResult, processed);
+				else processed.push(cardResult);
+			});
+			scryfallSearchResults = processed.filter(function(cardResult) { return cardResult && cardResult.type_line && cardResult.type_line !== 'Card'; });
+			results.innerHTML = '';
+			scryfallSearchResults.forEach(function(cardResult, index) {
+				var name = cardResult.printed_name || cardResult.name || 'Untitled Card';
+				if (cardResult.flavor_name) name += ' (' + cardResult.flavor_name + ')';
+				else if (cardResult.printed_name) name += ' (' + cardResult.name + ')';
+				var detail = String(cardResult.set || '').toUpperCase() + ' #' + String(cardResult.collector_number || '');
+				results.appendChild(new Option(name + ' (' + detail + ')', String(index)));
+			});
+			if (!scryfallSearchResults.length) throw new Error('No importable cards found for “' + query + '”.');
+			results.value = '0';
+			resultsLabel.hidden = false;
+			importButton.disabled = false;
+			setCardSearchStatus(scryfallSearchResults.length + ' result' + (scryfallSearchResults.length === 1 ? '' : 's') + ' found.');
+		} catch (error) {
+			scryfallSearchResults = [];
+			if (results) results.innerHTML = '';
+			if (resultsLabel) resultsLabel.hidden = true;
+			setCardSearchStatus(error.message || 'Scryfall search failed. Try again.', 'error');
+		} finally {
+			if (searchButton) searchButton.disabled = false;
+		}
+	}
+
+	async function importScryfallCard() {
+		var results = document.querySelector('#card-search-results');
+		var selected = results && scryfallSearchResults[Number(results.value)];
+		var record = activeCardRecord();
+		var set = activeSet();
+		if (!selected || !record || !set || typeof changeCardIndex !== 'function') return;
+		await captureActiveCard();
+		var beforeImport = snapshot();
+		closeCardSearch(false);
+		setStatus('Importing card…', 'saving');
+		try {
+			var importedRarity = String(selected.rarity || 'common').toLowerCase();
+			if (!Model.RARITIES.includes(importedRarity)) importedRarity = importedRarity === 'special' || importedRarity === 'bonus' ? 'rare' : 'common';
+			record.rarity = importedRarity;
+			changeCardIndex(clone(selected), {preserveSetOwned:true, useExactArt:true});
+			var hydrated = hydratedCardData(record, set);
+			var fields = {
+				'#info-number': hydrated.infoNumber,
+				'#info-rarity': hydrated.infoRarity,
+				'#info-set': hydrated.infoSet,
+				'#info-language': hydrated.infoLanguage,
+				'#info-year': hydrated.infoYear,
+				'#info-copyright': hydrated.infoCopyright
+			};
+			Object.keys(fields).forEach(function(selector) { var input = document.querySelector(selector); if (input) input.value = fields[selector] || ''; });
+			if (typeof card !== 'undefined') {
+				card.infoNumber = hydrated.infoNumber;
+				card.infoRarity = hydrated.infoRarity;
+				card.infoSet = hydrated.infoSet;
+				card.infoLanguage = hydrated.infoLanguage;
+				card.infoYear = hydrated.infoYear;
+				card.infoCopyright = hydrated.infoCopyright;
+			}
+			if (typeof bottomInfoEdited === 'function') await bottomInfoEdited();
+			if (typeof waitForRenderableImage === 'function' && typeof art !== 'undefined') await waitForRenderableImage(art);
+			await new Promise(function(resolve) { setTimeout(resolve, 750); });
+			clearTimeout(captureTimer);
+			editorDirty = false;
+			record.cardData = stripSetOwned(cardStorageSnapshot());
+			record.uiState = liveDraftUiSnapshot();
+			record.updatedAt = new Date().toISOString();
+			record.thumbnailDirty = true;
+			inferFrameClassification(record);
+			renumberSet(set.id);
+			var afterImport = snapshot();
+			if (!snapshotEqual(beforeImport, afterImport)) recordHistory([set.id], 'Import from Scryfall', 'scryfall-import', beforeImport, afterImport);
+			await updateThumbnail(record.id);
+			await persist(true);
+			renderWorkspace();
+			renderCardDetailsSummary();
+			setStatus('Imported ' + (selected.printed_name || selected.name || 'card'), 'saved');
+		} catch (error) {
+			showWorkspaceError(error.message || 'The selected card could not be imported.');
+			setStatus('Card import failed', 'error');
+		}
+	}
 
 	function readFile(event, callback) {
 		var input = event.target; var file = input.files && input.files[0]; if (!file) return;
@@ -788,22 +1022,87 @@
 
 	function openDrawer(trigger) { var drawer=document.querySelector('#sets-workspace'), toggle=document.querySelector('#sets-drawer-toggle'), button=document.querySelector('#sets-drawer-open'); drawerReturnFocus=trigger||document.activeElement; if(toggle)toggle.checked=true; if(drawer)drawer.classList.add('opened'); if(button)button.setAttribute('aria-expanded','true'); document.body.classList.add('sets-drawer-active'); setTimeout(function(){drawer&&drawer.querySelector('.sets-drawer-close')&&drawer.querySelector('.sets-drawer-close').focus();},0); }
 	function closeDrawer() { var drawer=document.querySelector('#sets-workspace'), toggle=document.querySelector('#sets-drawer-toggle'), button=document.querySelector('#sets-drawer-open'); if(toggle)toggle.checked=false; if(drawer)drawer.classList.remove('opened'); if(button)button.setAttribute('aria-expanded','false'); document.body.classList.remove('sets-drawer-active'); if(drawerReturnFocus&&drawerReturnFocus.isConnected)drawerReturnFocus.focus(); }
+	function toggleSetsPanel(expand) {
+		var grid = document.querySelector('.creator-workspace .creator-grid'); if (!grid) return;
+		var collapse = expand === false ? false : !workspaceLayout.collapsed;
+		if (collapse && !workspaceLayout.leftWidth) workspaceLayout.leftWidth = document.querySelector('#sets-workspace')?.getBoundingClientRect().width || null;
+		workspaceLayout.collapsed = collapse;
+		applyWorkspaceLayout(); saveWorkspaceLayout();
+		document.querySelectorAll('details.creator-action-dropdown[open]').forEach(function(dropdown) { dropdown.removeAttribute('open'); });
+	}
+
+	function resizeWorkspacePanel(side, startLeft, startRight, deltaX) {
+		var grid = document.querySelector('.creator-workspace .creator-grid'); if (!grid) return;
+		var total = grid.getBoundingClientRect().width;
+		var minimumLeft = 208, minimumMiddle = 320, minimumRight = 304, separators = 2;
+		if (side === 'left') {
+			workspaceLayout.leftWidth = clamp(startLeft + deltaX, minimumLeft, Math.max(minimumLeft, total - startRight - minimumMiddle - separators));
+		} else {
+			workspaceLayout.rightWidth = clamp(startRight - deltaX, minimumRight, Math.max(minimumRight, total - startLeft - minimumMiddle - separators));
+		}
+		applyWorkspaceLayout();
+	}
+
+	function beginWorkspaceResize(event, side) {
+		if (event.button !== 0 || window.innerWidth <= 880) return;
+		if (workspaceLayout.collapsed && side === 'left') { workspaceLayout.collapsed = false; applyWorkspaceLayout(); }
+		var grid = document.querySelector('.creator-workspace .creator-grid');
+		var left = document.querySelector('#sets-workspace');
+		var right = document.querySelector('.creator-workspace .creator-menu');
+		if (!grid || !left || !right) return;
+		event.preventDefault();
+		var startX = event.clientX, startLeft = left.getBoundingClientRect().width, startRight = right.getBoundingClientRect().width;
+		grid.classList.add('workspace-is-resizing'); document.body.classList.add('workspace-panel-resizing');
+		function move(moveEvent) { resizeWorkspacePanel(side, startLeft, startRight, moveEvent.clientX - startX); }
+		function finish() {
+			document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', finish);
+			grid.classList.remove('workspace-is-resizing'); document.body.classList.remove('workspace-panel-resizing'); saveWorkspaceLayout();
+		}
+		document.addEventListener('pointermove', move); document.addEventListener('pointerup', finish, {once:true});
+	}
+
+	function initializeWorkspaceResizers() {
+		document.querySelectorAll('.workspace-resizer').forEach(function(handle) {
+			var side = handle.classList.contains('workspace-resizer-left') ? 'left' : 'right';
+			handle.addEventListener('pointerdown', function(event) { beginWorkspaceResize(event, side); });
+			handle.addEventListener('keydown', function(event) {
+				if (!['ArrowLeft','ArrowRight'].includes(event.key) || window.innerWidth <= 880) return;
+				event.preventDefault();
+				if (workspaceLayout.collapsed && side === 'left') { workspaceLayout.collapsed = false; applyWorkspaceLayout(); }
+				var left = document.querySelector('#sets-workspace').getBoundingClientRect().width;
+				var right = document.querySelector('.creator-workspace .creator-menu').getBoundingClientRect().width;
+				var step = event.shiftKey ? 32 : 12;
+				resizeWorkspacePanel(side, left, right, event.key === 'ArrowRight' ? step : -step); saveWorkspaceLayout();
+			});
+		});
+		window.addEventListener('resize', applyWorkspaceLayout);
+	}
 
 	async function initialize() {
 		if (initialized) return;
 		try {
+			loadWorkspaceLayout(); applyWorkspaceLayout(); initializeWorkspaceResizers();
 			if (root.frameCatalogReadyPromise) await root.frameCatalogReadyPromise;
 			initialBlankCardData = stripSetOwned(typeof cardStorageSnapshot === 'function' ? cardStorageSnapshot() : {});
-			await bootstrap(); initialized = true; renderWorkspace(); await loadActiveCard();
+			await bootstrap(); initialized = true; renderWorkspace(); applyWorkspaceLayout(); await loadActiveCard(); await revealWorkspace();
 			document.querySelector('.creator-menu')?.addEventListener('input', function(event) { if (!event.target.closest('#sets-card-details-summary')) queueCapture(420); });
 			document.querySelector('.creator-menu')?.addEventListener('change', function(event) { if (!event.target.closest('#sets-card-details-summary')) queueCapture(0); });
+			document.addEventListener('click', function(event) {
+				document.querySelectorAll('details.creator-action-dropdown[open]').forEach(function(dropdown) {
+					if (!dropdown.contains(event.target)) dropdown.removeAttribute('open');
+				});
+			});
 			document.addEventListener('keydown', function(event) {
-				if (event.key === 'Escape') closeDrawer();
+				if (event.key === 'Escape') {
+					document.querySelectorAll('details.creator-action-dropdown[open]').forEach(function(dropdown) { dropdown.removeAttribute('open'); });
+					closeCardSearch();
+					closeDrawer();
+				}
 				if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !event.isComposing) { event.preventDefault(); event.shiftKey ? redo() : undo(); }
 			});
 			setStatus('Saved locally','saved');
 		} catch (error) {
-			console.error(error); var host=document.querySelector('#sets-workspace-content'); if(host)host.innerHTML='<div class="creator-library-empty"><h3>Sets could not open</h3><p>'+escapeHtml(error.message)+'</p><button class="input" onclick="location.reload()">Retry</button></div>'; setStatus('Local storage unavailable','error');
+			console.error(error); var host=document.querySelector('#sets-workspace-content'); if(host)host.innerHTML='<div class="creator-library-empty"><h3>Sets could not open</h3><p>'+escapeHtml(error.message)+'</p><button class="input" onclick="location.reload()">Retry</button></div>'; setStatus('Local storage unavailable','error'); await revealWorkspace();
 		}
 	}
 
@@ -812,12 +1111,13 @@
 	root.CardConjurerSets = {
 		initialize: initialize, captureActiveCard: captureActiveCard, queueCapture: queueCapture, resetActiveCard: resetActiveCard,
 		automaticFrameSettled: automaticFrameSettled,
-		selectSet: selectSet, selectTab: selectTab, selectCard: selectCard, newSet: newSet, newCard: newCard, duplicateCard: duplicateCard, addVariant: addVariant,
+		selectSet: selectSet, selectTab: selectTab, selectCard: selectCard, newSet: newSet, duplicateSet: duplicateSet, newCard: newCard, duplicateCard: duplicateCard, addVariant: addVariant,
 		deleteCard: deleteCardAction, deleteSet: deleteSetAction, undo: undo, redo: redo, updateListState: updateListState,
 		previewSetField: previewSetField, commitSetField: commitSetField, updateSetText: updateSetText, previewStory: previewStory,
 		updateSymbol: updateSymbol, uploadSymbol: uploadSymbol, loadSymbolsByCode: loadSymbolsByCode, updateCollectorStyle: updateCollectorStyle, moveGroup: moveGroup, updateCardDetail: updateCardDetail,
-		moveOrCopy: moveOrCopy, confirmMoveOrCopy: confirmMoveOrCopy, exportCard: exportCardAction, exportSet: exportSetAction, importCardFile: importCardFile, importSetFile: importSetFile, resolveSetImport: resolveSetImport, cancelSetImport: cancelSetImport,
-		downloadSetImages: downloadSetImages, cancelZip: cancelZip, openDrawer: openDrawer, closeDrawer: closeDrawer,
+		moveOrCopy: moveOrCopy, confirmMoveOrCopy: confirmMoveOrCopy, exportCard: exportCardAction, exportCardImage: exportCardImage, exportSet: exportSetAction, importCardFile: importCardFile, importSetFile: importSetFile, resolveSetImport: resolveSetImport, cancelSetImport: cancelSetImport,
+		openCardSearch: openCardSearch, closeCardSearch: closeCardSearch, searchScryfallCards: searchScryfallCards, importScryfallCard: importScryfallCard,
+		downloadSetImages: downloadSetImages, cancelZip: cancelZip, openDrawer: openDrawer, closeDrawer: closeDrawer, toggleSetsPanel: toggleSetsPanel,
 		getState: function() { return clone(state); }, safeMarkdown: safeMarkdown, deleteDatabaseForTests: Storage.deleteDatabaseForTests
 	};
 

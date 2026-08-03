@@ -4628,8 +4628,9 @@ function parseStationCard(oracleText) {
     };
 }
 
-function changeCardIndex() {
-	let cardToImport = scryfallCard[document.querySelector('#import-index').value];
+function changeCardIndex(cardOverride, importOptions = {}) {
+	let cardToImport = cardOverride || scryfallCard[document.querySelector('#import-index').value];
+	const preserveSetOwned = Boolean(importOptions.preserveSetOwned);
 	// Add debug logging for card Layout detection
 	console.log('Card layout:', cardToImport.layout);
 	console.log('Card version:', card.version);
@@ -4707,7 +4708,7 @@ function changeCardIndex() {
 		}
 	
 		// Handle set symbol
-		if (!document.querySelector('#lockSetSymbolCode').checked) {
+		if (!preserveSetOwned && !document.querySelector('#lockSetSymbolCode').checked) {
 			document.querySelector('#set-symbol-code').value = cardToImport.set;
 			document.querySelector('#set-symbol-rarity').value = cardToImport.rarity.slice(0, 1);
 			if (!document.querySelector('#lockSetSymbolURL').checked) {
@@ -5251,7 +5252,7 @@ else if (cardToImport.oracle_text && cardToImport.oracle_text.includes('Station'
 		});
 	textEdited();
 	//collector's info
-	if (localStorage.getItem('enableImportCollectorInfo') == 'true') {
+	if (!preserveSetOwned && localStorage.getItem('enableImportCollectorInfo') == 'true') {
 		document.querySelector('#info-number').value = cardToImport.collector_number || "";
 		document.querySelector('#info-rarity').value = (cardToImport.rarity || "")[0].toUpperCase();
 		document.querySelector('#info-set').value = (cardToImport.set || "").toUpperCase();
@@ -5302,18 +5303,25 @@ else if (cardToImport.oracle_text && cardToImport.oracle_text.includes('Station'
 	}
 	//art
 	document.querySelector('#art-name').value = cardToImport.name;
-	fetchScryfallData(cardToImport.name, artFromScryfall, 'art');
-	if (document.querySelector('#importAllPrints').checked) {
-		document.querySelector('#art-index').value = document.querySelector('#import-index').value;
-		changeArtIndex();
+	if (importOptions.useExactArt && cardToImport.image_uris?.art_crop) {
+		uploadArt(cardToImport.image_uris.art_crop, 'autoFit');
+		if (cardToImport.artist) artistEdited(cardToImport.artist);
+	} else {
+		fetchScryfallData(cardToImport.name, artFromScryfall, 'art');
+		if (document.querySelector('#importAllPrints').checked) {
+			document.querySelector('#art-index').value = document.querySelector('#import-index').value;
+			changeArtIndex();
+		}
 	}
 	//set symbol
-	if (!document.querySelector('#lockSetSymbolCode').checked) {
-		document.querySelector('#set-symbol-code').value = cardToImport.set;
-	}
-	document.querySelector('#set-symbol-rarity').value = cardToImport.rarity.slice(0, 1);
-	if (!document.querySelector('#lockSetSymbolURL').checked) {
-		fetchSetSymbol();
+	if (!preserveSetOwned) {
+		if (!document.querySelector('#lockSetSymbolCode').checked) {
+			document.querySelector('#set-symbol-code').value = cardToImport.set;
+		}
+		document.querySelector('#set-symbol-rarity').value = cardToImport.rarity.slice(0, 1);
+		if (!document.querySelector('#lockSetSymbolURL').checked) {
+			fetchSetSymbol();
+		}
 	}
 }
 function loadAvailableCards(cardKeys = JSON.parse(localStorage.getItem('cardKeys'))) {

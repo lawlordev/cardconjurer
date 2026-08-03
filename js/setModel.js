@@ -322,7 +322,8 @@
 		var result = (cards || []).filter(function(raw) {
 			var card = raw.derived ? raw : deriveCard(raw);
 			var d = card.derived;
-			if (query && ![d.normalizedTitle, d.normalizedType, d.normalizedRules, d.normalizedArtist].some(function(value) { return value.includes(query); })) return false;
+			var searchableTitle = d.normalizedTitle || normalizeText('Untitled Card');
+			if (query && ![searchableTitle, d.normalizedType, d.normalizedRules, d.normalizedArtist].some(function(value) { return value.includes(query); })) return false;
 			if (!matchesColor(d.actualColors, state.color, state.colorMode)) return false;
 			if (!matchesColor(d.colorIdentity, state.identity, state.identityMode)) return false;
 			if (state.rarity && card.rarity !== state.rarity) return false;
