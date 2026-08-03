@@ -7,6 +7,8 @@
 
 	var SCHEMA_VERSION = 1;
 	var RARITIES = ['common', 'uncommon', 'rare', 'mythic'];
+	var SET_SYMBOL_RARITY_CODES = {common: 'c', uncommon: 'u', rare: 'r', mythic: 'm'};
+	var SET_SYMBOL_ALIASES = {anb: 'ana', tsb: 'tsp', pmei: 'sld'};
 	var COLORS = ['W', 'U', 'B', 'R', 'G'];
 	var DEFAULT_GROUP_ORDER = ['tokens', 'borderless', 'special', 'booster-fun', 'custom'];
 	var DEFAULT_LIST_STATE = {
@@ -135,6 +137,31 @@
 		return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
 	}
 
+	function normalizeSymbolCode(value) {
+		return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
+	}
+
+	function symbolSourcesForCode(value) {
+		var requestedCode = normalizeSymbolCode(value);
+		if (!requestedCode) return null;
+		var assetCode = SET_SYMBOL_ALIASES[requestedCode] || requestedCode;
+		var folder = 'official';
+		var extension = assetCode === 'xxxx' ? 'png' : 'svg';
+		var filenameCode = assetCode;
+		if (['a22', 'a23', 'j22', 'hlw'].includes(assetCode)) {
+			folder = 'custom';
+			extension = 'png';
+			if (assetCode === 'j22') filenameCode = 'J22';
+		} else if (['cc', 'logan', 'joe'].includes(assetCode)) {
+			folder = 'custom';
+			extension = 'svg';
+		}
+		return RARITIES.reduce(function(sources, rarity) {
+			sources[rarity] = '/img/setSymbols/' + folder + '/' + filenameCode + '-' + SET_SYMBOL_RARITY_CODES[rarity] + '.' + extension;
+			return sources;
+		}, {});
+	}
+
 	function validateSet(set, sets) {
 		var errors = {};
 		if (!String(set.name || '').trim()) errors.name = 'Enter a set name.';
@@ -154,7 +181,7 @@
 		return {
 			id: createId('set'), name: next.name, description: '', releaseDate: '', creator: 'Card Conjurer User',
 			notes: '', story: '', code: next.code, language: 'EN', copyright: '© ' + date.getUTCFullYear() + ' Custom Cards.',
-			collectorStyle: 'post-one', symbolSources: {common: '', uncommon: '', rare: '', mythic: ''},
+			collectorStyle: 'post-one', symbolCode: '', symbolSources: {common: '', uncommon: '', rare: '', mythic: ''},
 			collectorGroupOrder: DEFAULT_GROUP_ORDER.slice(), activeCardId: null, listState: clone(DEFAULT_LIST_STATE), activeTab: 'cards',
 			createdAt: timestamp, updatedAt: timestamp
 		};
@@ -349,6 +376,7 @@
 		SCHEMA_VERSION: SCHEMA_VERSION, RARITIES: RARITIES, COLORS: COLORS,
 		DEFAULT_GROUP_ORDER: DEFAULT_GROUP_ORDER, DEFAULT_LIST_STATE: DEFAULT_LIST_STATE,
 		clone: clone, createId: createId, normalizeText: normalizeText, normalizeSetCode: normalizeSetCode,
+		normalizeSymbolCode: normalizeSymbolCode, symbolSourcesForCode: symbolSourcesForCode,
 		validateSet: validateSet, nextUntitled: nextUntitled, createDefaultSet: createDefaultSet, createDefaultCard: createDefaultCard,
 		deriveCard: deriveCard, gameplayFingerprint: gameplayFingerprint, manaValue: manaValue,
 		printingGroup: printingGroup, collectorBucket: collectorBucket, suffixFor: suffixFor,

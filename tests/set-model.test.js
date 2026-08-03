@@ -29,6 +29,19 @@ test('normalizes and validates set codes and uniqueness', () => {
 	assert.equal(Model.validateSet(other, [set]).code, 'Use exactly three letters or numbers.');
 });
 
+test('builds all four set-symbol sources from one code', () => {
+	assert.equal(Model.normalizeSymbolCode(' LE-A! '), 'lea');
+	assert.deepEqual(Model.symbolSourcesForCode('lea'), {
+		common: '/img/setSymbols/official/lea-c.svg',
+		uncommon: '/img/setSymbols/official/lea-u.svg',
+		rare: '/img/setSymbols/official/lea-r.svg',
+		mythic: '/img/setSymbols/official/lea-m.svg'
+	});
+	assert.equal(Model.symbolSourcesForCode('anb').rare, '/img/setSymbols/official/ana-r.svg');
+	assert.equal(Model.symbolSourcesForCode('j22').mythic, '/img/setSymbols/custom/J22-m.png');
+	assert.equal(Model.symbolSourcesForCode(''), null);
+});
+
 test('orders the standard collector buckets and formats Post-ONE numbers', () => {
 	const set = Model.createDefaultSet([], '2026-01-01T00:00:00Z');
 	const cards = [

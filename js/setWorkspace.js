@@ -14,6 +14,7 @@
 	var zipCanceled = false;
 	var pendingTransferMode = null;
 	var pendingSetImport = null;
+	var DEFAULT_SET_SYMBOL_BOUNDS = {x: 0.9213, y: 0.5910, width: 0.12, height: 0.0410, vertical: 'center', horizontal: 'right'};
 	var channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('card-conjurer-sets') : null;
 
 	function clone(value) { return Model.clone(value); }
@@ -52,6 +53,23 @@
 		var source = symbolFor(set, record);
 		if (source) data.setSymbolSource = source;
 		return data;
+	}
+
+	function symbolSourceKey(source) {
+		var value = String(source || ''); var hash = 2166136261;
+		for (var index = 0; index < value.length; index++) {
+			hash ^= value.charCodeAt(index);
+			hash = Math.imul(hash, 16777619);
+		}
+		return value.length + ':' + (hash >>> 0).toString(16);
+	}
+
+	function symbolPlacementMissing(data, source) {
+		if (!data || !data.setSymbolBounds) return true;
+		var x = Number(data.setSymbolX); var y = Number(data.setSymbolY); var zoom = Number(data.setSymbolZoom);
+		if (![x, y, zoom].every(Number.isFinite) || zoom <= 0 || zoom > 5) return true;
+		if (x === 0 && y === 0 && zoom === 1) return true;
+		return Boolean(source) && data.setSymbolPlacementKey !== symbolSourceKey(source);
 	}
 
 	function stripSetOwned(data) {
@@ -288,7 +306,9 @@
 
 	function renderSymbolTab(panel, set) {
 		var labels = {common:'Common · tokens · basic lands', uncommon:'Uncommon', rare:'Rare', mythic:'Mythic Rare'};
-		panel.innerHTML = '<p class="sets-tab-intro">Upload or link one symbol for each supported rarity. Placement remains card-specific.</p><div class="sets-symbol-grid">' + Model.RARITIES.map(function(rarity) {
+		panel.innerHTML = '<p class="sets-tab-intro">Load a bundled symbol family by set code, or upload and link individual rarity overrides. Placement remains card-specific.</p>' +
+			'<section class="sets-symbol-loader"><div><strong>Load by set code</strong><span>Fills Common, Uncommon, Rare, and Mythic Rare at once.</span></div><label><span class="sr-only">Symbol set code</span><input id="sets-symbol-code" class="input" type="text" maxlength="12" autocomplete="off" spellcheck="false" value="' + escapeHtml(set.symbolCode || set.code || '') + '" placeholder="Set code" oninput="this.value=CardConjurerSetModel.normalizeSymbolCode(this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();CardConjurerSets.loadSymbolsByCode(this)}"></label><button type="button" class="input sets-primary" onclick="CardConjurerSets.loadSymbolsByCode(document.querySelector(\'#sets-symbol-code\'))">Load all rarities</button></section>' +
+			'<div class="sets-symbol-grid">' + Model.RARITIES.map(function(rarity) {
 			var source = set.symbolSources[rarity] || '';
 			return '<section class="sets-symbol-card"><div class="sets-symbol-preview">' + (source ? '<img src="' + escapeHtml(source) + '" alt="' + labels[rarity] + ' set symbol">' : '<span>—</span>') + '</div><label><strong>' + labels[rarity] + '</strong><input class="input" value="' + escapeHtml(source) + '" placeholder="Image URL" onblur="CardConjurerSets.updateSymbol(\'' + rarity + '\', this.value)"></label><button type="button" onclick="this.nextElementSibling.click()">Upload image</button><input type="file" accept="image/*" hidden onchange="CardConjurerSets.uploadSymbol(\'' + rarity + '\', event)"></section>';
 		}).join('') + '</div>';
@@ -317,10 +337,20 @@
 		try {
 			var styleInput = document.querySelector('#enableNewCollectorStyle');
 			if (styleInput) styleInput.checked = set.collectorStyle === 'post-one';
-			await loadCardData(hydratedCardData(record, set), record.uiState || {});
+			var hydrated = hydratedCardData(record, set);
+			var repairedSymbolPlacement = Boolean(hydrated.setSymbolSource && symbolPlacementMissing(hydrated, hydrated.setSymbolSource));
+			if (repairedSymbolPlacement && !hydrated.setSymbolBounds) hydrated.setSymbolBounds = clone(DEFAULT_SET_SYMBOL_BOUNDS);
+			await loadCardData(hydrated, record.uiState || {});
+			if (repairedSymbolPlacement && typeof resetSetSymbol === 'function') {
+				resetSetSymbol();
+				card.setSymbolPlacementKey = symbolSourceKey(hydrated.setSymbolSource);
+				record.cardData = stripSetOwned(cardStorageSnapshot());
+				record.updatedAt = new Date().toISOString();
+			}
 			if (typeof setBottomInfoStyle === 'function') { await setBottomInfoStyle(); await bottomInfoEdited(); }
 			renderCardDetailsSummary();
 			await updateThumbnail(record.id);
+			if (repairedSymbolPlacement) await persist();
 		} finally { loadingCard = false; editorDirty = false; }
 	}
 
@@ -533,15 +563,85 @@
 
 	function previewStory(value) { var host = document.querySelector('#sets-story-preview'); if (host) host.innerHTML = safeMarkdown(value); }
 
+	function invalidateSetCardThumbnails(set) {
+		cardsFor(set.id).forEach(function(cardRecord) {
+			cardRecord.thumbnail = '';
+			cardRecord.thumbnailDirty = true;
+		});
+	}
+
+	async function refreshActiveCardSymbol() {
+		var set = activeSet(); var record = activeCardRecord();
+		if (!set || !record || typeof uploadSetSymbol !== 'function') return;
+		var source = symbolFor(set, record) || (typeof blank !== 'undefined' && blank.src) || '/img/blank.png';
+		var repairedSymbolPlacement = symbolPlacementMissing(card, source);
+		if (repairedSymbolPlacement && !card.setSymbolBounds) card.setSymbolBounds = clone(DEFAULT_SET_SYMBOL_BOUNDS);
+		uploadSetSymbol(source);
+		if (typeof waitForRenderableImage === 'function' && typeof setSymbol !== 'undefined') await waitForRenderableImage(setSymbol);
+		if (repairedSymbolPlacement && typeof resetSetSymbol === 'function') {
+			resetSetSymbol();
+			card.setSymbolPlacementKey = symbolSourceKey(source);
+		}
+		else if (typeof setSymbolEdited === 'function') setSymbolEdited();
+		else if (typeof drawCard === 'function') drawCard();
+		if (repairedSymbolPlacement && typeof cardStorageSnapshot === 'function') {
+			record.cardData = stripSetOwned(cardStorageSnapshot());
+			record.updatedAt = new Date().toISOString();
+		}
+		await updateThumbnail(record.id);
+		if (repairedSymbolPlacement) await persist();
+	}
+
 	async function updateSymbol(rarity, source) {
-		var set = activeSet(); if (!set || set.symbolSources[rarity] === source) return;
-		await commit('Change ' + rarity + ' set symbol', '', function() { set.symbolSources[rarity] = source.trim(); cardsFor(set.id).forEach(function(card) { card.thumbnailDirty = true; }); }, [set.id]);
-		await loadActiveCard();
+		var set = activeSet(); var normalizedSource = String(source || '').trim();
+		if (!set || set.symbolSources[rarity] === normalizedSource) return;
+		await commit('Change ' + rarity + ' set symbol', '', function() {
+			set.symbolSources[rarity] = normalizedSource;
+			invalidateSetCardThumbnails(set);
+		}, [set.id]);
+		await refreshActiveCardSymbol();
 	}
 
 	function uploadSymbol(rarity, event) {
 		var file = event.target.files && event.target.files[0]; if (!file) return;
 		var reader = new FileReader(); reader.onload = function() { updateSymbol(rarity, reader.result); }; reader.readAsDataURL(file); event.target.value = '';
+	}
+
+	function symbolImageLoads(source) {
+		return new Promise(function(resolve) {
+			var image = new Image();
+			image.onload = function() { resolve(true); };
+			image.onerror = function() { resolve(false); };
+			image.src = typeof fixUri === 'function' ? fixUri(source) : source;
+		});
+	}
+
+	async function loadSymbolsByCode(input) {
+		var set = activeSet();
+		var code = Model.normalizeSymbolCode(input && input.value);
+		if (!set || !input) return;
+		input.value = code;
+		if (!code) { input.setCustomValidity('Enter a set code.'); input.reportValidity(); return; }
+		input.setCustomValidity('');
+		clearWorkspaceError();
+		var button = input.closest('.sets-symbol-loader').querySelector('button');
+		var sources = Model.symbolSourcesForCode(code);
+		button.disabled = true;
+		button.textContent = 'Loading…';
+		var results = await Promise.all(Model.RARITIES.map(function(rarity) { return symbolImageLoads(sources[rarity]); }));
+		if (results.some(function(result) { return !result; })) {
+			button.disabled = false;
+			button.textContent = 'Load all rarities';
+			showWorkspaceError('A complete four-rarity symbol family was not found for "' + code.toUpperCase() + '". Check the code or use the individual rarity overrides below.');
+			return;
+		}
+		await commit('Load ' + code.toUpperCase() + ' set symbols', '', function() {
+			set.symbolCode = code;
+			set.symbolSources = sources;
+			invalidateSetCardThumbnails(set);
+		}, [set.id]);
+		await refreshActiveCardSymbol();
+		setStatus('Loaded ' + code.toUpperCase() + ' symbols for all rarities', 'saved');
 	}
 
 	async function updateCollectorStyle(value) {
@@ -715,7 +815,7 @@
 		selectSet: selectSet, selectTab: selectTab, selectCard: selectCard, newSet: newSet, newCard: newCard, duplicateCard: duplicateCard, addVariant: addVariant,
 		deleteCard: deleteCardAction, deleteSet: deleteSetAction, undo: undo, redo: redo, updateListState: updateListState,
 		previewSetField: previewSetField, commitSetField: commitSetField, updateSetText: updateSetText, previewStory: previewStory,
-		updateSymbol: updateSymbol, uploadSymbol: uploadSymbol, updateCollectorStyle: updateCollectorStyle, moveGroup: moveGroup, updateCardDetail: updateCardDetail,
+		updateSymbol: updateSymbol, uploadSymbol: uploadSymbol, loadSymbolsByCode: loadSymbolsByCode, updateCollectorStyle: updateCollectorStyle, moveGroup: moveGroup, updateCardDetail: updateCardDetail,
 		moveOrCopy: moveOrCopy, confirmMoveOrCopy: confirmMoveOrCopy, exportCard: exportCardAction, exportSet: exportSetAction, importCardFile: importCardFile, importSetFile: importSetFile, resolveSetImport: resolveSetImport, cancelSetImport: cancelSetImport,
 		downloadSetImages: downloadSetImages, cancelZip: cancelZip, openDrawer: openDrawer, closeDrawer: closeDrawer,
 		getState: function() { return clone(state); }, safeMarkdown: safeMarkdown, deleteDatabaseForTests: Storage.deleteDatabaseForTests

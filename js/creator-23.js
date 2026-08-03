@@ -1503,6 +1503,21 @@ function createTextFieldCard(key, textObject, optionalPlaceholder) {
 	layoutButton.className = 'text-field-layout-button';
 	layoutButton.textContent = 'Layout';
 	layoutButton.onclick = () => textboxEditorForKey(key);
+	if (['title', 'type'].includes(key)) {
+		var autoSizeLabel = document.createElement('label');
+		autoSizeLabel.className = 'text-field-auto-size';
+		var autoSizeInput = document.createElement('input');
+		autoSizeInput.type = 'checkbox';
+		autoSizeInput.checked = textObject.autoSize !== false;
+		autoSizeInput.setAttribute('aria-label', `Auto-size ${textObject.name || key}`);
+		autoSizeInput.onchange = () => {
+			textObject.autoSize = autoSizeInput.checked;
+			drawTextBuffer(0);
+			if (typeof queueLiveDraftSave === 'function') queueLiveDraftSave();
+		};
+		autoSizeLabel.append(autoSizeInput, document.createTextNode('Auto-Size'));
+		heading.appendChild(autoSizeLabel);
+	}
 	heading.appendChild(layoutButton);
 	field.appendChild(heading);
 
@@ -1772,8 +1787,12 @@ async function drawText(requestId) {
 	textContext.clearRect(0, 0, textCanvas.width, textCanvas.height);
 	prePTContext.clearRect(0, 0, prePTCanvas.width, prePTCanvas.height);
 	drawTextBetweenFrames = false;
-	for (var textObject of Object.entries(card.text)) {
-		writeText(textObject[1], textContext);
+	var renderedTextBounds = {};
+	var textEntries = Object.entries(card.text || {});
+	var orderedTextEntries = textEntries.filter(entry => entry[1]?.manaCost).concat(textEntries.filter(entry => !entry[1]?.manaCost));
+	for (var textObject of orderedTextEntries) {
+		var fittedTextObject = collisionAwareTextObject(textObject[0], textObject[1], renderedTextBounds);
+		renderedTextBounds[textObject[0]] = writeText(fittedTextObject, textContext);
 		continue;
 	}
 	if (drawTextBetweenFrames || redrawFrames) {
@@ -1786,6 +1805,41 @@ async function drawText(requestId) {
 	}
 	finishPreviewRenderCommit(previewCommitId);
 	return true;
+}
+
+function primaryManaBounds(renderedTextBounds) {
+	var entry = Object.entries(card.text || {}).find(item => item[1]?.manaCost && !/flip|back/i.test(item[0]));
+	return entry ? renderedTextBounds[entry[0]] : null;
+}
+
+function setSymbolVisualLeft() {
+	if (!card.setSymbolBounds || !setSymbol || !setSymbol.complete || !setSymbol.naturalWidth || !setSymbol.naturalHeight || setSymbol.src.includes('/img/blank.png')) return null;
+	var width = setSymbol.width * Number(card.setSymbolZoom || 0);
+	var height = setSymbol.height * Number(card.setSymbolZoom || 0);
+	if (!width || !height) return null;
+	var rotation = Math.PI * Number(card.setSymbolRotate || 0) / 180;
+	var visualWidth = Math.abs(width * Math.cos(rotation)) + Math.abs(height * Math.sin(rotation));
+	return scaleX(Number(card.setSymbolX || 0)) + width / 2 - visualWidth / 2;
+}
+
+function collisionAwareTextObject(key, textObject, renderedTextBounds) {
+	if (!['title', 'type'].includes(key) || textObject.autoSize === false || !textObject.oneLine) return textObject;
+	var fitted = Object.assign({}, textObject);
+	fitted.autoSizeVerticalCenter = true;
+	var textLeft = scaleX(Number(textObject.x || 0));
+	var configuredRight = textLeft + scaleWidth(Number(textObject.width || 1));
+	var obstacleLeft = null;
+	if (key === 'title') {
+		var manaBounds = primaryManaBounds(renderedTextBounds);
+		if (manaBounds && manaBounds.width > 0) obstacleLeft = manaBounds.left;
+	} else {
+		obstacleLeft = setSymbolVisualLeft();
+	}
+	if (Number.isFinite(obstacleLeft)) {
+		var fittedRight = Math.min(configuredRight, obstacleLeft - 8);
+		fitted.width = Math.max(1, fittedRight - textLeft) / card.width;
+	}
+	return fitted;
 }
 var justifyWidth = 90;
 let manaSymbolsToRender = [];
@@ -1988,6 +2042,7 @@ function reminderTextOptionChanged(input) {
 }
 
 function writeText(textObject, targetContext) {
+	var finalRenderedBounds = null;
 	manaSymbolsToRender = [];
 	//Most bits of info about text loaded, with defaults when needed
 	var textX = scaleX(textObject.x) || scaleX(0);
@@ -2197,6 +2252,8 @@ function writeText(textObject, targetContext) {
 		var savedRollColor = 'black';
 		var drawToPrePTCanvas = false;
 		var widestLineWidth = 0;
+		var oneLineInkTop = Infinity;
+		var oneLineInkBottom = -Infinity;
 		//variables that track various... things?
 		var textSize = startingTextSize;
 		var newLineSpacing = (textObject.lineSpacing || 0) * textSize;
@@ -2597,6 +2654,10 @@ function writeText(textObject, targetContext) {
 						shadowOffsetY: textShadowOffsetY,
 						shadowBlur: textShadowBlur
 					});
+					if (textOneLine && textObject.autoSizeVerticalCenter) {
+						oneLineInkTop = Math.min(oneLineInkTop, manaSymbolY - canvasMargin);
+						oneLineInkBottom = Math.max(oneLineInkBottom, manaSymbolY - canvasMargin + manaSymbolHeight);
+					}
 					currentX += manaSymbolWidth + manaSymbolSpacing * 2;
 
 					manaSymbolColor = origManaSymbolColor;
@@ -2809,6 +2870,14 @@ function writeText(textObject, targetContext) {
 			}
 			//if there's a word to write, it's not a space on a new line, and it's allowed to write words, then we write the word
 			if (wordToWrite && (currentX != startingCurrentX || wordToWrite != ' ') && !textManaCost) {
+				if (textOneLine && textObject.autoSizeVerticalCenter) {
+					var inkMetrics = lineContext.measureText(wordToWrite);
+					var inkAscent = inkMetrics.actualBoundingBoxAscent || textSize * textFontHeightRatio;
+					var inkDescent = inkMetrics.actualBoundingBoxDescent || textSize * 0.15;
+					var inkBaseline = textSize * textFontHeightRatio + lineY;
+					oneLineInkTop = Math.min(oneLineInkTop, inkBaseline - inkAscent);
+					oneLineInkBottom = Math.max(oneLineInkBottom, inkBaseline + inkDescent);
+				}
 				var justifySettings = {
 					maxSpaceSize: 6,
 					minSpaceSize: 0
@@ -2859,7 +2928,11 @@ function writeText(textObject, targetContext) {
 				//should manage vertical centering here
 				var verticalAdjust = 0;
 				if (!textObject.noVerticalCenter) {
-					verticalAdjust = (textHeight - currentY + textSize * 0.15) / 2;
+					if (textObject.autoSizeVerticalCenter && oneLineInkTop !== Infinity && oneLineInkBottom !== -Infinity) {
+						verticalAdjust = textHeight / 2 - (oneLineInkTop + oneLineInkBottom) / 2;
+					} else {
+						verticalAdjust = (textHeight - currentY + textSize * 0.15) / 2;
+					}
 				}
 				var finalHorizontalAdjust = 0;
 				const horizontalAdjustUnit = (textWidth - widestLineWidth) / 2;
@@ -2890,10 +2963,15 @@ function writeText(textObject, targetContext) {
 				} else {
 					trueTargetContext.drawImage(paragraphCanvas, textX - canvasMargin + ptShift[0] + permaShift[0] + finalHorizontalAdjust, textY - canvasMargin + verticalAdjust + ptShift[1] + permaShift[1]);
 				}
+				var renderedLeft = textX + ptShift[0] + permaShift[0] + finalHorizontalAdjust;
+				if (textAlign === 'right') renderedLeft += textWidth - widestLineWidth;
+				else if (textAlign === 'center') renderedLeft += (textWidth - widestLineWidth) / 2;
+				finalRenderedBounds = {left: renderedLeft, right: renderedLeft + widestLineWidth, width: widestLineWidth, top: textY, height: textHeight};
 				drawingText = false;
 			}
 		}
 	}
+	return finalRenderedBounds;
 }
 
 CanvasRenderingContext2D.prototype.fillTextArc = function(text, x, y, radius, startRotation, distance = 0, outlineWidth = 0) {
@@ -3260,7 +3338,8 @@ function setSymbolEdited() {
 	card.setSymbolY = document.querySelector('#setSymbol-y').value / card.height;
 	card.setSymbolZoom = document.querySelector('#setSymbol-zoom').value / 100;
 	card.setSymbolRotate = parseFloat(document.querySelector('#setSymbol-rotate').value) || 0;
-	drawCard();
+	if (card.text?.type && card.text.type.autoSize !== false) drawTextBuffer(0);
+	else drawCard();
 }
 function resetSetSymbol() {
 	if (card.setSymbolBounds == undefined) {

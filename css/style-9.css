@@ -627,6 +627,7 @@ textarea.input {
 .sets-set-actions { display: flex; flex-wrap: wrap; gap: .35rem; padding-top: .65rem; }
 .sets-card-actions button,
 .sets-set-actions button,
+.sets-symbol-loader button,
 .sets-symbol-card button,
 .sets-group-list button { border: 1px solid rgba(148,163,184,.2); border-radius: .42rem; padding: .42rem .58rem; background: rgba(30,41,59,.7); color: #cbd5e1; cursor: pointer; font: inherit; font-size: .7rem; }
 .sets-card-actions .danger,
@@ -640,6 +641,13 @@ textarea.input {
 .sets-markdown-preview a { color: #71e0d2; }
 .sets-markdown-preview pre { overflow: auto; padding: .55rem; border-radius: .35rem; background: #080e17; }
 .sets-markdown-preview blockquote { margin: .6rem 0; padding-left: .65rem; border-left: 3px solid #71e0d2; color: #9aa8b7; }
+.sets-symbol-loader { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: .55rem; align-items: end; margin-bottom: .7rem; padding: .7rem; border: 1px solid rgba(113,224,210,.24); border-radius: .55rem; background: rgba(113,224,210,.07); }
+.sets-symbol-loader > div { grid-column: 1 / -1; display: grid; gap: .2rem; color: #d7e3eb; font-size: .76rem; }
+.sets-symbol-loader > div span { color: #8fa0ae; font-size: .7rem; line-height: 1.4; }
+.sets-symbol-loader label { min-width: 0; }
+.sets-symbol-loader .input { margin: 0; min-width: 0; }
+.sets-symbol-loader button.sets-primary { border-color: #71e0d2; background: #71e0d2; color: #0b151d; font-weight: 800; }
+.sets-symbol-loader button:disabled { cursor: wait; opacity: .65; }
 .sets-symbol-grid { display: grid; gap: .6rem; }
 .sets-symbol-card { display: grid; grid-template-columns: 3.3rem minmax(0,1fr); gap: .65rem; align-items: center; border: 1px solid rgba(148,163,184,.14); border-radius: .55rem; padding: .65rem; background: rgba(15,23,42,.4); }
 .sets-symbol-card button { grid-column: 2; justify-self: start; }
@@ -1318,6 +1326,18 @@ textarea.collector-copyright-input {
 	color: #eef2f8;
 	background: #1b2432;
 }
+.text-field-auto-size {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	margin-left: auto;
+	color: #9eacbd;
+	font-size: 0.62rem;
+	font-weight: 600;
+	cursor: pointer;
+}
+.text-field-auto-size + .text-field-layout-button { margin-left: 0; }
+.text-field-auto-size input { width: 0.85rem; height: 0.85rem; margin: 0; accent-color: #71e0d2; }
 .card-specific-text-tools {
 	display: grid;
 	gap: 0.65rem;
