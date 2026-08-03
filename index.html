@@ -9,6 +9,7 @@
 	<meta name="apple-mobile-web-app-capable" content="yes">
 	<meta name="mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-status-bar-style" content="black">
+	<script src="js/desktopBoot.js?v=20260803-desktop-1"></script>
 	<link rel="stylesheet" href="css/reset.css">
 	<link rel="stylesheet" href="css/style-9.css?v=20260803-sets-7">
 	<link rel="shortcut icon" href="core/favicon.ico">
@@ -22,6 +23,12 @@
 	<script defer src='js/desktopBridge.js?v=20260803-desktop-1'></script>
 </head>
 <body>
+	<div id="desktop-boot-screen" role="status" aria-live="polite" aria-label="Set Conjurer is loading">
+		<span class="desktop-boot-mark" aria-hidden="true">SC</span>
+		<strong>Set Conjurer</strong>
+		<small>Conjuring your studio…</small>
+		<i class="desktop-boot-progress" aria-hidden="true"></i>
+	</div>
 	<div class='background'></div>
 	<header class='readable-background'>
 		<h1 class='title center'>CARD CONJURER</h1>

@@ -31,3 +31,17 @@ test('development mode reloads renderer changes without weakening packaged build
 	assert.match(main, /if \(app\.isPackaged\) return/);
 	assert.match(main, /reloadIgnoringCache/);
 });
+
+test('desktop boot hides the legacy page until the Sets workspace is ready', () => {
+	const boot = fs.readFileSync(path.join(__dirname, '../../js/desktopBoot.js'), 'utf8');
+	const workspace = fs.readFileSync(path.join(__dirname, '../../js/setWorkspace.js'), 'utf8');
+	assert.match(boot, /desktop-booting/);
+	assert.match(boot, /SetConjurerBoot/);
+	assert.match(workspace, /SetConjurerBoot\.finish\(\)/);
+});
+
+test('local developer packages seed every selectable frame pack', () => {
+	const seed = fs.readFileSync(path.join(__dirname, '../../scripts/build-local-pack-seed.mjs'), 'utf8');
+	for (const id of ['standard', 'booster-fun', 'tokens', 'basics', 'legacy', 'custom']) assert.match(seed, new RegExp(`['\"]${id}['\"]`));
+	assert.match(seed, /requested === 'all'/);
+});

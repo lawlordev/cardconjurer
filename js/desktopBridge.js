@@ -57,7 +57,7 @@
 	function packCard(pack, selectable) {
 		var checked = pack.required || pack.installed;
 		var disabled = pack.required || !pack.available;
-		var status = pack.installed ? 'Installed · ' + escapeHtml(pack.installedVersion || '') : pack.available ? 'Available to download' : 'Not available in this build yet';
+		var status = pack.installed ? 'Installed · ' + escapeHtml(pack.installedVersion || '') : pack.source === 'bundled-seed' ? 'Included in this local build' : pack.available ? 'Available to download' : 'Not available in this build yet';
 		return '<label class="desktop-pack-row"><input type="checkbox" data-pack-id="' + pack.id + '" ' + (checked ? 'checked ' : '') + (disabled ? 'disabled ' : '') + '><span><strong>' + escapeHtml(pack.displayName) + (pack.required ? ' <em>Required</em>' : '') + '</strong><small>' + escapeHtml(pack.description) + '</small><small>' + status + '</small></span>' + (selectable && pack.installed && !pack.required ? '<button type="button" data-remove-pack="' + pack.id + '" class="danger">Remove</button>' : '') + '</label>';
 	}
 	async function openPacks(trigger) {

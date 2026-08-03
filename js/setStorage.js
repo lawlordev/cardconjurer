@@ -53,8 +53,19 @@
 		return requestPromise(db.transaction(storeName, 'readonly').objectStore(storeName).getAll());
 	}
 
+	function normalizeState(value) {
+		var state = value && typeof value === 'object' ? value : {};
+		return {
+			sets: Array.isArray(state.sets) ? state.sets : [],
+			cards: Array.isArray(state.cards) ? state.cards : [],
+			histories: state.histories && typeof state.histories === 'object' ? state.histories : {},
+			activeSetId: state.activeSetId || null,
+			revision: Number.isFinite(Number(state.revision)) ? Number(state.revision) : 0
+		};
+	}
+
 	async function loadState() {
-		if (typeof window !== 'undefined' && window.setConjurerDesktop) return window.setConjurerDesktop.storage.loadState();
+		if (typeof window !== 'undefined' && window.setConjurerDesktop) return normalizeState(await window.setConjurerDesktop.storage.loadState());
 		var db = await open();
 		var transaction = db.transaction(['sets', 'cards', 'history', 'preferences'], 'readonly');
 		var setsRequest = transaction.objectStore('sets').getAll();
@@ -62,12 +73,12 @@
 		var historyRequest = transaction.objectStore('history').getAll();
 		var activeRequest = transaction.objectStore('preferences').get('active');
 		var values = await Promise.all([requestPromise(setsRequest), requestPromise(cardsRequest), requestPromise(historyRequest), requestPromise(activeRequest)]);
-		return {
+		return normalizeState({
 			sets: values[0] || [], cards: values[1] || [],
 			histories: Object.fromEntries((values[2] || []).map(function(item) { return [item.setId, item.history]; })),
 			activeSetId: values[3] && values[3].activeSetId || null,
 			revision: values[3] && values[3].revision || 0
-		};
+		});
 	}
 
 	async function saveState(state) {
@@ -99,7 +110,7 @@
 
 	return {
 		DB_NAME: DB_NAME, DB_VERSION: DB_VERSION,
-		open: open, getAll: getAll, loadState: loadState, saveState: saveState,
+		open: open, getAll: getAll, normalizeState: normalizeState, loadState: loadState, saveState: saveState,
 		deleteDatabaseForTests: deleteDatabaseForTests
 	};
 });

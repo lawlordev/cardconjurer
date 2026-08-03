@@ -53,6 +53,7 @@
 				requestAnimationFrame(function() {
 					var workspace = document.querySelector('.creator-workspace');
 					if (workspace) workspace.classList.add('is-ready');
+					if (root.SetConjurerBoot) root.SetConjurerBoot.finish();
 					resolve();
 				});
 			});

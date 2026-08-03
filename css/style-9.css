@@ -2998,6 +2998,16 @@ body.workspace-panel-resizing,body.workspace-panel-resizing * { cursor: col-resi
 .art-search-drawer [hidden] { display: none !important; }
 
 /* Set Conjurer desktop shell: extends the existing compact workspace/drawer language. */
+html.desktop-booting body > :not(#desktop-boot-screen):not(#desktop-onboarding) { visibility: hidden !important; }
+#desktop-boot-screen { display: none; }
+html.desktop-booting #desktop-boot-screen { position: fixed; inset: 0; z-index: 3400; display: grid; place-content: center; justify-items: center; gap: .55rem; color: #eef2f8; background: radial-gradient(circle at 50% 38%, #172539 0, #0b0f16 43%, #070a10 100%); font-family: Montserrat, sans-serif; }
+.desktop-boot-mark { display: grid; place-items: center; width: 3.25rem; height: 3.25rem; margin-bottom: .35rem; border: 1px solid #51677f; border-radius: .8rem; color: #cfe6ff; background: linear-gradient(145deg, #253a54, #111b29); box-shadow: 0 1rem 3rem rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.12); font-size: 1.05rem; font-weight: 900; letter-spacing: -.08em; }
+#desktop-boot-screen > strong { font-size: 1rem; letter-spacing: .01em; }
+#desktop-boot-screen > small { color: #93a5ba; font-size: .68rem; }
+.desktop-boot-progress { display: block; width: 7rem; height: 2px; margin-top: .45rem; overflow: hidden; border-radius: 999px; background: #233044; }
+.desktop-boot-progress::after { content: ''; display: block; width: 45%; height: 100%; border-radius: inherit; background: #8fc5ff; animation: desktop-boot-slide 1.15s ease-in-out infinite; }
+@keyframes desktop-boot-slide { from { transform: translateX(-110%); } to { transform: translateX(245%); } }
+@media (prefers-reduced-motion: reduce) { .desktop-boot-progress::after { width: 100%; animation: none; } }
 .desktop-shell { --workspace-bg: #0b0f16; --workspace-panel: #111722; --workspace-panel-raised: #161d29; --workspace-border: #293142; --workspace-border-soft: #202736; --workspace-text: #eef2f8; --workspace-muted: #8994a7; --workspace-accent: #6ee7d8; --workspace-accent-strong: #39c7b7; --workspace-focus: #8aa5ff; }
 .desktop-shell > .background { display: none; }
 .desktop-shell #content { min-height: 100vh; }

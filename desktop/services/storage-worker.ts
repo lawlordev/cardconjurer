@@ -49,7 +49,13 @@ const saveStatement = database.prepare(`
 function loadState(): unknown {
   const row = loadStatement.get() as {payload_json?: string} | undefined;
   if (!row?.payload_json) return emptyState;
-  return hydrateAssets(JSON.parse(row.payload_json));
+  try {
+    const parsed = JSON.parse(row.payload_json) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return emptyState;
+    return hydrateAssets(parsed);
+  } catch {
+    return emptyState;
+  }
 }
 
 function saveState(payload: unknown): unknown {
