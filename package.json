@@ -4,7 +4,7 @@
   "version": "0.1.0-beta.1",
   "description": "A local-first desktop fork of Card Conjurer for creating custom card sets.",
   "author": "Jake Lawlor",
-  "license": "SEE LICENSE IN README.md",
+  "license": "GPL-3.0-only",
   "private": true,
   "engines": {
     "node": ">=24 <26",

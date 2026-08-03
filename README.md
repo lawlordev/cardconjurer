@@ -48,8 +48,14 @@ More detail is available in [desktop development](docs/desktop-development.md) a
 
 ## Credits
 
-Set Conjurer is an open-source desktop fork of Card Conjurer, originally created by Kyle Burton (`@ImKyle4815`) and maintained by its contributors. The rename does not remove their credit or ownership of their work.
+Set Conjurer is a desktop fork of [Card Conjurer](https://github.com/joshbirnholz/cardconjurer), originally created by [Kyle Burton (`@ImKyle4815`)](https://github.com/ImKyle4815). This fork descends from the branch maintained by [Josh Birnholz (`@joshbirnholz`)](https://github.com/joshbirnholz), with major upstream contributions from [`@AModSoul`](https://github.com/AModSoul) and [Noah Kantrowitz (`@coderanger`)](https://github.com/coderanger), among [many other contributors](https://github.com/joshbirnholz/cardconjurer/graphs/contributors).
 
-Magic: The Gathering names, symbols, frames, and related assets belong to their respective owners. This project is not affiliated with or endorsed by Wizards of the Coast.
+The Set Conjurer name and desktop work do not remove or replace anyone's credit or ownership of their contributions.
 
-This inherited repository does not currently contain a root open-source license. A license must be chosen and added before a public release.
+Set Conjurer is unofficial Fan Content permitted under the [Wizards of the Coast Fan Content Policy](https://company.wizards.com/en/legal/fancontentpolicy). Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.
+
+## License
+
+The Card Conjurer source repository included the GNU General Public License v3.0 from its initial 2018 commit. Set Conjurer preserves that license and is distributed under the [GNU GPL v3.0](LICENSE).
+
+The GPL applies to the software source code. It does not grant rights to Magic: The Gathering names, symbols, card frames, artwork, or other Wizards of the Coast intellectual property.

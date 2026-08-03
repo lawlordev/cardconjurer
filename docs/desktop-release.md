@@ -4,7 +4,7 @@
 
 Public release is intentionally manual. Before publishing:
 
-1. Add a root open-source license chosen by the maintainer.
+1. Confirm the inherited GNU GPL v3.0 license and contributor credits remain present in the packaged release.
 2. Configure Apple Developer ID Application credentials and App Store Connect API notarization credentials.
 3. Configure a trusted Windows code-signing certificate.
 4. Publish an immutable `packs-vX.Y.Z` frame-pack release containing at least Standard.
