@@ -79,7 +79,7 @@ const config: ForgeConfig = {
       name: 'set_conjurer',
       authors: 'Jake Lawlor',
       description: 'A local-first desktop fork of Card Conjurer for creating custom card sets.',
-      setupExe: 'Set-Conjurer-${version}-Setup.exe',
+      setupExe: 'Set-Conjurer-Windows-x64-Setup.exe',
       noMsi: true,
       ...(process.env.WINDOWS_CERTIFICATE_FILE && process.env.WINDOWS_CERTIFICATE_PASSWORD ? {certificateFile: process.env.WINDOWS_CERTIFICATE_FILE, certificatePassword: process.env.WINDOWS_CERTIFICATE_PASSWORD} : {})
     })

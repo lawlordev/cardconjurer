@@ -25,6 +25,6 @@ The Electron renderer has no Node access. It runs sandboxed with context isolati
 
 ## Local package
 
-`npm run package` creates a base app without the multi-gigabyte frame library. `npm run make:local` creates a local-only developer installer whose required Standard seed points back to this checkout. That developer build is useful on the same machine but is not distributable. Public artifacts obtain packs from immutable GitHub pack releases.
+`npm run package` creates a base app without the multi-gigabyte frame library. `npm run make:local` creates a local-only developer installer whose six frame-pack seeds point back to this checkout. That developer build is useful on the same machine but is not distributable. Public artifacts obtain packs from immutable GitHub pack releases.
 
 Local macOS output uses ad-hoc signing when `APPLE_SIGN_IDENTITY` is absent. It proves bundle integrity but is not Developer ID trust or notarization.

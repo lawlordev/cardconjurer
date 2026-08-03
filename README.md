@@ -1,124 +1,55 @@
 # Set Conjurer
 
-Set Conjurer is a local-first Electron desktop fork of Card Conjurer for building complete custom card sets. It preserves the existing canvas editor while adding application-owned storage, portable card/set files, independently downloadable frame packs, native printing, and user-approved updates. There are no accounts, cloud storage, telemetry, or hosted app.
+Set Conjurer is a local-first desktop app for creating custom cards and complete custom sets. Your cards, sets, images, and frame packs stay on your computer—there are no accounts, cloud storage, or telemetry.
 
-Card Conjurer was originally created by Kyle Burton (`@ImKyle4815`) and has been maintained by the contributors to this repository. Set Conjurer keeps that lineage explicit; the product rename does not remove their credit. Magic: The Gathering names, symbols, frames, and related assets belong to their respective owners, and this project is not affiliated with or endorsed by Wizards of the Coast.
+## Download
 
-Desktop development and release instructions live in [docs/desktop-development.md](docs/desktop-development.md) and [docs/desktop-release.md](docs/desktop-release.md). This inherited repository does not currently contain a root open-source license; choosing and adding one is a required maintainer decision before a public release.
+Choose the installer that matches your computer:
 
-## Card Conjurer history
-Card Conjurer was created by a passionate Magic the Gathering player and grew to become probably the most popular online card generator known to the game.
-In November of 2022, Wizards of the Coast served the original creator and webhost of the site with Ceas and Desist paperwork, forcing the site offline.
-This repository is for the purpose of making the application usable on your local machine and maintaining templates in perpetuity.
-## Setup
-- Clone this repo somewhere on your system. (Or download the Zip with CODE > Download Zip above)
-- Run server.exe (or mac-server for MacOS, linux-server for linux)
-- You're good to go! You could also set up Card Conjurer in a more traditional method using WAMP, Docker, XAMPP, etc.
+| Platform | Download |
+| --- | --- |
+| Windows 10/11 (64-bit) | [Download Set Conjurer for Windows](https://github.com/lawlordev/cardconjurer/releases/latest/download/Set-Conjurer-Windows-x64-Setup.exe) |
+| macOS on an Intel Mac | [Download Set Conjurer for Intel Mac](https://github.com/lawlordev/cardconjurer/releases/latest/download/Set-Conjurer-x64.dmg) |
+| macOS on an M-series Mac | [Download Set Conjurer for Apple silicon](https://github.com/lawlordev/cardconjurer/releases/latest/download/Set-Conjurer-arm64.dmg) |
 
+Not sure which Mac you have? Open the Apple menu, choose **About This Mac**, and check whether the chip says Intel or Apple M1/M2/M3/M4/M5.
 
-[![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg?longCache=true&style=popout)](https://www.paypal.me/kyleburtondonate
-) ← Help out Card Conjurer's original creator, Kyle. We love you buddy.
+[View all releases, including beta versions](https://github.com/lawlordev/cardconjurer/releases).
 
+## Developer setup
 
-## Start with Docker (http://localhost:4242/)
+Install [Node.js 24](https://nodejs.org/), then run:
 
-<details>
-  <summary>Install Make on Ubuntu</summary>
-
-  ```bash
-  $ sudo apt update
-  ```
-
-  check is make installed
-
-  ```bash
-  $ make -version
-  ```
-
-  after run this command, you got the following error? 
-  
-  - **bash: /usr/bin/make: No such file or directory**
-
-  then follow with the next step, otherwise skip the next commands
-
-  ```bash
-  $ sudo apt install make
-  ```
-
-### Troubleshooting's? 
- * Follow this guide https://linuxhint.com/install-make-ubuntu/
-</details>
-
-<details>
-  <summary>Install Make on Mac</summary>
-
-  check is make installed
-
-  ```bash
-  $ make -version
-  ```
-
-  after run this command, you got the following error? 
-  
-  - **zsh: command not found: make**
-
-  then follow with the next step, otherwise skip the next commands
-
-  ```bash
-  $ (sudo) brew install make
-  ```
-</details>
-
-<details>
-  <summary>Install Make on Windows</summary>
-
-  Follow this Guide
-  https://sp21.datastructur.es/materials/guides/make-install.html#windows-installation
-</details>
-
-* go to the downloaded/ cloned folder with your terminal/ powershell (windows) and run the following command
-
-```bash
-$ make start
+```sh
+git clone https://github.com/lawlordev/cardconjurer.git
+cd cardconjurer
+npm ci
+npm run packs:compile
+npm run dev
 ```
 
-Open your Browser with the following URL 
+`npm run dev` opens the Electron app and automatically reloads changes to the card editor's HTML, CSS, JavaScript, frame definitions, and frame images. If you change files inside `desktop/`, stop the process and run `npm run dev` again.
 
-http://localhost:4242/
+To use the browser version at `http://localhost:8081` instead, run:
 
-### Important
+```sh
+npm run start:browser
+```
 
-Be sure, that you are running Docker Desktop under Windows or Mac before you can run the make command.
+Before submitting a change, run:
 
-## Using Local Images
+```sh
+npm test
+npm run typecheck
+npm run lint
+```
 
-If you're saving a lot of cards custom images you might hit the data limit for uploaded images (about 2MB).
+More detail is available in [desktop development](docs/desktop-development.md) and [release instructions](docs/desktop-release.md).
 
-You can avoid this by putting the image files in the `local_art` directory of this repo. Then, when selecting the image in the Art tab of the card creator, instead of uploading the image you can type the file name in the "Via URL" field. This will use the image directly from the `local_art` directory instead of needing to store the whole image in the save file.
+## Credits
 
-For example if you add the file:
-`cardconjurer/local_art/my_art.jpg`
+Set Conjurer is an open-source desktop fork of Card Conjurer, originally created by Kyle Burton (`@ImKyle4815`) and maintained by its contributors. The rename does not remove their credit or ownership of their work.
 
-You can load it in the "Via URL" box by typing:
-`my_art.jpg`
-then hitting enter.
+Magic: The Gathering names, symbols, frames, and related assets belong to their respective owners. This project is not affiliated with or endorsed by Wizards of the Coast.
 
-## Sets workspace
-
-The card creator stores every card inside a set. On first launch it creates `Untitled Set` (`UT1`) with one blank Common card numbered `0001`. New sets continue with `UT2`, `UT3`, and so on.
-
-Sets and cards save continuously in the browser's IndexedDB storage. There are no Save or Cancel buttons. Undo and redo also persist across reloads, with the latest 40 actions retained for each set. This data is local to the browser profile and device, so export important work regularly before clearing browser data or moving to another computer.
-
-The Sets panel provides:
-
-- a searchable card list with collector, alphabetical, and mana-value sorting;
-- color, color-identity, rarity, and card-type filters;
-- shared set details, Markdown story preview, rarity symbols, set code, language, copyright, and collector format;
-- automatic Post-ONE (`0001`) or Pre-ONE (`001/123`) numbering;
-- duplicate, same-frame art variant, treatment variant, move, copy, delete, and universal undo actions;
-- one-card `.cardconjurer-card` and whole-set `.cardconjurer-set` imports and exports;
-- a separate ZIP download containing the rendered images for every card in the active set.
-
-Lettered art variants such as `002a` and `002b` share one collector slot. In Pre-ONE formatting they therefore share the same denominator; a following independent card is `003/003`, even though four image files exist. Treatment variants receive independent collector slots.
-
-Portable card and set files retain external image URLs as URLs and embed images that were uploaded from disk. They preserve frame choice, layers, art positioning, text layout, symbol placement, and the other card-specific rendering settings. Importing a card into a set applies that set's shared symbol, code, language, and copyright values. When a set import matches an existing name or code, the app asks whether to merge or replace it.
+This inherited repository does not currently contain a root open-source license. A license must be chosen and added before a public release.
