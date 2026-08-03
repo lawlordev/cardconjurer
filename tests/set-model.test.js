@@ -16,6 +16,7 @@ test('allocates first and subsequent Untitled names and three-character codes', 
 	assert.equal(first.code, 'UT1');
 	assert.equal(first.creator, 'Card Conjurer User');
 	assert.equal(first.copyright, '© 2026 Custom Cards.');
+	assert.equal(first.copyrightFirstLineNoteStyle, false);
 	const second = Model.createDefaultSet([first], '2026-01-01T00:00:00Z');
 	assert.equal(second.name, 'Untitled Set 2');
 	assert.equal(second.code, 'UT2');

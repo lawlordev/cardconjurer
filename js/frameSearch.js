@@ -604,6 +604,15 @@ function frameFlipsideTextColors() {
 	));
 }
 
+function frameHasCustomizableLayer(requirement) {
+	return (window.card?.frames || []).some(frame => {
+		const name = String(frame.name || '');
+		if (requirement === 'power-toughness') return /power\s*\/\s*toughness/i.test(name) && !/cutout/i.test(name);
+		if (requirement === 'legend-crown') return /\bcrown\b/i.test(name) && !/(inner|outline|border cover|nickname|icon)/i.test(name);
+		return true;
+	});
+}
+
 function renderFrameCustomize(basePack = activeFramePack) {
 	const section = document.querySelector('#frameCustomize');
 	const container = document.querySelector('#frameCustomizeControls');
@@ -632,6 +641,10 @@ function renderFrameCustomize(basePack = activeFramePack) {
 		if (planeswalkerContext && details.control === 'Transform') return false;
 		if (planeswalkerContext && groupParent === 'M15Regular-1' && details.control === 'Style') return false;
 		if (planeswalkerContext && pack === 'M15DarkPT') return false;
+		if (details.requiresLayer && !frameHasCustomizableLayer(details.requiresLayer)) {
+			if (pack === 'M15DarkPT') delete activeFrameComponentOptions['power-toughness-variant'];
+			return false;
+		}
 		return true;
 	});
 	const applicableFamilies = new Set(Array.from(roots).flatMap(pack => [pack.toLowerCase(), FRAME_REGISTRY.family(pack).toLowerCase()]));
@@ -645,6 +658,10 @@ function renderFrameCustomize(basePack = activeFramePack) {
 		if (!familyMatches) return false;
 		if (details.whenNoMana && manaCost.trim()) return false;
 		if (details.automaticFromFlipsideText && frameFlipsideTextColors().length) return false;
+		if (details.requiresLayer && !frameHasCustomizableLayer(details.requiresLayer)) {
+			delete activeFrameComponentOptions[details.slot];
+			return false;
+		}
 		return !details.whenPacks || details.whenPacks.some(pack => roots.has(pack));
 	});
 
@@ -685,6 +702,15 @@ function renderFrameCustomize(basePack = activeFramePack) {
 
 	customizations.forEach(([pack, details]) => {
 		if (details.mode !== 'checkbox') return;
+		if (pack === 'M15DarkPT') {
+			container.appendChild(renderFrameCheckboxControl(
+				details.control,
+				details.option,
+				activeFrameComponentOptions['power-toughness-variant']?.pack === pack,
+				checkbox => applyFrameComponentCustomization('power-toughness-variant', checkbox.checked ? pack + '::' : '')
+			));
+			return;
+		}
 		container.appendChild(renderFrameCheckboxControl(
 			details.control || details.label || framePackDisplayName(pack),
 			details.option || 'Enabled',
@@ -1096,6 +1122,9 @@ async function applyActiveFrameComponents(colors, typeLine, requestId) {
 	const manaCost = window.card?.text?.mana?.text || '';
 	const isLegendary = String(typeLine || '').toLowerCase().includes('legendary');
 	const selections = Object.entries(activeFrameComponentOptions).filter(([slot]) => {
+		const selection = activeFrameComponentOptions[slot];
+		const details = FRAME_REGISTRY?.components?.[selection?.pack] || FRAME_REGISTRY?.variants?.[selection?.pack];
+		if (details?.requiresLayer && !frameHasCustomizableLayer(details.requiresLayer)) return false;
 		if (slot === 'color-identity') return !manaCost.trim();
 		if (slot === 'crown-variant') return isLegendary;
 		if (slot === 'flipside-color') return hasPlaneswalkerMDFC && !automaticFlipsideColors.length;
@@ -1137,6 +1166,7 @@ async function applyActiveFrameComponents(colors, typeLine, requestId) {
 	const colorName = frameCustomizeColorName(colors, typeLine);
 	const layers = [];
 	let borderPlacement = null;
+	let replacePowerToughness = false;
 	for (const [slot, selection] of selections) {
 		const definitions = await loadFrameComponentDefinitions(selection.pack);
 		const clone = frame => {
@@ -1146,7 +1176,15 @@ async function applyActiveFrameComponents(colors, typeLine, requestId) {
 			result.masks = result.masks || [];
 			return result;
 		};
-		if (selection.pack === 'PlaneswalkerMDFCFlipsideColor') {
+		if (selection.pack === 'M15DarkPT') {
+			const source = definitions.find(frame => frame.name === colorName + ' Power/Toughness') || definitions.find(frame => /power\s*\/\s*toughness/i.test(frame.name || ''));
+			if (source) {
+				const powerToughness = clone(source);
+				powerToughness.masks = [];
+				layers.unshift(powerToughness);
+				replacePowerToughness = true;
+			}
+		} else if (selection.pack === 'PlaneswalkerMDFCFlipsideColor') {
 			const colorName = ({W:'White', U:'Blue', B:'Black', R:'Red', G:'Green', M:'Multicolored'})[selection.frame];
 			const source = definitions.find(frame => frame.name === colorName + ` Frame (${planeswalkerMDFCFace === 'back' ? 'Back' : 'Front'})`);
 			if (source) {
@@ -1248,6 +1286,14 @@ async function applyActiveFrameComponents(colors, typeLine, requestId) {
 		if (borderElement && currentElement) {
 			if (borderPlacement.replace) currentElement.replaceWith(borderElement);
 			else currentElement.before(borderElement);
+		}
+	}
+	if (replacePowerToughness) {
+		const frameList = document.querySelector('#frame-list');
+		for (let index = card.frames.length - 1; index >= 0; index--) {
+			if (!/power\s*\/\s*toughness/i.test(card.frames[index].name || '') || /cutout/i.test(card.frames[index].name || '')) continue;
+			card.frames.splice(index, 1);
+			frameList?.children[index]?.remove();
 		}
 	}
 	card.frames.unshift(...layers);

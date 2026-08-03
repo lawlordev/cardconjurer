@@ -113,6 +113,7 @@
 		data.infoLanguage = set.language;
 		data.infoYear = yearFor(set);
 		data.infoCopyright = set.copyright;
+		data.infoCopyrightFirstLineNoteStyle = Boolean(set.copyrightFirstLineNoteStyle);
 		var source = symbolFor(set, record);
 		if (source) data.setSymbolSource = source;
 		return data;
@@ -137,7 +138,7 @@
 
 	function stripSetOwned(data) {
 		var output = clone(data || {});
-		['infoNumber', 'infoSet', 'infoLanguage', 'infoYear', 'infoCopyright'].forEach(function(key) { delete output[key]; });
+		['infoNumber', 'infoSet', 'infoLanguage', 'infoYear', 'infoCopyright', 'infoCopyrightFirstLineNoteStyle'].forEach(function(key) { delete output[key]; });
 		delete output.setSymbolSource;
 		return output;
 	}
@@ -395,33 +396,32 @@
 	}
 
 	function field(label, key, value, type, attrs) {
-		return '<label class="sets-field"><span>' + label + '</span><input class="input" type="' + (type || 'text') + '" value="' + escapeHtml(value || '') + '" ' + (attrs || '') + ' oninput="CardConjurerSets.previewSetField(\'' + key + '\', this)" onblur="CardConjurerSets.commitSetField(\'' + key + '\', this)"></label>';
+		var inputClass = type === 'date' ? 'input sets-date-input' : 'input';
+		return '<label class="sets-field"><span>' + label + '</span><input class="' + inputClass + '" type="' + (type || 'text') + '" value="' + escapeHtml(value || '') + '" ' + (attrs || '') + ' oninput="CardConjurerSets.previewSetField(\'' + key + '\', this)" onblur="CardConjurerSets.commitSetField(\'' + key + '\', this)"></label>';
 	}
 
 	function renderDetailsTab(panel, set) {
 		panel.innerHTML = '<div class="sets-form">' + field('Set name','name',set.name) + field('Short description','description',set.description) + field('Release date','releaseDate',set.releaseDate,'date') + field('Creator','creator',set.creator) +
 			'<label class="sets-field"><span>Notes</span><textarea class="input" rows="3" oninput="CardConjurerSets.updateSetText(\'notes\', this.value)">' + escapeHtml(set.notes) + '</textarea></label>' +
-			'<label class="sets-field"><span>Story (Markdown)</span><textarea id="sets-story" class="input" rows="9" oninput="CardConjurerSets.updateSetText(\'story\', this.value); CardConjurerSets.previewStory(this.value)">' + escapeHtml(set.story) + '</textarea></label>' +
+			'<div class="sets-field"><div class="sets-field-heading"><span>Story (Markdown)</span><button type="button" class="text-field-layout-button" aria-controls="markdown-help-drawer" onclick="document.querySelector(\'#markdown-help-drawer\').classList.add(\'opened\')">Markdown Help</button></div><textarea id="sets-story" class="input" rows="9" oninput="CardConjurerSets.updateSetText(\'story\', this.value); CardConjurerSets.previewStory(this.value)">' + escapeHtml(set.story) + '</textarea></div>' +
 			'<section class="sets-markdown-preview" aria-label="Rendered story preview"><span class="creator-eyebrow">Preview</span><div id="sets-story-preview">' + safeMarkdown(set.story) + '</div></section></div>';
 	}
 
 	function renderSymbolTab(panel, set) {
 		var labels = {common:'Common · tokens · basic lands', uncommon:'Uncommon', rare:'Rare', mythic:'Mythic Rare'};
-		panel.innerHTML = '<p class="sets-tab-intro">Load a bundled symbol family by set code, or upload and link individual rarity overrides. Placement remains card-specific.</p>' +
-			'<section class="sets-symbol-loader"><div><strong>Load by set code</strong><span>Fills Common, Uncommon, Rare, and Mythic Rare at once.</span></div><label><span class="sr-only">Symbol set code</span><input id="sets-symbol-code" class="input" type="text" maxlength="12" autocomplete="off" spellcheck="false" value="' + escapeHtml(set.symbolCode || set.code || '') + '" placeholder="Set code" oninput="this.value=CardConjurerSetModel.normalizeSymbolCode(this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();CardConjurerSets.loadSymbolsByCode(this)}"></label><button type="button" class="input sets-primary" onclick="CardConjurerSets.loadSymbolsByCode(document.querySelector(\'#sets-symbol-code\'))">Load all rarities</button></section>' +
+		panel.innerHTML = '<section class="sets-symbol-loader"><div><strong>Load by set code</strong><span>Fills Common, Uncommon, Rare, and Mythic Rare at once.</span></div><label><span class="sr-only">Symbol set code</span><input id="sets-symbol-code" class="input" type="text" maxlength="12" autocomplete="off" spellcheck="false" value="' + escapeHtml(set.symbolCode || set.code || '') + '" placeholder="Set code" oninput="this.value=CardConjurerSetModel.normalizeSymbolCode(this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();CardConjurerSets.loadSymbolsByCode(this)}"></label><button type="button" class="input sets-primary" onclick="CardConjurerSets.loadSymbolsByCode(document.querySelector(\'#sets-symbol-code\'))">Load all rarities</button></section>' +
 			'<div class="sets-symbol-grid">' + Model.RARITIES.map(function(rarity) {
 			var source = set.symbolSources[rarity] || '';
 			return '<section class="sets-symbol-card"><div class="sets-symbol-preview">' + (source ? '<img src="' + escapeHtml(source) + '" alt="' + labels[rarity] + ' set symbol">' : '<span>—</span>') + '</div><label><strong>' + labels[rarity] + '</strong><input class="input" value="' + escapeHtml(source) + '" placeholder="Image URL" onblur="CardConjurerSets.updateSymbol(\'' + rarity + '\', this.value)"></label><button type="button" onclick="this.nextElementSibling.click()">Upload image</button><input type="file" accept="image/*" hidden onchange="CardConjurerSets.uploadSymbol(\'' + rarity + '\', event)"></section>';
-		}).join('') + '</div>';
+		}).join('') + '</div><div class="sets-symbol-actions"><button type="button" class="sets-symbol-clear" onclick="CardConjurerSets.clearSymbols()">Clear Symbols</button></div>';
 	}
 
 	function renderCollectorTab(panel, set) {
-		var cards = cardsFor(set.id);
 		panel.innerHTML = '<div class="sets-form sets-collector-form">' + field('Set code','code',set.code,'text','maxlength="3"') + field('Language','language',set.language,'text','maxlength="8"') +
 			'<label class="sets-field"><span>Copyright</span><textarea class="input" rows="2" maxlength="160" oninput="CardConjurerSets.updateSetText(\'copyright\', this.value)">' + escapeHtml(set.copyright) + '</textarea></label>' +
+			'<label class="checkbox-container input workspace-checkbox frame-advanced-option sets-copyright-note-style"><span class="frame-advanced-option-copy"><strong>Match first copyright line to Note</strong><small>Use the Note font and size on every card in this set</small></span><input type="checkbox" ' + (set.copyrightFirstLineNoteStyle ? 'checked' : '') + ' onchange="CardConjurerSets.updateCopyrightNoteStyle(this.checked)"><span class="checkmark"></span></label>' +
 			'<label class="sets-field"><span>Collector format</span><select class="input" onchange="CardConjurerSets.updateCollectorStyle(this.value)">' + selectOptions(['post-one','pre-one'], set.collectorStyle, {'post-one':'Post-ONE · 0001','pre-one':'Pre-ONE · 001/' + String(collectorSlotCount(set.id)).padStart(3,'0')}) + '</select></label>' +
-			'<div class="sets-collector-summary"><span>Printed year</span><strong>' + yearFor(set) + '</strong><span>Collector slots</span><strong>' + collectorSlotCount(set.id) + '</strong><span>Card files</span><strong>' + cards.length + '</strong></div>' +
-			'<section><div class="sets-section-heading"><div><span class="creator-eyebrow">Collector groups</span><h4>Main is always first</h4></div></div><ol class="sets-group-list"><li><span>Main Set</span><small>Fixed</small></li>' + set.collectorGroupOrder.map(function(group, index) { return '<li><span>' + escapeHtml(group.replace(/(^|[-:])([a-z])/g, function(_, before, letter) { return (before ? ' ' : '') + letter.toUpperCase(); })) + '</span><span><button type="button" onclick="CardConjurerSets.moveGroup(' + index + ',-1)" aria-label="Move group up">↑</button><button type="button" onclick="CardConjurerSets.moveGroup(' + index + ',1)" aria-label="Move group down">↓</button></span></li>'; }).join('') + '</ol></section></div>';
+			'<section class="readable-background padding sets-collector-groups"><div class="art-section-heading"><h4>Collector Groups</h4></div><ol class="sets-group-list"><li><span>Main Set</span><small>Fixed</small></li>' + set.collectorGroupOrder.map(function(group, index) { return '<li><span>' + escapeHtml(group.replace(/(^|[-:])([a-z])/g, function(_, before, letter) { return (before ? ' ' : '') + letter.toUpperCase(); })) + '</span><span class="sets-group-actions"><button type="button" onclick="CardConjurerSets.moveGroup(' + index + ',-1)" aria-label="Move group up">↑</button><button type="button" onclick="CardConjurerSets.moveGroup(' + index + ',1)" aria-label="Move group down">↓</button></span></li>'; }).join('') + '</ol></section></div>';
 	}
 
 	function updateUndoButtons() {
@@ -459,10 +459,8 @@
 	function renderCardDetailsSummary() {
 		var record = activeCardRecord(); var set = activeSet(); var host = document.querySelector('#sets-card-details-summary');
 		if (!record || !set || !host) return;
-		host.innerHTML = '<div class="creator-download-heading"><span class="creator-eyebrow">Card Details</span><h3>' + escapeHtml(record.derived.title || 'Untitled Card') + '</h3></div>' +
-			'<div class="sets-card-detail-grid"><label>Collector number<input class="input" value="' + escapeHtml(record.collectorNumber) + '" readonly></label><label>Rarity<select class="input" onchange="CardConjurerSets.updateCardDetail(\'rarity\',this.value)">' + selectOptions(Model.RARITIES, record.rarity, {mythic:'Mythic Rare'}) + '</select></label>' +
-			'<label>Printing category<select class="input" onchange="CardConjurerSets.updateCardDetail(\'printingCategory\',this.value)">' + selectOptions(['main','token','borderless','special','booster-fun','custom'], record.printingCategory, {'booster-fun':'Booster Fun'}) + '</select></label><label>Frame group<input class="input" value="' + escapeHtml(record.frameGroupKey || '') + '" onchange="CardConjurerSets.updateCardDetail(\'frameGroupKey\',this.value)"></label></div>' +
-			'<p class="input-description">Set code ' + escapeHtml(set.code) + ', ' + escapeHtml(set.language) + ', symbol, year, copyright, and collector style are controlled by the set.</p>';
+		host.innerHTML = '<div class="art-section-heading"><h4>Rarity</h4></div>' +
+			'<label class="card-details-field"><span>Rarity</span><select class="input" onchange="CardConjurerSets.updateCardDetail(\'rarity\',this.value)">' + selectOptions(Model.RARITIES, record.rarity, {mythic:'Mythic Rare'}) + '</select></label>';
 		['#info-number','#info-rarity','#info-set','#info-language','#info-year','#info-copyright','#enableNewCollectorStyle'].forEach(function(selector) { var input = document.querySelector(selector); if (input) input.disabled = true; });
 	}
 
@@ -792,6 +790,15 @@
 		if (key === 'copyright') await loadActiveCard();
 	}
 
+	async function updateCopyrightNoteStyle(enabled) {
+		var set = activeSet(); if (!set || Boolean(set.copyrightFirstLineNoteStyle) === Boolean(enabled)) return;
+		await commit('Change set copyright style', '', function() {
+			set.copyrightFirstLineNoteStyle = Boolean(enabled);
+			invalidateSetCardThumbnails(set);
+		}, [set.id]);
+		await loadActiveCard();
+	}
+
 	function previewStory(value) { var host = document.querySelector('#sets-story-preview'); if (host) host.innerHTML = safeMarkdown(value); }
 
 	function invalidateSetCardThumbnails(set) {
@@ -803,8 +810,9 @@
 	async function refreshActiveCardSymbol() {
 		var set = activeSet(); var record = activeCardRecord();
 		if (!set || !record || typeof uploadSetSymbol !== 'function') return;
-		var source = symbolFor(set, record) || (typeof blank !== 'undefined' && blank.src) || '/img/blank.png';
-		var repairedSymbolPlacement = symbolPlacementMissing(card, source);
+		var symbolSource = symbolFor(set, record);
+		var source = symbolSource || (typeof blank !== 'undefined' && blank.src) || '/img/blank.png';
+		var repairedSymbolPlacement = Boolean(symbolSource) && symbolPlacementMissing(card, symbolSource);
 		if (repairedSymbolPlacement && !card.setSymbolBounds) card.setSymbolBounds = clone(DEFAULT_SET_SYMBOL_BOUNDS);
 		uploadSetSymbol(source);
 		if (typeof waitForRenderableImage === 'function' && typeof setSymbol !== 'undefined') await waitForRenderableImage(setSymbol);
@@ -830,6 +838,18 @@
 			invalidateSetCardThumbnails(set);
 		}, [set.id]);
 		await refreshActiveCardSymbol();
+	}
+
+	async function clearSymbols() {
+		var set = activeSet();
+		if (!set || (!set.symbolCode && !Model.RARITIES.some(function(rarity) { return Boolean(set.symbolSources[rarity]); }))) return;
+		await commit('Clear set symbols', '', function() {
+			set.symbolCode = '';
+			set.symbolSources = {common:'', uncommon:'', rare:'', mythic:''};
+			invalidateSetCardThumbnails(set);
+		}, [set.id]);
+		await refreshActiveCardSymbol();
+		setStatus('Cleared set symbols', 'saved');
 	}
 
 	function uploadSymbol(rarity, event) {
@@ -1279,8 +1299,8 @@
 		automaticFrameSettled: automaticFrameSettled,
 		selectSet: selectSet, selectTab: selectTab, selectCard: selectCard, newSet: newSet, duplicateSet: duplicateSet, newCard: newCard, duplicateCard: duplicateCard, addVariant: addVariant,
 		deleteCard: deleteCardAction, deleteSet: deleteSetAction, undo: undo, redo: redo, updateListState: updateListState,
-		previewSetField: previewSetField, commitSetField: commitSetField, updateSetText: updateSetText, previewStory: previewStory,
-		updateSymbol: updateSymbol, uploadSymbol: uploadSymbol, loadSymbolsByCode: loadSymbolsByCode, updateCollectorStyle: updateCollectorStyle, moveGroup: moveGroup, updateCardDetail: updateCardDetail,
+		previewSetField: previewSetField, commitSetField: commitSetField, updateSetText: updateSetText, updateCopyrightNoteStyle: updateCopyrightNoteStyle, previewStory: previewStory,
+		updateSymbol: updateSymbol, uploadSymbol: uploadSymbol, loadSymbolsByCode: loadSymbolsByCode, clearSymbols: clearSymbols, updateCollectorStyle: updateCollectorStyle, moveGroup: moveGroup, updateCardDetail: updateCardDetail,
 		moveOrCopy: moveOrCopy, confirmMoveOrCopy: confirmMoveOrCopy, exportCard: exportCardAction, exportCardImage: exportCardImage, exportSet: exportSetAction, importCardFile: importCardFile, importSetFile: importSetFile, resolveSetImport: resolveSetImport, cancelSetImport: cancelSetImport,
 		openCardSearch: openCardSearch, closeCardSearch: closeCardSearch, searchScryfallCards: searchScryfallCards, importScryfallCard: importScryfallCard,
 		downloadSetImages: downloadSetImages, cancelZip: cancelZip, openDrawer: openDrawer, closeDrawer: closeDrawer, toggleSetsPanel: toggleSetsPanel,

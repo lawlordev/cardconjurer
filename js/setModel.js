@@ -180,7 +180,7 @@
 		var timestamp = date.toISOString();
 		return {
 			id: createId('set'), name: next.name, description: '', releaseDate: '', creator: 'Card Conjurer User',
-			notes: '', story: '', code: next.code, language: 'EN', copyright: '© ' + date.getUTCFullYear() + ' Custom Cards.',
+			notes: '', story: '', code: next.code, language: 'EN', copyright: '© ' + date.getUTCFullYear() + ' Custom Cards.', copyrightFirstLineNoteStyle: false,
 			collectorStyle: 'post-one', symbolCode: '', symbolSources: {common: '', uncommon: '', rare: '', mythic: ''},
 			collectorGroupOrder: DEFAULT_GROUP_ORDER.slice(), activeCardId: null, listState: clone(DEFAULT_LIST_STATE), activeTab: 'cards',
 			createdAt: timestamp, updatedAt: timestamp

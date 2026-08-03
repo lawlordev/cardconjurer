@@ -129,6 +129,98 @@
 			<button type='button' class='textbox-editor-close' aria-label='Close card layout' onclick='closeCardSpecificLayoutDrawer();'>×</button>
 			<div id='card-specific-layout-body' class='layout-drawer-body'></div>
 		</div>
+		<div id='art-layout-drawer' class='textbox-editor layout-drawer art-layout-drawer' role='dialog' aria-modal='true' aria-labelledby='art-layout-title' aria-hidden='true'>
+			<div class='textbox-editor-heading'>
+				<h2 id='art-layout-title' class='textbox-editor-title'>Art Layout</h2>
+			</div>
+			<button type='button' class='textbox-editor-close' aria-label='Close art layout' onclick='closeArtLayoutDrawer();'>×</button>
+			<div class='layout-drawer-body'>
+				<section class='layout-control-group'>
+					<div class='layout-control-heading'>
+						<h3>Position</h3>
+						<p>Drag the card preview to move art, or enter exact coordinates.</p>
+					</div>
+					<div class='layout-control-grid'>
+						<label class='layout-control-field'><span>X position</span><span class='layout-input-shell'><input id='art-x' type='number' class='input' oninput='artEdited();' value='0' aria-label='Art X Position'><small>px</small></span></label>
+						<label class='layout-control-field'><span>Y position</span><span class='layout-input-shell'><input id='art-y' type='number' class='input' oninput='artEdited();' value='0' aria-label='Art Y Position'><small>px</small></span></label>
+					</div>
+				</section>
+				<section class='layout-control-group'>
+					<div class='layout-control-heading'>
+						<h3>Scale and rotation</h3>
+						<p>Hold Shift while dragging to scale, or Control to rotate.</p>
+					</div>
+					<div class='layout-control-grid'>
+						<label class='layout-control-field'><span>Scale</span><span class='layout-input-shell'><input id='art-zoom' type='number' class='input' oninput='artEdited();' value='100' step='0.1' min='0' aria-label='Art Scale'><small>%</small></span></label>
+						<label class='layout-control-field'><span>Rotation</span><span class='layout-input-shell'><input id='art-rotate' type='number' class='input' oninput='artEdited();' value='0' step='1' min='0' max='360' aria-label='Art Rotation'><small>°</small></span></label>
+					</div>
+				</section>
+				<section class='layout-control-group art-layout-actions'>
+					<button type='button' class='input sets-primary' onclick='autoFitArt();'>Auto Fit Art</button>
+					<label class='checkbox-container input workspace-checkbox frame-advanced-option' title='Do not auto-fit art when changing frames'>
+						<span class='frame-advanced-option-copy'><strong>Preserve position</strong><small>Keep placement when frames change</small></span>
+						<input id='art-preserve-position' type='checkbox' onchange='setPreserveArtPosition();'>
+						<span class='checkmark'></span>
+					</label>
+				</section>
+			</div>
+		</div>
+		<div id='watermark-layout-drawer' class='textbox-editor layout-drawer watermark-layout-drawer' role='dialog' aria-modal='true' aria-labelledby='watermark-layout-title' aria-hidden='true'>
+			<div class='textbox-editor-heading'>
+				<h2 id='watermark-layout-title' class='textbox-editor-title'>Watermark Layout</h2>
+			</div>
+			<button type='button' class='textbox-editor-close' aria-label='Close watermark layout' onclick='closeWatermarkLayoutDrawer();'>×</button>
+			<div class='layout-drawer-body'>
+				<section class='layout-control-group'>
+					<div class='layout-control-heading'>
+						<h3>Position</h3>
+						<p>Enter exact coordinates for the watermark.</p>
+					</div>
+					<div class='layout-control-grid'>
+						<label class='layout-control-field'><span>X position</span><span class='layout-input-shell'><input id='watermark-x' type='number' class='input' oninput='watermarkEdited();' value='0' aria-label='Watermark X Position'><small>px</small></span></label>
+						<label class='layout-control-field'><span>Y position</span><span class='layout-input-shell'><input id='watermark-y' type='number' class='input' oninput='watermarkEdited();' value='0' aria-label='Watermark Y Position'><small>px</small></span></label>
+					</div>
+				</section>
+				<section class='layout-control-group'>
+					<div class='layout-control-heading'>
+						<h3>Scale</h3>
+						<p>Size the watermark within the active frame.</p>
+					</div>
+					<label class='layout-control-field'><span>Scale</span><span class='layout-input-shell'><input id='watermark-zoom' type='number' class='input' oninput='watermarkEdited();' value='100' step='0.1' min='0' aria-label='Watermark Scale'><small>%</small></span></label>
+				</section>
+				<section class='layout-control-group watermark-layout-actions'>
+					<button type='button' class='input sets-primary' onclick='resetWatermark();'>Reset Watermark</button>
+				</section>
+			</div>
+		</div>
+		<div id='serial-layout-drawer' class='textbox-editor layout-drawer serial-layout-drawer' role='dialog' aria-modal='true' aria-labelledby='serial-layout-title' aria-hidden='true'>
+			<div class='textbox-editor-heading'>
+				<h2 id='serial-layout-title' class='textbox-editor-title'>Serialized Card Layout</h2>
+			</div>
+			<button type='button' class='textbox-editor-close' aria-label='Close serialized card layout' onclick='closeSerialLayoutDrawer();'>×</button>
+			<div class='layout-drawer-body'>
+				<section class='layout-control-group'>
+					<div class='layout-control-heading'>
+						<h3>Position</h3>
+						<p>Place the serialized number on the card.</p>
+					</div>
+					<div class='layout-control-grid'>
+						<label class='layout-control-field'><span>X position</span><span class='layout-input-shell'><input id='serial-x' type='number' class='input' oninput='serialInfoEdited();' value='172' aria-label='Serial Number X Position'><small>px</small></span></label>
+						<label class='layout-control-field'><span>Y position</span><span class='layout-input-shell'><input id='serial-y' type='number' class='input' oninput='serialInfoEdited();' value='1383' aria-label='Serial Number Y Position'><small>px</small></span></label>
+					</div>
+				</section>
+				<section class='layout-control-group'>
+					<div class='layout-control-heading'>
+						<h3>Scale</h3>
+						<p>Adjust the size of both serialized values together.</p>
+					</div>
+					<label class='layout-control-field'><span>Scale</span><span class='layout-input-shell'><input id='serial-scale' type='number' class='input' oninput='serialInfoEdited();' min='0' step='0.01' value='1' aria-label='Serial Number Scale'><small>×</small></span></label>
+				</section>
+				<section class='layout-control-group serial-layout-actions'>
+					<button type='button' class='input sets-primary' onclick='resetSerial();'>Reset Serialized Layout</button>
+				</section>
+			</div>
+		</div>
 		<!-- Regular stuff -->
 		<div class='creator-workspace'>
 			<div class='creator-loading-screen' role='status' aria-live='polite' aria-label='Loading Card Conjurer'>
@@ -403,66 +495,53 @@
 						</div>
 					</div>
 					<div id='creator-menu-art' class='hidden'>
-						<div class='readable-background padding margin-bottom'>
-							<h5 class='margin-bottom padding input-description'>Choose/upload your art</h5>
-							<div class='input-grid margin-bottom'>
-								<div class='padding drop-area'>
-						            <h5 class='margin-bottom padding input-description'>Drag and drop</h5>
-						            <input type='file' multiple accept='.png, .svg, .jpg, .jpeg, .bmp, .webp' placeholder='File Upload' class='input' oninput='uploadFiles(event.target.files, uploadArt, document.querySelector("#art-update-autofit").checked ? "autoFit" : "");' data-dropFunction='uploadArt' data-otherParams='autoFit'>
-						        </div>
-						        <div>
-									<input type='url' placeholder='Via URL' class='input' onchange='imageURL(this.value, uploadArt, document.querySelector("#art-update-autofit").checked ? "autoFit" : "");'>
-									<h5 class='input-description margin-bottom'></h5>
-										<label class='checkbox-container input'>Autofit when setting art
-											<input id='art-update-autofit' type='checkbox' onchange='setAutofit();'>
-											<span class='checkmark'></span>
-										</label>
+						<section class='readable-background padding margin-bottom art-credit-panel'>
+							<div class='art-section-heading'><h4>Artist</h4></div>
+							<label class='art-artist-field'><span class='sr-only'>Artist name</span><input id='art-artist' type='text' class='input' oninput='artistEdited(this.value);' placeholder='Artist name'></label>
+						</section>
+						<section class='readable-background padding margin-bottom art-source-panel'>
+							<div class='art-section-heading'>
+								<h4>Artwork</h4>
+								<div class='art-heading-actions'>
+									<button type='button' class='text-field-layout-button' aria-controls='art-layout-drawer' onclick='openArtLayoutDrawer(this);'>Layout</button>
+									<button type='button' class='text-field-layout-button art-remove-action' onclick='uploadArt(blank.src);'>Remove Art</button>
 								</div>
-								<button class='input margin-bottom' onclick='pasteArt();'>Paste from clipboard</button>
 							</div>
-							<h5 class='margin-bottom padding input-description'>Or enter a card name</h5>
-							<input id='art-name' type='text' placeholder='Enter Card Name' class='input margin-bottom' onchange="fetchScryfallData(this.value, artFromScryfall, 'art');" aria-label='Enter Card Name'>
-							<h5 class='padding margin-bottom input-description'>Select a specific card art to load</h5>
-							<select class='input margin-bottom' id='art-index' onchange='changeArtIndex();' aria-label='Select specific card art'></select>
-							<h5 class='margin-bottom padding input-description'>And credit the artist</h5>
-							<div class='input-grid'>
-								<input id='art-artist' type='text' class='input' oninput='artistEdited(this.value);' placeholder='Artist'>
-							</div>
-						</div>
-						<div class='readable-background padding margin-bottom'>
-							<h5 class='margin-bottom padding input-description'>Position/scale your art (X, Y, Scale, Rotation)<br>Art is now visually adjustable! Click and drag anywhere on the card to move your art around. Hold shift while doing so to scale, or control to rotate.</h5>
-							<div class='input-grid margin-bottom'>
-								<input id='art-x' type='number' class='input' oninput='artEdited();' value=0 aria-label='Art X Position'>
-								<input id='art-y' type='number' class='input' oninput='artEdited();' value=0 aria-label='Art Y Position'>
-								<input id='art-zoom' type='number' class='input' oninput='artEdited();' value=100 step=0.1 min=0 aria-label='Art Scale'>
-								<input id='art-rotate' type='number' class='input' oninput='artEdited();' value=0 step=1 min=0 max=360 aria-label='Art Rotation'>
-							</div>
-							<div class='input-grid'>
-								<button class='input' onclick='autoFitArt();'>Auto Fit Art</button>
-								<label class='checkbox-container input' title='Do not auto-fit art when changing frames'>Preserve art position
-									<input id='art-preserve-position' type='checkbox' onchange='setPreserveArtPosition();'>
-									<span class='checkmark'></span>
+							<div class='art-source-actions'>
+								<label class='art-source-action art-upload-action drop-area'>
+									<span class='art-source-action-copy'><strong>Upload or drop</strong><small>Loads immediately</small></span>
+									<input type='file' accept='.png, .svg, .jpg, .jpeg, .bmp, .webp' aria-label='Upload artwork' oninput='uploadFiles(event.target.files, uploadArt, document.querySelector("#art-update-autofit").checked ? "autoFit" : "");' data-dropFunction='uploadArt' data-otherParams='autoFit'>
 								</label>
+								<button type='button' class='art-source-action' onclick='pasteArt();'><span class='art-source-action-copy'><strong>Paste image</strong><small>From clipboard</small></span></button>
+								<button type='button' class='art-source-action' aria-controls='art-search-drawer' onclick='openArtSearchDrawer(this);'><span class='art-source-action-copy'><strong>Search card art</strong><small>Browse Scryfall</small></span></button>
 							</div>
-						</div>
-						<div class='readable-background padding margin-bottom'>
-							<h5 class='input-description margin-bottom'>Make the art grayscale</h5>
-							<label class='checkbox-container input'>Grayscale
-								<input id='grayscale-art' type='checkbox' onchange='drawCard();'>
+							<form class='art-url-form' onsubmit='event.preventDefault(); loadArtUrl();'>
+								<label><span>Image URL</span><input id='art-url' type='url' placeholder='https://…' class='input' required></label>
+								<button type='submit' class='input'>Load</button>
+							</form>
+							<label class='checkbox-container input workspace-checkbox frame-advanced-option art-autofit-option'>
+								<span class='frame-advanced-option-copy'><strong>Auto-fit new art</strong><small>Fill the current art window</small></span>
+								<input id='art-update-autofit' type='checkbox' onchange='setAutofit();'>
 								<span class='checkmark'></span>
 							</label>
-						</div>
-						<div class='readable-background padding margin-bottom'>
-							<h5 class='padding margin-bottom input-description'>Clears the art, making it blank</h5>
-							<button class='input margin-bottom' onclick='uploadArt(blank.src);'>Remove Art</button>
-						</div>
-						<div class='readable-background padding'>
-							<h5 class='input-description margin-bottom'>Show guidelines for text, art, watermark, and set symbols</h5>
-							<label class='checkbox-container input'>Guidelines
-								<input id='show-guidelines-2' type='checkbox' onchange='drawCard();'>
-								<span class='checkmark'></span>
-							</label>
-						</div>
+						</section>
+						<section class='readable-background padding art-advanced-panel'>
+							<h5 class='frame-advanced-toggle collapsible collapsed input-description' onclick='toggleCollapse(event);'>Advanced</h5>
+							<div class='frame-advanced-settings'>
+								<div class='frame-advanced-options art-advanced-options'>
+									<label class='checkbox-container input workspace-checkbox frame-advanced-option'>
+										<span class='frame-advanced-option-copy'><strong>Grayscale</strong><small>Remove art color</small></span>
+										<input id='grayscale-art' type='checkbox' onchange='drawCard();'>
+										<span class='checkmark'></span>
+									</label>
+									<label class='checkbox-container input workspace-checkbox frame-advanced-option'>
+										<span class='frame-advanced-option-copy'><strong>Guidelines</strong><small>Show placement guides</small></span>
+										<input id='show-guidelines-2' type='checkbox' onchange='drawCard();'>
+										<span class='checkmark'></span>
+									</label>
+								</div>
+							</div>
+						</section>
 					</div>
 					<div id='creator-menu-setSymbol' class='hidden'>
 						<div class='readable-background padding margin-bottom'>
@@ -537,232 +616,130 @@
 						</div>
 					</div>
 					<div id='creator-menu-watermark' class='hidden'>
-					<div class='readable-background padding margin-bottom'>
-							<h5 class='margin-bottom padding input-description'>Choose/upload your watermark</h5>
-							<div class='input-grid'>
-								<div class='padding drop-area'>
-						            <h5 class='margin-bottom padding input-description'>Drag and drop</h5>
-						            <input type='file' multiple accept='.png, .svg, .jpg, .jpeg, .bmp, .webp' placeholder='File Upload' class='input' oninput='uploadFiles(event.target.files, uploadWatermark, "resetWatermark");' data-dropFunction='uploadWatermark' data-otherParams='resetWatermark'>
-						        </div>
-						        <div>
-									<input type='url' placeholder='Via URL' class='input margin-bottom' onchange='imageURL(this.value, uploadWatermark, "resetWatermark");'>
-									<input type='text' placeholder='Via Set Code' class='input' onchange='getSetSymbolWatermark(this.value);'>
+						<section class='readable-background padding margin-bottom watermark-source-panel'>
+							<div class='art-section-heading'>
+								<h4>Watermark</h4>
+								<div class='art-heading-actions'>
+									<button type='button' class='text-field-layout-button' aria-controls='watermark-layout-drawer' onclick='openWatermarkLayoutDrawer(this);'>Layout</button>
+									<button type='button' class='text-field-layout-button watermark-remove-action' onclick='uploadWatermark(blank.src);'>Remove Watermark</button>
 								</div>
 							</div>
-							<h5 class='margin-bottom padding input-description'>Select lore-based watermarks</h5>
-							<select class='input padding margin-bottom' onchange='getSetSymbolWatermark(fixUri(this.value));' aria-label='Select lore-based watermarks'>
-								<option disabled selected='selected'>None</option>
-								<option disabled>General</option>
-								<option value="/img/watermarks/planeswalker.svg">Planeswalker</option>
-								<option value="/img/watermarks/desparked-planeswalker.svg">Desparked Planeswalker</option>
-								<option value="/img/watermarks/misc-star.svg">DCI Star</option>
-								<option value="/img/watermarks/misc-dci.svg">DCI Logo</option>
-								<option disabled>Monocolors</option>
-								<option value="/img/watermarks/w.svg">White</option>
-								<option value="/img/watermarks/u.svg">Blue</option>
-								<option value="/img/watermarks/b.svg">Black</option>
-								<option value="/img/watermarks/r.svg">Red</option>
-								<option value="/img/watermarks/g.svg">Green</option>
-								<option value="/img/watermarks/c.svg">Colorless</option>
-								<option disabled>Mechanics</option>
-								<option value="/img/watermarks/ability-foretell.svg">Foretell</option>
-								<option disabled>Phyrexian/Mirrodin</option>
-								<option value="/img/watermarks/phyrexian.svg">Phyrexian</option>
-								<option value="/img/watermarks/mirran.svg">Mirran</option>
-								<option disabled>Guilds (Ravnica)</option>
-								<option value="/img/watermarks/guild-azorius.svg">Azorius</option>
-								<option value="/img/watermarks/guild-dimir.svg">Dimir</option>
-								<option value="/img/watermarks/guild-rakdos.svg">Rakdos</option>
-								<option value="/img/watermarks/guild-gruul.svg">Gruul</option>
-								<option value="/img/watermarks/guild-selesnya.svg">Selesnya</option>
-								<option value="/img/watermarks/guild-orzhov.svg">Orzhov</option>
-								<option value="/img/watermarks/guild-izzet.svg">Izzet</option>
-								<option value="/img/watermarks/guild-golgari.svg">Golgari</option>
-								<option value="/img/watermarks/guild-boros.svg">Boros</option>
-								<option value="/img/watermarks/guild-simic.svg">Simic</option>
-								<option disabled>Schools (Strixhaven)</option>
-								<option value="/img/watermarks/school-silverquill.svg">Silverquill</option>
-								<option value="/img/watermarks/school-prismari.svg">Prismari</option>
-								<option value="/img/watermarks/school-witherbloom.svg">Witherbloom</option>
-								<option value="/img/watermarks/school-lorehold.svg">Lorehold</option>
-								<option value="/img/watermarks/school-quandrix.svg">Quandrix</option>
-								<option disabled>Echoverse (Reality Fracture)</option>
-								<option value="/img/watermarks/fracture.svg">Echoverse</option>
-								<option disabled>Families (New Capenna)</option>
-								<option value="/img/watermarks/family-brokers.svg">Brokers</option>
-								<option value="/img/watermarks/family-obscura.svg">Obscura</option>
-								<option value="/img/watermarks/family-maestros.svg">Maestros</option>
-								<option value="/img/watermarks/family-riveteers.svg">Riveteers</option>
-								<option value="/img/watermarks/family-cabaretti.svg">Cabaretti</option>
-								<option disabled>Clans (Tarkir - Old Timeline)</option>
-								<option value="/img/watermarks/clan-abzan.svg">Abzan</option>
-								<option value="/img/watermarks/clan-jeskai.svg">Jeskai</option>
-								<option value="/img/watermarks/clan-sultai.svg">Sultai</option>
-								<option value="/img/watermarks/clan-mardu.svg">Mardu</option>
-								<option value="/img/watermarks/clan-temur.svg">Temur</option>
-								<option disabled>Clans (Tarkir - New Timeline)</option>
-								<option value="/img/watermarks/clan-ojutai.svg">Ojutai</option>
-								<option value="/img/watermarks/clan-silumgar.svg">Silumgar</option>
-								<option value="/img/watermarks/clan-kolaghan.svg">Kolaghan</option>
-								<option value="/img/watermarks/clan-atarka.svg">Atarka</option>
-								<option value="/img/watermarks/clan-dromoka.svg">Dromoka</option>
-								<option disabled>Poleis (Theros)</option>
-								<option value="/img/watermarks/polis-akros.svg">Akros</option>
-								<option value="/img/watermarks/polis-meletis.svg">Meletis</option>
-								<option value="/img/watermarks/polis-setessa.svg">Setessa</option>
-								<option disabled>Unstable Factions (Bablovia)</option>
-								<option value="/img/watermarks/faction-order-of-the-widget.svg">Order of the Widget</option>
-								<option value="/img/watermarks/faction-agents-of-sneak.svg">Agents of S.N.E.A.K.</option>
-								<option value="/img/watermarks/faction-league-of-dastardly-doom.svg">League of Dastardly Doom</option>
-								<option value="/img/watermarks/faction-goblin-explosioneers.svg">Goblin Explosioneers</option>
-								<option value="/img/watermarks/faction-crossbreed-labs.svg">Crossbreed Labs</option>
-								<option disabled>Avatar The Last Airbender (TLA)</option>
-								<option value="/img/watermarks/atla-water.svg">Water Tribe</option>
-								<option value="/img/watermarks/atla-earth.svg">Earth Kingdom</option>
-								<option value="/img/watermarks/atla-fire.svg">Fire Nation</option>
-								<option value="/img/watermarks/atla-air.svg">Air Nomads</option>
-								<option disabled>Custome</option>
-								<option value="/img/watermarks/purple.svg">Purple Mana</option>
-							</select>
-							<h5 class='collapsible collapsed padding input-description' onclick='toggleCollapse(event);'>
-								How to find set codes
-							</h5>
-							<div class='padding'>
-								<h5 class='margin-top'>Set codes are the two-three character combinations that represent sets. For sets released after 2015, the three-character set code can be found in the lower left hand corner.</h5>
-								<h5 class='margin-top'>For older sets, the code may be different depending on your use:</h5>
-								<p class='margin-top padding'>Set symbol images are named using the same codes as used in <a class='underline' href='https://scryfall.com/sets' target='_blank' rel='noopener'>Scryfall</a>.</p>
-								<p class='padding'>For watermarks, please reference <a class='underline' href='https://keyrune.andrewgioia.com/icons.html' target='_blank' rel='noopener'>Keyrune</a>.</p>
+							<label class='sets-search watermark-search-wrap'>
+								<svg class='sets-search-icon' aria-hidden='true' viewBox='0 0 24 24'><circle cx='11' cy='11' r='6.5'></circle><path d='m16 16 4 4'></path></svg>
+								<input id='watermark-search' class='input' type='search' placeholder='Search watermarks' aria-label='Search watermark presets' autocomplete='off' oninput='filterWatermarkCatalog(this.value);'>
+								<button type='button' class='sets-search-clear' onclick='clearWatermarkCatalogSearch()' aria-label='Clear watermark search'><svg aria-hidden='true' viewBox='0 0 24 24'><path d='m7 7 10 10M17 7 7 17'></path></svg></button>
+							</label>
+							<div id='watermark-catalog' class='watermark-catalog' aria-label='Watermark presets'></div>
+							<p id='watermark-catalog-status' class='watermark-catalog-status' aria-live='polite'></p>
+							<div class='watermark-source-actions'>
+								<label class='art-source-action art-upload-action drop-area'>
+									<span class='art-source-action-copy'><strong>Upload or drop</strong><small>Loads and fits immediately</small></span>
+									<input type='file' accept='.png, .svg, .jpg, .jpeg, .bmp, .webp' aria-label='Upload watermark' oninput='uploadFiles(event.target.files, uploadWatermark, "resetWatermark");' data-dropFunction='uploadWatermark' data-otherParams='resetWatermark'>
+								</label>
 							</div>
-						</div>
-						<div class='readable-background padding margin-bottom'>
-							<h5 class='margin-bottom padding input-description'>Select watermark colors (left, right)</h5>
-							<div class='input-grid margin-bottom'>
-								<select class='input' id='watermark-left' onchange='watermarkLeftColor(this.value);' aria-label='Watermark left color'>
-									<option value="none">None</option>
-					                <option value="default">Actual Image</option>
-					                <option value="#b79d58" selected="selected">White</option>
-					                <option value="#8cacc5">Blue</option>
-					                <option value="#5e5e5e">Black</option>
-					                <option value="#c66d39">Red</option>
-					                <option value="#598c52">Green</option>
-					                <option value="#cab34d">Gold</option>
-					                <option value="#647d86">Artifact/Colorless</option>
-					                <option value="#5e5448">Land</option>
-					                <option value="#ffffff">True White</option>
-					                <option value="#000000">True Black</option>
-								</select>
-								<select class='input' id='watermark-right' onchange='watermarkRightColor(this.value);' aria-label='Watermark right color'>
-									<option value="none" selected="selected">None</option>
-					                <option value="default">Actual Image</option>
-					                <option value="#b79d58">White</option>
-					                <option value="#8cacc5">Blue</option>
-					                <option value="#5e5e5e">Black</option>
-					                <option value="#c66d39">Red</option>
-					                <option value="#598c52">Green</option>
-					                <option value="#cab34d">Gold</option>
-					                <option value="#647d86">Artifact/Colorless</option>
-					                <option value="#5e5448">Land</option>
-					                <option value="#ffffff">True White</option>
-					                <option value="#000000">True Black</option>
-								</select>
+							<form class='watermark-load-form' onsubmit='event.preventDefault(); loadWatermarkUrl();'>
+								<label><span>Image URL</span><input id='watermark-url' type='url' placeholder='https://…' class='input' required></label>
+								<button type='submit' class='input'>Load</button>
+							</form>
+							<form class='watermark-load-form' onsubmit='event.preventDefault(); loadWatermarkCode();'>
+								<label><span>Set code</span><input id='watermark-code' type='text' placeholder='e.g. rav' class='input' required autocapitalize='none' oninput='this.value = this.value.toLowerCase();'></label>
+								<button type='submit' class='input'>Load</button>
+							</form>
+						</section>
+						<section class='readable-background padding margin-bottom watermark-appearance-panel'>
+							<div class='art-section-heading'><h4>Appearance</h4></div>
+							<div class='watermark-appearance-grid'>
+								<label class='watermark-field watermark-opacity-field'><span>Opacity</span><span class='layout-input-shell'><input id='watermark-opacity' type='number' class='input' oninput='watermarkEdited();' value='40' step='1' min='0' max='100' aria-label='Watermark opacity'><small>%</small></span></label>
 							</div>
-							<h5 class='margin-bottom padding input-description'>Or choose them manually (left, right)</h5>
-							<div class='input-grid margin-bottom'>
-								<input class='input' type='color' placeholder='Color' value='#000000' onchange='watermarkLeftColor(this.value);'>
-								<input class='input' type='color' placeholder='Color' value='#000000' onchange='watermarkRightColor(this.value);'>
+						</section>
+						<section class='readable-background padding watermark-advanced-panel'>
+							<h5 class='frame-advanced-toggle collapsible collapsed input-description' onclick='toggleCollapse(event);'>Advanced</h5>
+							<div class='watermark-advanced-settings'>
+								<label class='checkbox-container input workspace-checkbox frame-advanced-option watermark-auto-option'>
+									<span class='frame-advanced-option-copy'><strong>Automatically update watermark colors</strong><small>Match the card's color identity and type</small></span>
+									<input id='watermark-auto-colors' type='checkbox' checked onchange='setWatermarkAutoColors(this.checked);'>
+									<span class='checkmark'></span>
+								</label>
+								<div id='watermark-manual-colors' class='watermark-manual-colors' hidden>
+									<p class='watermark-advanced-copy'>Manual tint colors</p>
+									<div class='watermark-custom-colors'>
+								<label class='watermark-field'><span>Left color</span>
+									<select class='input' id='watermark-left' onchange='watermarkLeftColor(this.value);' aria-label='Watermark left color'>
+										<option value="none" selected="selected">None</option>
+										<option value="default">Actual Image</option>
+										<option value="#b79d58">White</option>
+										<option value="#8cacc5">Blue</option>
+										<option value="#5e5e5e">Black</option>
+										<option value="#c66d39">Red</option>
+										<option value="#598c52">Green</option>
+										<option value="#cab34d">Gold</option>
+										<option value="#647d86">Artifact/Colorless</option>
+										<option value="#5e5448">Land</option>
+										<option value="#ffffff">True White</option>
+										<option value="#000000">True Black</option>
+									</select>
+								</label>
+								<label class='watermark-field'><span>Right color</span>
+									<select class='input' id='watermark-right' onchange='watermarkRightColor(this.value);' aria-label='Watermark right color'>
+										<option value="none" selected="selected">None</option>
+										<option value="default">Actual Image</option>
+										<option value="#b79d58">White</option>
+										<option value="#8cacc5">Blue</option>
+										<option value="#5e5e5e">Black</option>
+										<option value="#c66d39">Red</option>
+										<option value="#598c52">Green</option>
+										<option value="#cab34d">Gold</option>
+										<option value="#647d86">Artifact/Colorless</option>
+										<option value="#5e5448">Land</option>
+										<option value="#ffffff">True White</option>
+										<option value="#000000">True Black</option>
+									</select>
+								</label>
+									<label class='watermark-field'><span>Left custom color</span><input id='watermark-left-custom' class='input' type='color' value='#000000' onchange='watermarkLeftColor(this.value);'></label>
+									<label class='watermark-field'><span>Right custom color</span><input id='watermark-right-custom' class='input' type='color' value='#000000' onchange='watermarkRightColor(this.value);'></label>
+									</div>
+								</div>
+								<p class='watermark-help'>Set codes use the abbreviations listed by <a class='underline' href='https://scryfall.com/sets' target='_blank' rel='noopener'>Scryfall</a>. Watermark codes follow <a class='underline' href='https://keyrune.andrewgioia.com/icons.html' target='_blank' rel='noopener'>Keyrune</a>.</p>
 							</div>
-							<h5 class='margin-bottom padding input-description'>And enter an opacity</h5>
-							<div class='input-grid margin-bottom'>
-								<input id='watermark-opacity' type='number' class='input' oninput='watermarkEdited();' value=40 step=1 min=0 max=100 aria-label='Watermark opacity'>
-							</div>
-						</div>
-						<div class='readable-background padding margin-bottom'>
-							<h5 class='margin-bottom padding input-description'>Position/scale your watermark (X, Y, Scale)</h5>
-							<div class='input-grid margin-bottom'>
-								<input id='watermark-x' type='number' class='input' oninput='watermarkEdited();' value=0 aria-label='Watermark X Position'>
-								<input id='watermark-y' type='number' class='input' oninput='watermarkEdited();' value=0 aria-label='Watermark Y Position'>
-								<input id='watermark-zoom' type='number' class='input' oninput='watermarkEdited();' value=100 step=0.1 min=0 aria-label='Watermark Scale'>
-							</div>
-							<div class='input-grid'>
-								<button class='input' onclick='resetWatermark();'>Reset Watermark</button>
-							</div>
-						</div>
-						<div class='readable-background padding'>
-							<h5 class='padding margin-bottom input-description'>Clears the watermark, making it blank</h5>
-							<button class='input margin-bottom' onclick='uploadWatermark(blank.src);'>Remove Watermark</button>
-						</div>
+						</section>
 					</div>
 					<div id='creator-menu-cardDetails' class='hidden'>
 						<div id='sets-card-details-summary' class='readable-background padding margin-bottom'></div>
-						<div class='readable-background padding margin-bottom'>
-							<h5 class='padding margin-bottom input-description'>Enter the card number, rarity, set code, language, artist's name, and optional copyright</h5>
-							<div class='padding input-grid'>
-								<input id='info-number' type='text' class='input' oninput='bottomInfoEdited();' placeholder='Number' value=''>
-								<input id='info-rarity' type='text' class='input' oninput='bottomInfoEdited(); autoFrameBuffer();' placeholder='Rarity' value='P'>
-								<input id='info-note' type='text' class='input' oninput='bottomInfoEdited();' placeholder='Note' value=''>
+						<section class='readable-background padding margin-bottom card-details-note-panel'>
+							<div class='art-section-heading'><h4>Note</h4></div>
+							<label class='card-details-field'><span>Note</span><input id='info-note' type='text' class='input' oninput='bottomInfoEdited();' placeholder='Optional collector note' value=''></label>
+						</section>
+						<section class='readable-background padding margin-bottom card-details-serial-panel'>
+							<div class='art-section-heading'>
+								<h4>Serialized Card</h4>
+								<div class='art-heading-actions'><button type='button' class='text-field-layout-button' aria-controls='serial-layout-drawer' onclick='openSerialLayoutDrawer(this);'>Layout</button></div>
 							</div>
-							<div class='padding input-grid'>
-								<input id='info-set' type='text' class='input' oninput='bottomInfoEdited();' placeholder='Set' value='MTG'>
-								<input id='info-language' type='text' class='input' oninput='bottomInfoEdited();' placeholder='Language' value='EN'>
-								<input id='info-artist' type='text' class='input' oninput='artistEdited(this.value);' placeholder='Artist'>
+							<div class='card-details-grid'>
+								<label class='card-details-field'><span>Number</span><input id='serial-number' type='number' class='input' oninput='serialInfoEdited();' placeholder='001' min='0' value=''></label>
+								<label class='card-details-field'><span>Total</span><input id='serial-total' type='number' class='input' oninput='serialInfoEdited();' placeholder='500' min='0' value=''></label>
 							</div>
-							<div class='padding input-grid'>
-								<input id='info-year' type='number' class='input' oninput='bottomInfoEdited();' placeholder='0' value='1993'>
-							</div>
-							<h5 class='padding input-description'>Copyright (optional, up to two lines)</h5>
-							<div class='padding input-grid'>
-								<textarea id='info-copyright' class='input collector-copyright-input' rows='2' maxlength='160' oninput='limitCollectorCopyrightLines(this); bottomInfoEdited();' placeholder='©MEE&#10;™ &amp; © 2026 Wizards of the Coast' aria-label='Copyright text'></textarea>
-							</div>
-							<label class='checkbox-container input margin-bottom'>Match the first copyright line to the Note font and size
-								<input id='copyrightFirstLineNoteStyle' type='checkbox' onchange='copyrightFirstLineNoteStyleEdited();'>
+							<p class='card-details-help'>Leave both values blank for a standard, non-serialized card.</p>
+						</section>
+						<section class='readable-background padding margin-bottom card-details-footer-panel'>
+							<div class='art-section-heading'><h4>Footer Mark</h4></div>
+							<label class='checkbox-container input workspace-checkbox frame-advanced-option card-details-star-option'>
+								<span class='frame-advanced-option-copy'><strong>Use star</strong><small>Use the foil-style star instead of a dot</small></span>
+								<input id='collector-use-star' type='checkbox' onchange='setCollectorStar(this.checked);'>
 								<span class='checkmark'></span>
 							</label>
-						</div>
-						<div class='readable-background padding margin-bottom'>
-							<h5 class='input-description margin-bottom'>Enable importing collector information</h5>
-							<label class='checkbox-container input margin-bottom'>Enable imports
-								<input id='enableImportCollectorInfo' type='checkbox' onchange='enableImportCollectorInfo();'>
-								<span class='checkmark'></span>
-							</label>
-						</div>
-						<div class='readable-background padding margin-bottom'>
-							<h5 class='input-description margin-bottom'>Collector info style</h5>
-							<label class='checkbox-container input margin-bottom'>Use new (post-ONE) collector info style
-								<input id='enableNewCollectorStyle' type='checkbox' onchange='enableNewCollectorInfoStyle();'>
-								<span class='checkmark'></span>
-							</label>
-						</div>
-						<div class='readable-background padding margin-bottom'>
-							<h5 class='input-description margin-bottom'>Show collector info</h5>
-							<label class='checkbox-container input margin-bottom'>Show collector info (uncheck to hide)
-								<input id='enableCollectorInfo' type='checkbox' onchange='enableCollectorInfo();'>
-								<span class='checkmark'></span>
-							</label>
-						</div>
-
-						<div class='readable-background padding margin-bottom'>
-							<h5 class='padding input-description'>Serial Number (leave both blank to hide)</h5>
-							<div class='padding input-grid'>
-								<input id='serial-number' type='number' class='input' oninput='serialInfoEdited();' placeholder='001' min='0' value=''>
-								<input id='serial-total' type='number' class='input' oninput='serialInfoEdited();' placeholder='500' min='0' value=''>
-							</div>
-
-							<h5 class='padding input-description'>Placement (X, Y, Scale)</h5>
-							<div class='padding input-grid'>
-								<input id='serial-x' type='number' class='input' oninput='serialInfoEdited();' min='0' value='172' aria-label='Serial Number X Position'>
-								<input id='serial-y' type='number' class='input' oninput='serialInfoEdited();' min='0' value='1383' aria-label='Serial Number Y Position'>
-								<input id='serial-scale' type='number' class='input' oninput='serialInfoEdited();' min='0' step='0.01' value='1' aria-label='Serial Number Scale'>
-							</div>
-							<div class='padding input-grid'>
-								<button class='input' onclick='resetSerial();'>Reset Serial Number Placement</button>
-							</div>
-						</div>
-
-						<div class='readable-background padding margin-bottom'>
-							<h5 class='input-description padding margin-bottom'>Toggle between star (seen on foils) and dot (seen on regular cards)</h5>
-							<div class='padding'>
-								<button class='input padding' onclick='toggleStarDot();'>Toggle Star/Dot</button>
-							</div>
+						</section>
+						<div class='card-details-system-fields' hidden>
+							<input id='info-number' type='text' value=''>
+							<input id='info-rarity' type='text' value='P'>
+							<input id='info-set' type='text' value='MTG'>
+							<input id='info-language' type='text' value='EN'>
+							<input id='info-artist' type='text' value=''>
+							<input id='info-year' type='number' value='1993'>
+							<textarea id='info-copyright'></textarea>
+							<input id='copyrightFirstLineNoteStyle' type='checkbox'>
+							<input id='enableImportCollectorInfo' type='checkbox'>
+							<input id='enableNewCollectorStyle' type='checkbox'>
+							<input id='enableCollectorInfo' type='checkbox' checked>
 						</div>
 					</div>
 					<div id='creator-menu-import' class='hidden'>
@@ -819,7 +796,57 @@
 				</div>
 				</div>
 			</div>
-			<div id='card-search-drawer' class='textbox-editor layout-drawer card-search-drawer' role='dialog' aria-modal='true' aria-labelledby='card-search-title' aria-hidden='true'>
+			<div id='art-search-drawer' class='textbox-editor layout-drawer card-search-drawer art-search-drawer' role='dialog' aria-modal='true' aria-labelledby='art-search-title' aria-hidden='true'>
+				<div class='textbox-editor-heading'>
+					<h2 id='art-search-title' class='textbox-editor-title'>Search Card Art</h2>
+				</div>
+				<button type='button' class='textbox-editor-close' aria-label='Close art search' onclick='closeArtSearchDrawer();'>×</button>
+				<form class='layout-drawer-body card-search-drawer-body' onsubmit='event.preventDefault(); searchScryfallArt();'>
+					<label class='sets-search card-search-query'>
+						<span class='sr-only'>Search Scryfall by card name</span>
+						<svg class='sets-search-icon' aria-hidden='true' viewBox='0 0 24 24'><circle cx='11' cy='11' r='6.5'></circle><path d='m16 16 4 4'></path></svg>
+						<input id='art-name' class='input' type='search' placeholder='Search card name…' autocomplete='off'>
+						<button type='button' class='sets-search-clear' aria-label='Clear art search' onclick="var input=this.parentElement.querySelector('input'); input.value=''; input.focus();"><svg aria-hidden='true' viewBox='0 0 24 24'><path d='m7 7 10 10M17 7 7 17'></path></svg></button>
+					</label>
+					<label>Language
+						<select id='art-search-language' class='input'>
+							<option value='en'>English</option><option value='es'>Spanish</option><option value='fr'>French</option><option value='de'>German</option><option value='it'>Italian</option><option value='pt'>Portuguese</option><option value='ja'>Japanese</option><option value='ko'>Korean</option><option value='ru'>Russian</option><option value='zhs'>Simplified Chinese</option><option value='zht'>Traditional Chinese</option><option value='ph'>Phyrexian</option>
+						</select>
+					</label>
+					<button id='art-search-submit' type='submit' class='card-search-submit sets-confirm'>Search</button>
+					<p id='art-search-status' class='card-search-status' role='status' aria-live='polite' hidden></p>
+					<label id='art-search-results-label' hidden>Choose an artwork
+						<select id='art-index' class='input' aria-label='Scryfall art search results'></select>
+					</label>
+					<div class='sets-dialog-actions'>
+						<button type='button' onclick='closeArtSearchDrawer();'>Cancel</button>
+						<button id='art-search-use' type='button' class='sets-confirm' onclick='useSelectedScryfallArt();' disabled>Use Art</button>
+					</div>
+				</form>
+				</div>
+				<div id='markdown-help-drawer' class='textbox-editor formatting-help-drawer markdown-help-drawer' role='dialog' aria-labelledby='markdown-help-title'>
+					<div class='textbox-editor-heading'>
+						<h2 id='markdown-help-title' class='textbox-editor-title'>Markdown Help</h2>
+					</div>
+					<button type='button' class='textbox-editor-close' aria-label='Close markdown help' onclick='this.parentElement.classList.remove("opened");'>×</button>
+					<div class='formatting-help-body'>
+						<h5 class='margin-top'>Story Formatting</h5>
+						<div class='text-codes padding'>
+							<h5>Markdown</h5><h5>Result</h5>
+							<h5># Heading</h5><h5>Large heading</h5>
+							<h5>## Heading</h5><h5>Medium heading</h5>
+							<h5>### Heading</h5><h5>Small heading</h5>
+							<h5>**bold**</h5><h5><strong>Bold text</strong></h5>
+							<h5>*italic*</h5><h5><em>Italic text</em></h5>
+							<h5>`code`</h5><h5>Inline code</h5>
+							<h5>```<br>code block<br>```</h5><h5>Multi-line code block</h5>
+							<h5>- Item</h5><h5>Bulleted list item</h5>
+							<h5>&gt; Quote</h5><h5>Block quote</h5>
+							<h5>[Label](https://example.com)</h5><h5>External link</h5>
+						</div>
+					</div>
+				</div>
+				<div id='card-search-drawer' class='textbox-editor layout-drawer card-search-drawer' role='dialog' aria-modal='true' aria-labelledby='card-search-title' aria-hidden='true'>
 				<div class='textbox-editor-heading'>
 					<h2 id='card-search-title' class='textbox-editor-title'>Import Card</h2>
 				</div>

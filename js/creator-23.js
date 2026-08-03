@@ -147,7 +147,7 @@ window.FontLoadTracker = {
 };
 
 //card object
-var card = {width:getStandardWidth(), height:getStandardHeight(), marginX:0, marginY:0, frames:[], artSource:fixUri('/img/blank.png'), artX:0, artY:0, artZoom:1, artRotate:0, setSymbolSource:fixUri('/img/blank.png'), setSymbolX:0, setSymbolY:0, setSymbolZoom:1, setSymbolRotate:0, watermarkSource:fixUri('/img/blank.png'), watermarkX:0, watermarkY:0, watermarkZoom:1, watermarkLeft:'none', watermarkRight:'none', watermarkOpacity:0.4, version:'', manaSymbols:[]};
+var card = {width:getStandardWidth(), height:getStandardHeight(), marginX:0, marginY:0, frames:[], artSource:fixUri('/img/blank.png'), artX:0, artY:0, artZoom:1, artRotate:0, setSymbolSource:fixUri('/img/blank.png'), setSymbolX:0, setSymbolY:0, setSymbolZoom:1, setSymbolRotate:0, watermarkSource:fixUri('/img/blank.png'), watermarkX:0, watermarkY:0, watermarkZoom:1, watermarkLeft:'none', watermarkRight:'none', watermarkColorMode:'auto', watermarkOpacity:0.4, serialNumber:'', serialTotal:'', serialX:172, serialY:1383, serialScale:1, infoUseStar:false, version:'', manaSymbols:[]};
 var liveDraftCardStorageKey = '__card_conjurer_live_draft__';
 var liveDraftUiStorageKey = '__card_conjurer_live_draft_ui__';
 var liveDraftResetInProgress = false;
@@ -278,6 +278,10 @@ var lastMaskClick = null;
 //for imports
 var scryfallArt;
 var scryfallCard;
+var artLayoutReturnFocus = null;
+var artSearchReturnFocus = null;
+var watermarkLayoutReturnFocus = null;
+var serialLayoutReturnFocus = null;
 //for text
 var drawTextBetweenFrames = false;
 var redrawFrames = false;
@@ -359,6 +363,8 @@ async function setBottomInfoStyle() {
 				bottomRight: {text:'{ptshift0,0.0172}CardConjurer.com', x:0.0647, y:0.9548, width:0.8707, height:0.0143, oneLine:true, font:'mplantin', size:0.0143, color:card.bottomInfoColor, align:'right', outlineWidth:0.003}
 			});
 		}
+	applyCollectorStarStyle(Boolean(card.infoUseStar));
+	syncCollectorStarControl();
 }
 //Canvas management
 function sizeCanvas(name, width = Math.round(card.width * (1 + 2 * card.marginX)), height = Math.round(card.height * (1 + 2 * card.marginY))) {
@@ -1730,6 +1736,7 @@ function textEdited(key, value, optionalPlaceholder=false) {
 		autoFrameBuffer(editedTextObject?.manaCost || flipsideColorEdited ? 120 : 500);
 	}
 	if ((key === 'type' || editedTextObject?.manaCost || flipsideColorEdited) && typeof renderFrameCustomize === 'function') renderFrameCustomize();
+	if (typeof syncAutomaticWatermarkColors === 'function') syncAutomaticWatermarkColors();
 	if (key === 'ability3') autoUpdatePlaneswalkerStyleFromAbility4();
 	if (typeof queueLiveDraftSave === 'function') queueLiveDraftSave();
 }
@@ -3122,6 +3129,166 @@ async function addTextbox(textboxType) {
 	}
 }
 //ART TAB
+function openArtLayoutDrawer(trigger) {
+	var drawer = document.querySelector('#art-layout-drawer');
+	if (!drawer) return;
+	artLayoutReturnFocus = trigger || document.activeElement;
+	drawer.classList.add('opened');
+	drawer.setAttribute('aria-hidden', 'false');
+	setTimeout(function() { drawer.querySelector('.textbox-editor-close')?.focus({preventScroll:true}); }, 0);
+}
+
+function closeArtLayoutDrawer(returnFocus = true) {
+	var drawer = document.querySelector('#art-layout-drawer');
+	if (drawer) {
+		drawer.classList.remove('opened');
+		drawer.setAttribute('aria-hidden', 'true');
+	}
+	if (returnFocus && artLayoutReturnFocus?.isConnected) artLayoutReturnFocus.focus();
+	artLayoutReturnFocus = null;
+}
+
+function openWatermarkLayoutDrawer(trigger) {
+	var drawer = document.querySelector('#watermark-layout-drawer');
+	if (!drawer) return;
+	watermarkLayoutReturnFocus = trigger || document.activeElement;
+	drawer.classList.add('opened');
+	drawer.setAttribute('aria-hidden', 'false');
+	setTimeout(function() { drawer.querySelector('.textbox-editor-close')?.focus({preventScroll:true}); }, 0);
+}
+
+function closeWatermarkLayoutDrawer(returnFocus = true) {
+	var drawer = document.querySelector('#watermark-layout-drawer');
+	if (drawer) {
+		drawer.classList.remove('opened');
+		drawer.setAttribute('aria-hidden', 'true');
+	}
+	if (returnFocus && watermarkLayoutReturnFocus?.isConnected) watermarkLayoutReturnFocus.focus();
+	watermarkLayoutReturnFocus = null;
+}
+
+function openSerialLayoutDrawer(trigger) {
+	var drawer = document.querySelector('#serial-layout-drawer');
+	if (!drawer) return;
+	serialLayoutReturnFocus = trigger || document.activeElement;
+	drawer.classList.add('opened');
+	drawer.setAttribute('aria-hidden', 'false');
+	setTimeout(function() { drawer.querySelector('.textbox-editor-close')?.focus({preventScroll:true}); }, 0);
+}
+
+function closeSerialLayoutDrawer(returnFocus = true) {
+	var drawer = document.querySelector('#serial-layout-drawer');
+	if (drawer) {
+		drawer.classList.remove('opened');
+		drawer.setAttribute('aria-hidden', 'true');
+	}
+	if (returnFocus && serialLayoutReturnFocus?.isConnected) serialLayoutReturnFocus.focus();
+	serialLayoutReturnFocus = null;
+}
+
+function setArtSearchStatus(message, kind = '') {
+	var status = document.querySelector('#art-search-status');
+	if (!status) return;
+	status.textContent = message;
+	status.dataset.kind = kind;
+	status.hidden = !message;
+}
+
+function openArtSearchDrawer(trigger) {
+	var drawer = document.querySelector('#art-search-drawer');
+	var query = document.querySelector('#art-name');
+	var language = document.querySelector('#art-search-language');
+	if (!drawer || !query) return;
+	artSearchReturnFocus = trigger || document.activeElement;
+	scryfallArt = [];
+	query.value = '';
+	var workspaceState = window.CardConjurerSets?.getState?.();
+	var activeSet = workspaceState?.sets?.find(set => set.id === workspaceState.activeSetId);
+	var preferredLanguage = String(activeSet?.language || document.querySelector('#import-language')?.value || 'en').toLowerCase();
+	if (language) language.value = Array.from(language.options).some(option => option.value === preferredLanguage) ? preferredLanguage : 'en';
+	var results = document.querySelector('#art-index');
+	var resultsLabel = document.querySelector('#art-search-results-label');
+	var useButton = document.querySelector('#art-search-use');
+	if (results) results.innerHTML = '';
+	if (resultsLabel) resultsLabel.hidden = true;
+	if (useButton) useButton.disabled = true;
+	setArtSearchStatus('');
+	drawer.classList.add('opened');
+	drawer.setAttribute('aria-hidden', 'false');
+	setTimeout(function() { query.focus(); }, 0);
+}
+
+function closeArtSearchDrawer(returnFocus = true) {
+	var drawer = document.querySelector('#art-search-drawer');
+	if (drawer) {
+		drawer.classList.remove('opened');
+		drawer.setAttribute('aria-hidden', 'true');
+	}
+	if (returnFocus && artSearchReturnFocus?.isConnected) artSearchReturnFocus.focus();
+	artSearchReturnFocus = null;
+}
+
+async function searchScryfallArt() {
+	var queryInput = document.querySelector('#art-name');
+	var languageInput = document.querySelector('#art-search-language');
+	var results = document.querySelector('#art-index');
+	var resultsLabel = document.querySelector('#art-search-results-label');
+	var searchButton = document.querySelector('#art-search-submit');
+	var useButton = document.querySelector('#art-search-use');
+	var query = String(queryInput?.value || '').trim();
+	if (!query) { setArtSearchStatus('Card name required.', 'error'); queryInput?.focus(); return; }
+	if (searchButton) searchButton.disabled = true;
+	if (useButton) useButton.disabled = true;
+	if (resultsLabel) resultsLabel.hidden = true;
+	setArtSearchStatus('Searching Scryfall…');
+	try {
+		var searchParams = new URLSearchParams({order:'released', include_extras:'true', unique:'art', q:'name=' + query + ' lang=' + (languageInput?.value || 'en')});
+		var response = await fetch('https://api.scryfall.com/cards/search?' + searchParams.toString());
+		if (!response.ok) {
+			if (response.status === 404) throw new Error('No artwork found for “' + query + '”.');
+			throw new Error('Scryfall search failed. Try again.');
+		}
+		var payload = await response.json();
+		var processed = [];
+		(payload.data || []).forEach(function(cardResult) {
+			if (typeof processScryfallCard === 'function') processScryfallCard(cardResult, processed);
+			else processed.push(cardResult);
+		});
+		scryfallArt = processed.filter(cardResult => cardResult?.image_uris?.art_crop && cardResult.artist && cardResult.type_line !== 'Card');
+		results.innerHTML = '';
+		scryfallArt.forEach(function(cardResult, index) {
+			var name = cardResult.printed_name || cardResult.name || 'Untitled Card';
+			var detail = String(cardResult.set || '').toUpperCase() + ' #' + String(cardResult.collector_number || '') + ' · ' + cardResult.artist;
+			results.appendChild(new Option(name + ' (' + detail + ')', String(index)));
+		});
+		if (!scryfallArt.length) throw new Error('No usable artwork found for “' + query + '”.');
+		results.value = '0';
+		resultsLabel.hidden = false;
+		useButton.disabled = false;
+		setArtSearchStatus(scryfallArt.length + ' artwork' + (scryfallArt.length === 1 ? '' : 's') + ' found.');
+	} catch (error) {
+		scryfallArt = [];
+		if (results) results.innerHTML = '';
+		if (resultsLabel) resultsLabel.hidden = true;
+		setArtSearchStatus(error.message || 'Scryfall search failed. Try again.', 'error');
+	} finally {
+		if (searchButton) searchButton.disabled = false;
+	}
+}
+
+function useSelectedScryfallArt() {
+	if (!scryfallArt?.[Number(document.querySelector('#art-index')?.value)]) return;
+	changeArtIndex();
+	closeArtSearchDrawer();
+}
+
+function loadArtUrl() {
+	var input = document.querySelector('#art-url');
+	var value = String(input?.value || '').trim();
+	if (!value) return;
+	imageURL(value, uploadArt, document.querySelector('#art-update-autofit')?.checked ? 'autoFit' : '');
+}
+
 function uploadArt(imageSource, otherParams) {
 	ImageLoadTracker.track(imageSource);
 	art.src = imageSource;
@@ -3343,6 +3510,17 @@ function setSymbolEdited() {
 	if (card.text?.type && card.text.type.autoSize !== false) drawTextBuffer(0);
 	else drawCard();
 }
+
+if (!window.cardConjurerArtDrawersBound) {
+	window.cardConjurerArtDrawersBound = true;
+	document.addEventListener('keydown', function(event) {
+		if (event.key !== 'Escape') return;
+		if (document.querySelector('#art-search-drawer.opened')) closeArtSearchDrawer();
+		if (document.querySelector('#art-layout-drawer.opened')) closeArtLayoutDrawer();
+		if (document.querySelector('#watermark-layout-drawer.opened')) closeWatermarkLayoutDrawer();
+		if (document.querySelector('#serial-layout-drawer.opened')) closeSerialLayoutDrawer();
+	});
+}
 function resetSetSymbol() {
 	if (card.setSymbolBounds == undefined) {
 		return;
@@ -3458,8 +3636,181 @@ function lockSetSymbolURL() {
 	localStorage.setItem('lockSetSymbolURL', savedValue);
 }
 //WATERMARK TAB
-function uploadWatermark(imageSource, otherParams) {
+const WATERMARK_TINTS = {
+	W:'#b79d58', U:'#8cacc5', B:'#5e5e5e', R:'#c66d39', G:'#598c52',
+	M:'#cab34d', A:'#647d86', L:'#5e5448'
+};
+
+const WATERMARK_PRESETS = [
+	['General', [['Planeswalker','planeswalker'],['Desparked Planeswalker','desparked-planeswalker'],['DCI Star','misc-star'],['DCI Logo','misc-dci']]],
+	['Monocolors', [['White','w'],['Blue','u'],['Black','b'],['Red','r'],['Green','g'],['Colorless','c']]],
+	['Mechanics', [['Foretell','ability-foretell']]],
+	['Phyrexian / Mirrodin', [['Phyrexian','phyrexian'],['Mirran','mirran']]],
+	['Guilds · Ravnica', [['Azorius','guild-azorius'],['Dimir','guild-dimir'],['Rakdos','guild-rakdos'],['Gruul','guild-gruul'],['Selesnya','guild-selesnya'],['Orzhov','guild-orzhov'],['Izzet','guild-izzet'],['Golgari','guild-golgari'],['Boros','guild-boros'],['Simic','guild-simic']]],
+	['Schools · Strixhaven', [['Silverquill','school-silverquill'],['Prismari','school-prismari'],['Witherbloom','school-witherbloom'],['Lorehold','school-lorehold'],['Quandrix','school-quandrix']]],
+	['Echoverse', [['Echoverse','fracture']]],
+	['Families · New Capenna', [['Brokers','family-brokers'],['Obscura','family-obscura'],['Maestros','family-maestros'],['Riveteers','family-riveteers'],['Cabaretti','family-cabaretti']]],
+	['Clans · Tarkir', [['Abzan','clan-abzan'],['Jeskai','clan-jeskai'],['Sultai','clan-sultai'],['Mardu','clan-mardu'],['Temur','clan-temur'],['Ojutai','clan-ojutai'],['Silumgar','clan-silumgar'],['Kolaghan','clan-kolaghan'],['Atarka','clan-atarka'],['Dromoka','clan-dromoka']]],
+	['Poleis · Theros', [['Akros','polis-akros'],['Meletis','polis-meletis'],['Setessa','polis-setessa']]],
+	['Factions · Bablovia', [['Order of the Widget','faction-order-of-the-widget'],['Agents of S.N.E.A.K.','faction-agents-of-sneak'],['League of Dastardly Doom','faction-league-of-dastardly-doom'],['Goblin Explosioneers','faction-goblin-explosioneers'],['Crossbreed Labs','faction-crossbreed-labs']]],
+	['Avatar: The Last Airbender', [['Water Tribe','atla-water'],['Earth Kingdom','atla-earth'],['Fire Nation','atla-fire'],['Air Nomads','atla-air']]],
+	['Custom', [['Purple Mana','purple']]]
+].flatMap(([group, presets]) => presets.map(([name, file]) => ({group, name, src:'/img/watermarks/' + file + '.svg'})));
+
+function automaticWatermarkColors() {
+	var derived = window.CardConjurerSetModel?.deriveCard({cardData:{text:card.text || {}}})?.derived || {};
+	var types = derived.cardTypes || [];
+	if (types.includes('land')) return {left:WATERMARK_TINTS.L, right:'none', label:'Land'};
+	if (types.includes('artifact')) return {left:WATERMARK_TINTS.A, right:'none', label:'Artifact'};
+	var colors = derived.colorIdentity || [];
+	if (window.FRAME_REGISTRY?.canonicalColors) colors = FRAME_REGISTRY.canonicalColors(colors);
+	if (colors.length >= 3) return {left:WATERMARK_TINTS.M, right:'none', label:'Gold'};
+	if (colors.length === 2) return {left:WATERMARK_TINTS[colors[0]], right:WATERMARK_TINTS[colors[1]], label:colors.join('')};
+	if (colors.length === 1) return {left:WATERMARK_TINTS[colors[0]], right:'none', label:colors[0]};
+	var hasCardContent = Boolean(derived.title || derived.typeLine || derived.manaCost || derived.rulesText);
+	return hasCardContent
+		? {left:WATERMARK_TINTS.A, right:'none', label:'Colorless'}
+		: {left:'none', right:'none', label:'None'};
+}
+
+function watermarkPreviewBackground(left, rightColor) {
+	var visibleLeft = left === 'none' || left === 'default' ? '#eef2f7' : left;
+	var visibleRight = rightColor === 'none' || rightColor === 'default' ? visibleLeft : rightColor;
+	return rightColor === 'none'
+		? visibleLeft
+		: `linear-gradient(90deg, ${visibleLeft} 0 50%, ${visibleRight} 50% 100%)`;
+}
+
+function refreshWatermarkCatalogTint() {
+	var colors = card.watermarkColorMode === 'manual'
+		? {left:card.watermarkLeft || 'none', right:card.watermarkRight || 'none'}
+		: automaticWatermarkColors();
+	document.querySelectorAll('.watermark-catalog-symbol').forEach(symbol => {
+		symbol.style.background = watermarkPreviewBackground(colors.left, colors.right);
+	});
+}
+
+function updateWatermarkColorControls() {
+	var automatic = card.watermarkColorMode !== 'manual';
+	var autoInput = document.querySelector('#watermark-auto-colors');
+	var manualControls = document.querySelector('#watermark-manual-colors');
+	if (autoInput) autoInput.checked = automatic;
+	if (manualControls) manualControls.hidden = automatic;
+	var leftSelect = document.querySelector('#watermark-left');
+	var rightSelect = document.querySelector('#watermark-right');
+	if (leftSelect && Array.from(leftSelect.options).some(option => option.value === card.watermarkLeft)) leftSelect.value = card.watermarkLeft;
+	if (rightSelect && Array.from(rightSelect.options).some(option => option.value === card.watermarkRight)) rightSelect.value = card.watermarkRight;
+}
+
+function syncAutomaticWatermarkColors() {
+	if (card.watermarkColorMode === 'manual') {
+		refreshWatermarkCatalogTint();
+		return;
+	}
+	card.watermarkColorMode = 'auto';
+	var colors = automaticWatermarkColors();
+	var changed = card.watermarkLeft !== colors.left || card.watermarkRight !== colors.right;
+	card.watermarkLeft = colors.left;
+	card.watermarkRight = colors.right;
+	updateWatermarkColorControls();
+	refreshWatermarkCatalogTint();
+	if (changed && document.querySelector('#watermark-opacity')) watermarkEdited();
+}
+
+function setWatermarkAutoColors(enabled) {
+	card.watermarkColorMode = enabled ? 'auto' : 'manual';
+	updateWatermarkColorControls();
+	if (enabled) syncAutomaticWatermarkColors();
+	else refreshWatermarkCatalogTint();
+	if (typeof queueLiveDraftSave === 'function') queueLiveDraftSave();
+}
+
+function renderWatermarkCatalog() {
+	var catalog = document.querySelector('#watermark-catalog');
+	if (!catalog || catalog.childElementCount) return;
+	WATERMARK_PRESETS.forEach(preset => {
+		var button = document.createElement('button');
+		button.type = 'button';
+		button.className = 'watermark-catalog-item';
+		button.dataset.search = `${preset.name} ${preset.group}`.toLowerCase();
+		button.dataset.src = preset.src;
+		button.title = `${preset.name} · ${preset.group}`;
+		button.setAttribute('aria-label', `Use ${preset.name} watermark`);
+		button.onclick = () => selectWatermarkPreset(preset, button);
+
+		var preview = document.createElement('span');
+		preview.className = 'watermark-catalog-preview';
+		var symbol = document.createElement('span');
+		symbol.className = 'watermark-catalog-symbol';
+		symbol.style.webkitMaskImage = `url("${fixUri(preset.src)}")`;
+		symbol.style.maskImage = `url("${fixUri(preset.src)}")`;
+		preview.appendChild(symbol);
+
+		var label = document.createElement('span');
+		label.className = 'watermark-catalog-title';
+		label.textContent = preset.name;
+		button.append(preview, label);
+		catalog.appendChild(button);
+	});
+	refreshWatermarkCatalogTint();
+	filterWatermarkCatalog('');
+}
+
+function selectWatermarkPreset(preset, button) {
+	card.watermarkPresetSource = preset.src;
+	document.querySelectorAll('.watermark-catalog-item').forEach(item => {
+		var selected = item === button;
+		item.classList.toggle('selected', selected);
+		item.setAttribute('aria-pressed', selected ? 'true' : 'false');
+	});
+	syncAutomaticWatermarkColors();
+	getSetSymbolWatermark(fixUri(preset.src), watermark, preset.src);
+}
+
+function filterWatermarkCatalog(value) {
+	var query = String(value || '').trim().toLowerCase();
+	var visible = 0;
+	document.querySelectorAll('.watermark-catalog-item').forEach(item => {
+		item.hidden = Boolean(query) && !item.dataset.search.includes(query);
+		if (!item.hidden) visible++;
+	});
+	var status = document.querySelector('#watermark-catalog-status');
+	if (status) status.textContent = `${visible} watermark${visible === 1 ? '' : 's'}`;
+}
+
+function clearWatermarkCatalogSearch() {
+	var search = document.querySelector('#watermark-search');
+	if (!search) return;
+	search.value = '';
+	filterWatermarkCatalog('');
+	search.focus();
+}
+
+function loadWatermarkUrl() {
+	var input = document.querySelector('#watermark-url');
+	var value = String(input?.value || '').trim();
+	if (!value) return;
+	card.watermarkPresetSource = '';
+	imageURL(value, uploadWatermark, 'resetWatermark');
+}
+
+function loadWatermarkCode() {
+	var input = document.querySelector('#watermark-code');
+	var value = String(input?.value || '').trim().toLowerCase();
+	if (!value) return;
+	input.value = value;
+	card.watermarkPresetSource = '';
+	getSetSymbolWatermark(value);
+}
+
+function uploadWatermark(imageSource, otherParams, presetSource) {
 	ImageLoadTracker.track(imageSource);
+	card.watermarkPresetSource = presetSource || '';
+	document.querySelectorAll('.watermark-catalog-item').forEach(item => {
+		var selected = item.dataset.src === card.watermarkPresetSource;
+		item.classList.toggle('selected', selected);
+		item.setAttribute('aria-pressed', selected ? 'true' : 'false');
+	});
 	watermark.src = imageSource;
 	if (otherParams && otherParams == 'resetWatermark') {
 		watermark.onload = function() {
@@ -3469,11 +3820,17 @@ function uploadWatermark(imageSource, otherParams) {
 	}
 }
 function watermarkLeftColor(c) {
+	card.watermarkColorMode = 'manual';
 	card.watermarkLeft = c;
+	updateWatermarkColorControls();
+	refreshWatermarkCatalogTint();
 	watermarkEdited();
 }
 function watermarkRightColor(c) {
+	card.watermarkColorMode = 'manual';
 	card.watermarkRight = c;
+	updateWatermarkColorControls();
+	refreshWatermarkCatalogTint();
 	watermarkEdited();
 }
 function watermarkEdited() {
@@ -3481,11 +3838,6 @@ function watermarkEdited() {
 	card.watermarkX = document.querySelector('#watermark-x').value / card.width;
 	card.watermarkY = document.querySelector('#watermark-y').value / card.height;
 	card.watermarkZoom = document.querySelector('#watermark-zoom').value / 100;
-	if (card.watermarkLeft == "none" && document.querySelector('#watermark-left').value != "none") {
-		card.watermarkLeft = document.querySelector('#watermark-left').value;
-	}
-	// card.watermarkLeft = document.querySelector('#watermark-left').value;
-	// card.watermarkRight =  document.querySelector('#watermark-right').value;
 	card.watermarkOpacity = document.querySelector('#watermark-opacity').value / 100;
 	watermarkContext.globalCompositeOperation = 'source-over';
 	watermarkContext.globalAlpha = 1;
@@ -3514,6 +3866,7 @@ function watermarkEdited() {
 		watermarkContext.fillRect(0, 0, watermarkCanvas.width, watermarkCanvas.height);
 	}
 	drawCard();
+	if (typeof queueLiveDraftSave === 'function') queueLiveDraftSave();
 }
 function resetWatermark() {
 	var watermarkZoom;
@@ -3528,7 +3881,7 @@ function resetWatermark() {
 	watermarkEdited();
 }
 //svg cropper
-function getSetSymbolWatermark(url, targetImage = watermark) {
+function getSetSymbolWatermark(url, targetImage = watermark, presetSource = '') {
 	if (!url.includes('/')) {
 		url = 'https://cdn.jsdelivr.net/npm/keyrune/svg/' + url + '.svg';
 	}
@@ -3542,7 +3895,7 @@ function getSetSymbolWatermark(url, targetImage = watermark) {
 			svg.setAttribute('viewBox', [box.x, box.y, box.width, box.height].join(' '));
 			svg.setAttribute('width', box.width);
 			svg.setAttribute('height', box.height);
-			uploadWatermark('data:image/svg+xml,' + encodeURIComponent(svg.outerHTML), 'resetWatermark');
+			uploadWatermark('data:image/svg+xml,' + encodeURIComponent(svg.outerHTML), 'resetWatermark', presetSource);
 			svg.remove();
 		} else if (this.status == 404) {
 			throw new Error('Improper Set Code');
@@ -3729,17 +4082,28 @@ function artistEdited(value) {
 	document.querySelector('#info-artist').value = value;
 	bottomInfoEdited();
 }
-function toggleStarDot() {
-	for (var key of Object.keys(card.bottomInfo)) {
-		var text = card.bottomInfo[key].text
-		if (text.includes('*')) {
-			card.bottomInfo[key].text = text.replace('*', ' \u2022 ');
-		} else {
-			card.bottomInfo[key].text = text.replace(' \u2022 ', '*');
-		}
-	}
-	defaultCollector.starDot = !defaultCollector.starDot;
+function collectorBottomInfoUsesStar(bottomInfo = card.bottomInfo) {
+	return Object.values(bottomInfo || {}).some(function(item) { return String(item?.text || '').includes('*'); });
+}
+function applyCollectorStarStyle(enabled) {
+	Object.values(card.bottomInfo || {}).forEach(function(item) {
+		var text = String(item?.text || '');
+		item.text = enabled ? text.split(' \u2022 ').join('*') : text.split('*').join(' \u2022 ');
+	});
+}
+function syncCollectorStarControl() {
+	var input = document.querySelector('#collector-use-star');
+	if (input) input.checked = Boolean(card.infoUseStar);
+}
+function setCollectorStar(enabled) {
+	card.infoUseStar = Boolean(enabled);
+	applyCollectorStarStyle(card.infoUseStar);
+	syncCollectorStarControl();
 	bottomInfoEdited();
+	if (typeof queueLiveDraftSave === 'function') queueLiveDraftSave();
+}
+function toggleStarDot() {
+	setCollectorStar(!Boolean(card.infoUseStar));
 }
 async function enableNewCollectorInfoStyle() {
 	localStorage.setItem('enableNewCollectorStyle', document.querySelector('#enableNewCollectorStyle').checked);
@@ -3801,7 +4165,6 @@ function setDefaultCollector() {
 		lang: document.querySelector('#info-language').value,
 		note: document.querySelector('#info-note').value,
 		copyright: document.querySelector('#info-copyright').value,
-		copyrightFirstLineNoteStyle: document.querySelector('#copyrightFirstLineNoteStyle').checked,
 		starDot: starDot
 	};
 	localStorage.setItem('defaultCollector', JSON.stringify(defaultCollector));
@@ -5378,24 +5741,31 @@ function queueLiveDraftSave(delay = 250) {
 }
 
 function applyLiveDraftUi(ui) {
-	if (!ui) return;
+	if (!ui) return false;
+	var migratedDarkPowerToughness = ui.activeFrameCustomizationPack === 'M15DarkPT' || ui.selectedFrameProfile === 'M15DarkPT';
+	var selectedProfile = migratedDarkPowerToughness ? (ui.activeFramePack || 'M15Regular-1') : ui.selectedFrameProfile;
+	var autoFrameValue = migratedDarkPowerToughness && typeof FRAME_REGISTRY !== 'undefined'
+		? (FRAME_REGISTRY.engine(selectedProfile) || selectedProfile)
+		: ui.autoFrameValue;
 	if (typeof activeFramePack !== 'undefined' && ui.activeFramePack) activeFramePack = ui.activeFramePack;
-	if (typeof activeFrameCustomizationPack !== 'undefined') activeFrameCustomizationPack = ui.activeFrameCustomizationPack || null;
+	if (typeof activeFrameCustomizationPack !== 'undefined') activeFrameCustomizationPack = migratedDarkPowerToughness ? null : (ui.activeFrameCustomizationPack || null);
 	if (typeof activeFrameComponentOptions !== 'undefined') activeFrameComponentOptions = ui.activeFrameComponentOptions || {};
+	if (migratedDarkPowerToughness && typeof activeFrameComponentOptions !== 'undefined') activeFrameComponentOptions['power-toughness-variant'] = {pack:'M15DarkPT', frame:null};
 	if (typeof automaticVariantPack !== 'undefined') automaticVariantPack = ui.automaticVariantPack || null;
 	var autoFrameInput = document.querySelector('#autoFrame');
 	if (autoFrameInput) {
-		if (ui.autoFrameValue) autoFrameInput.value = ui.autoFrameValue;
-		if (ui.selectedFrameProfile) autoFrameInput.dataset.profile = ui.selectedFrameProfile;
+		if (autoFrameValue) autoFrameInput.value = autoFrameValue;
+		if (selectedProfile) autoFrameInput.dataset.profile = selectedProfile;
 	}
-	if (ui.autoFrameValue) localStorage.setItem('autoFrame', ui.autoFrameValue);
-	if (ui.selectedFrameProfile) localStorage.setItem('selectedFrameProfile', ui.selectedFrameProfile);
+	if (autoFrameValue) localStorage.setItem('autoFrame', autoFrameValue);
+	if (selectedProfile) localStorage.setItem('selectedFrameProfile', selectedProfile);
 	if (typeof renderFrameCustomize === 'function') renderFrameCustomize(activeFramePack);
 	document.querySelectorAll('.frame-catalog-item').forEach(item => {
 		var selected = item.dataset.pack === activeFramePack;
 		item.classList.toggle('selected', selected);
 		item.setAttribute('aria-pressed', selected ? 'true' : 'false');
 	});
+	return migratedDarkPowerToughness;
 }
 
 function liveDraftFrameIdentity(frame) {
@@ -5561,7 +5931,8 @@ async function loadCardData(cardData, uiState) {
 	//clear the existing card, then replace it with the new JSON
 	card = {};
 	card = JSON.parse(JSON.stringify(cardData || {}));
-	if (uiState) applyLiveDraftUi(uiState);
+	if (card.infoUseStar == null) card.infoUseStar = collectorBottomInfoUsesStar(card.bottomInfo);
+	var migratedDarkPowerToughness = uiState ? applyLiveDraftUi(uiState) : false;
 	//if the card was loaded properly...
 	if (card) {
 		//load values from card into html inputs
@@ -5588,16 +5959,20 @@ async function loadCardData(cardData, uiState) {
 		document.querySelector('#watermark-x').value = scaleX(card.watermarkX) - scaleWidth(card.marginX);
 		document.querySelector('#watermark-y').value = scaleY(card.watermarkY) - scaleHeight(card.marginY);
 		document.querySelector('#watermark-zoom').value = card.watermarkZoom * 100;
-		// document.querySelector('#watermark-left').value = card.watermarkLeft;
-		// document.querySelector('#watermark-right').value = card.watermarkRight;
+		card.watermarkColorMode = card.watermarkColorMode === 'manual' ? 'manual' : 'auto';
+		card.watermarkLeft = card.watermarkLeft || 'none';
+		card.watermarkRight = card.watermarkRight || 'none';
+		updateWatermarkColorControls();
+		syncAutomaticWatermarkColors();
 		document.querySelector('#watermark-opacity').value = card.watermarkOpacity * 100;
 		document.getElementById("rounded-corners").checked = !card.noCorners;
-		uploadWatermark(card.watermarkSource);
-		document.querySelector('#serial-number').value = card.serialNumber;
-		document.querySelector('#serial-total').value = card.serialTotal;
-		document.querySelector('#serial-x').value = card.serialX;
-		document.querySelector('#serial-y').value = card.serialY;
-		document.querySelector('#serial-scale').value = card.serialScale;
+		uploadWatermark(card.watermarkSource, null, card.watermarkPresetSource);
+		document.querySelector('#serial-number').value = card.serialNumber || '';
+		document.querySelector('#serial-total').value = card.serialTotal || '';
+		document.querySelector('#serial-x').value = card.serialX ?? 172;
+		document.querySelector('#serial-y').value = card.serialY ?? 1383;
+		document.querySelector('#serial-scale').value = card.serialScale ?? 1;
+		syncCollectorStarControl();
 		serialInfoEdited();
 
 		var framesToLoad = (card.frames || []).slice().reverse();
@@ -5606,6 +5981,9 @@ async function loadCardData(cardData, uiState) {
 			await loadScript(card.onload);
 		}
 		await Promise.all((card.manaSymbols || []).map(item => loadScript(item)));
+		applyCollectorStarStyle(Boolean(card.infoUseStar));
+		syncCollectorStarControl();
+		if (migratedDarkPowerToughness && typeof autoFrame === 'function') await autoFrame();
 		//canvases
 		var canvasesResized = false;
 		canvasList.forEach(name => {
@@ -6084,8 +6462,6 @@ if ('number' in defaultCollector) {
 	document.querySelector('#info-set').value = defaultCollector.setCode;
 	document.querySelector('#info-language').value = defaultCollector.lang;
 	document.querySelector('#info-copyright').value = defaultCollector.copyright || '';
-	document.querySelector('#copyrightFirstLineNoteStyle').checked = Boolean(defaultCollector.copyrightFirstLineNoteStyle);
-	if (defaultCollector.starDot) {setTimeout(function(){defaultCollector.starDot = false; toggleStarDot();}, 500);}
 } else {
 	document.querySelector('#info-number').value = date.getFullYear();
 }
@@ -6099,11 +6475,8 @@ if (!localStorage.getItem('enableNewCollectorStyle')) {
 } else {
 	document.querySelector('#enableNewCollectorStyle').checked = (localStorage.getItem('enableNewCollectorStyle') == 'true');
 }
-if (!localStorage.getItem('enableCollectorInfo')) {
-	localStorage.setItem('enableCollectorInfo', 'true');
-} else {
-	document.querySelector('#enableCollectorInfo').checked = (localStorage.getItem('enableCollectorInfo') == 'true');
-}
+localStorage.setItem('enableCollectorInfo', 'true');
+document.querySelector('#enableCollectorInfo').checked = true;
 localStorage.setItem('autoFrame', 'M15Regular-1');
 document.querySelector('#autoFrame').value = 'M15Regular-1';
 if (!localStorage.getItem('automaticallyUpdateFrame')) {
@@ -6151,6 +6524,10 @@ bindInputs('#frame-editor-hsl-hue', '#frame-editor-hsl-hue-slider');
 bindInputs('#frame-editor-hsl-saturation', '#frame-editor-hsl-saturation-slider');
 bindInputs('#frame-editor-hsl-lightness', '#frame-editor-hsl-lightness-slider');
 bindInputs('#show-guidelines', '#show-guidelines-2', true);
+
+renderWatermarkCatalog();
+updateWatermarkColorControls();
+syncAutomaticWatermarkColors();
 
 // Load / init whatever
 loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');

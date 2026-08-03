@@ -1885,6 +1885,7 @@ async function autoFrame() {
 		await autoFrameFromAvailableFrames(colors, typeLineText, typeVariant, variantFrames, requestId);
 		if (requestId != autoFrameRequestId) return;
 		if (typeof applyActiveFrameComponents === 'function') await applyActiveFrameComponents(colors, typeLineText, requestId);
+		if (typeof renderFrameCustomize === 'function') renderFrameCustomize(activeFramePack);
 		if (window.CardConjurerSets?.automaticFrameSettled) window.CardConjurerSets.automaticFrameSettled();
 		return;
 	}
@@ -1912,6 +1913,7 @@ async function autoFrame() {
 	}
 	if (requestId != autoFrameRequestId) return;
 	if (typeof applyActiveFrameComponents === 'function') await applyActiveFrameComponents(colors, typeLineText, requestId);
+	if (typeof renderFrameCustomize === 'function') renderFrameCustomize(activeFramePack);
 	if (window.CardConjurerSets?.automaticFrameSettled) window.CardConjurerSets.automaticFrameSettled();
 }
 
