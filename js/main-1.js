@@ -119,8 +119,57 @@ function bindInputs(query1, query2, checkbox = false) {
 	}
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-	document.body.dispatchEvent(new Event('doCreate'));
+var creatorScriptsLoading = null;
+function loadCreatorScripts(root) {
+	var manifest = (root || document).querySelector && (root || document).querySelector('#creator-script-manifest');
+	if (!manifest || window.CardConjurerSets || creatorScriptsLoading) return creatorScriptsLoading;
+	var sources = String(manifest.dataset.scripts || '').split(',').filter(Boolean);
+	creatorScriptsLoading = sources.reduce(function(chain, source) {
+		return chain.then(function() {
+			return new Promise(function(resolve, reject) {
+				var script = document.createElement('script');
+				script.src = source;
+				script.onload = resolve;
+				script.onerror = function() { reject(new Error('Could not load ' + source)); };
+				document.body.appendChild(script);
+			});
+		});
+	}, Promise.resolve()).catch(function(error) {
+		creatorScriptsLoading = null;
+		console.error(error);
+		var status = document.querySelector('#sets-global-status');
+		if (status) status.textContent = 'Creator failed to load';
+	});
+	return creatorScriptsLoading;
+}
+
+document.body.addEventListener('htmx:afterSwap', function(event) { loadCreatorScripts(event.target); });
+
+function setSetsDrawerOpen(open, trigger) {
+	var drawer = document.querySelector('#sets-workspace');
+	var toggle = document.querySelector('#sets-drawer-toggle');
+	var button = document.querySelector('#sets-drawer-open');
+	if (toggle) toggle.checked = open;
+	if (drawer) drawer.classList.toggle('opened', open);
+	if (button) button.setAttribute('aria-expanded', open ? 'true' : 'false');
+	document.body.classList.toggle('sets-drawer-active', open);
+	if (open) {
+		setTimeout(function() { document.querySelector('.sets-drawer-close')?.focus(); }, 0);
+	} else if (trigger && trigger.isConnected) trigger.focus();
+}
+
+document.addEventListener('change', function(event) {
+	if (event.target.id === 'sets-drawer-toggle') setSetsDrawerOpen(event.target.checked, document.querySelector('#sets-drawer-open'));
+});
+
+document.addEventListener('keydown', function(event) {
+	if (event.key === 'Escape' && document.querySelector('#sets-drawer-toggle')?.checked) setSetsDrawerOpen(false, document.querySelector('#sets-drawer-open'));
+});
+
+window.addEventListener('load', function() {
+	// Start the creator after the app shell's load event so the initial navigation
+	// remains responsive while its ordered rendering bundle initializes.
+	setTimeout(function() { document.body.dispatchEvent(new Event('doCreate')); }, 0);
 })
 
 document.onkeyup = function(e) {

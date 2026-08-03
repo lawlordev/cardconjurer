@@ -275,6 +275,20 @@ window.FRAME_REGISTRY = (() => {
 		};
 	}
 
+	function collectorDefinition(pack) {
+		const frameCategory = category(pack);
+		const frameFamily = family(pack);
+		if (frameCategory === 'tokens') return {category:'token', groupKey:'tokens', groupLabel:'Tokens'};
+		if (frameCategory === 'custom') return {category:'custom', groupKey:'custom:' + frameFamily, groupLabel:frameFamily};
+		if (frameCategory === 'booster-fun') {
+			if (/borderless/i.test(frameFamily)) return {category:'borderless', groupKey:'borderless', groupLabel:'Borderless'};
+			return {category:'booster-fun', groupKey:'booster-fun:' + frameFamily, groupLabel:frameFamily};
+		}
+		if (frameCategory === 'legacy') return {category:'special', groupKey:'special:' + frameFamily, groupLabel:frameFamily};
+		if (/borderless|extended|showcase/i.test(frameFamily)) return {category:'borderless', groupKey:'borderless', groupLabel:'Borderless'};
+		return {category:'main', groupKey:'main', groupLabel:'Main Set'};
+	}
+
 	function automaticVariant(pack, typeLine = '') {
 		const normalizedType = typeLine.toLowerCase();
 		const packFamily = family(pack);
@@ -461,6 +475,7 @@ window.FRAME_REGISTRY = (() => {
 		categoryLabels,
 		review,
 		definition,
+		collectorDefinition,
 		automaticVariant,
 		profileForType,
 		stampFor,
