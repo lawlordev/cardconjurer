@@ -15,7 +15,7 @@ try {
   application = await electron.launch({
     args: [root],
     cwd: root,
-    env: {...process.env, SET_CONJURER_USER_DATA: userData, ELECTRON_ENABLE_LOGGING: '1'}
+    env: {...process.env, SET_CONJURER_USER_DATA: userData, SET_CONJURER_ALLOW_TEST_INSTANCE: '1', ELECTRON_ENABLE_LOGGING: '1'}
   });
   const page = await application.firstWindow();
   page.on('console', (message) => { if (message.type() === 'error' && !message.text().includes('Failed to load resource')) errors.push(`console: ${message.text()}`); });
@@ -36,15 +36,11 @@ try {
   await page.click('#desktop-onboarding-start');
   await page.waitForSelector('.creator-workspace.is-ready', {timeout: 45_000});
   await page.screenshot({path: path.join(evidence, '02-editor.png'), fullPage: true});
-  await page.click('#desktop-packs');
-  await page.waitForSelector('#desktop-drawer.opened');
-  await page.waitForTimeout(350);
-  await page.screenshot({path: path.join(evidence, '03-frame-packs.png'), fullPage: true});
-  await page.click('#desktop-drawer .textbox-editor-close');
   await page.click('#desktop-settings');
-  await page.waitForSelector('#desktop-channel');
+  await page.waitForSelector('#desktop-drawer.opened');
+  await page.waitForSelector('#desktop-channel', {state: 'attached'});
   await page.waitForTimeout(350);
-  await page.screenshot({path: path.join(evidence, '04-settings.png'), fullPage: true});
+  await page.screenshot({path: path.join(evidence, '03-settings-and-frame-packs.png'), fullPage: true});
   await page.click('#desktop-drawer .textbox-editor-close');
   await page.locator('.creator-card-action-dropdown').first().click();
   await page.getByRole('button', {name: 'Print', exact: true}).click();

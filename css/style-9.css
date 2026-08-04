@@ -1599,6 +1599,7 @@ textarea.collector-copyright-input {
 .markdown-help-drawer {
 	right: 0;
 	left: auto;
+	z-index: 3485;
 	transform: translateX(100%);
 	-webkit-transform: translateX(100%);
 	border-right: 0;

@@ -35,7 +35,8 @@ const initialAssociatedFile = process.platform === 'win32' ? associatedFileFromA
 if (initialAssociatedFile) pendingAssociatedFiles.push(initialAssociatedFile);
 
 if (process.env.SET_CONJURER_USER_DATA) app.setPath('userData', path.resolve(process.env.SET_CONJURER_USER_DATA));
-const singleInstance = app.requestSingleInstanceLock();
+const allowIsolatedTestInstance = process.env.SET_CONJURER_ALLOW_TEST_INSTANCE === '1' && !app.isPackaged;
+const singleInstance = allowIsolatedTestInstance || app.requestSingleInstanceLock();
 if (!singleInstance) app.quit();
 app.setPath('sessionData', path.join(app.getPath('userData'), 'Chromium'));
 

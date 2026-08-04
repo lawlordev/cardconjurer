@@ -10,6 +10,7 @@ test('desktop window is sandboxed and preload is context-isolated', () => {
 	assert.match(main, /sandbox:\s*true/);
 	assert.match(main, /setWindowOpenHandler/);
 	assert.match(main, /validateSender/);
+	assert.match(main, /SET_CONJURER_ALLOW_TEST_INSTANCE.*!app\.isPackaged/);
 });
 
 test('downloaded packs verify checksums and block unsafe archive paths', () => {
@@ -48,6 +49,14 @@ test('set workspace tabs use CSP-safe delegated navigation', () => {
 	assert.match(workspace, /data-set-tab=/);
 	assert.match(workspace, /closest\('\[data-set-tab\]'\)/);
 	assert.doesNotMatch(workspace, /onclick="CardConjurerSets\.selectTab/);
+});
+
+test('set and card workspace controls do not rely on CSP-blocked inline handlers', () => {
+	const workspace = fs.readFileSync(path.join(__dirname, '../../js/setWorkspace.js'), 'utf8');
+	assert.match(workspace, /data-set-field=/);
+	assert.match(workspace, /data-set-action=/);
+	assert.match(workspace, /addEventListener\('focusout'/);
+	assert.doesNotMatch(workspace, /on(?:click|change|input|blur|submit|keydown|keyup|load|error)=["']/);
 });
 
 test('local developer packages seed every selectable frame pack', () => {
