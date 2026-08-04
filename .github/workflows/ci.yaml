@@ -24,6 +24,7 @@ jobs:
       - run: npm test
       - run: npm run build:desktop
       - run: npm run test:electron
+      - run: npm run test:regression
 
   package:
     needs: verify
@@ -48,6 +49,7 @@ jobs:
       - run: npm run packs:compile
       - run: npm run build:desktop
       - run: npx electron-forge package --arch=${{ matrix.arch }}
+      - run: npm run package:verify
       - uses: actions/upload-artifact@v4
         with:
           name: unsigned-${{ runner.os }}-${{ matrix.arch }}

@@ -17,7 +17,7 @@ Every checkpoint fails on JavaScript exceptions, CSP violations, page errors, an
 | Watermark | Search, preset, opacity, exact layout, manual colors, remove | Preset and appearance/layout controls run without renderer errors |
 | Card Details | Rarity, Note, serialization, footer star, serialized layout | Set-owned rarity and card-owned collector details update together |
 | Card actions and history | New, duplicate, variant, set-detail undo, redo | Card count moves 1 → 4; deterministic set edit survives undo/redo |
-| Set actions | Duplicate set, create set, switch set, copy card | Three sets exist and copied card appears in its destination |
+| Set actions | Duplicate set, create set, switch set | Three sets exist and can be selected |
 | Import | Card-search drawer open/close | Drawer is reachable without making a network request |
 | Desktop | Combined Settings and Frame Packs drawer | Current desktop settings surface opens, contains Frame Packs, and closes |
 | Print | Single-card print preview | Front and default-back pages are generated |

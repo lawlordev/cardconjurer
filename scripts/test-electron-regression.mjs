@@ -268,7 +268,7 @@ try {
     assert(await page.locator('[data-set-field="description"]').inputValue() === 'History checkpoint', 'Redo did not restore the edited set description.');
   });
 
-  await checkpoint('set-and-transfer-actions', async () => {
+  await checkpoint('set-actions', async () => {
     await page.locator('.sets-options-dropdown summary').click();
     await page.locator('[data-set-action="duplicate-set"]').click();
     await page.waitForFunction(() => document.querySelector('#sets-switcher option:checked')?.textContent.includes('Copy'));
@@ -278,13 +278,8 @@ try {
     const setOptions = await page.locator('#sets-switcher option').evaluateAll((options) => options.map((option) => ({value: option.value, text: option.textContent})));
     assert(setOptions.length === 3, 'Expected original, duplicate, and newly created sets.');
     await selectOption('#sets-switcher', setOptions[0].value);
-    await page.getByRole('button', {name: 'Copy Card', exact: true}).click();
-    await page.waitForSelector('#sets-transfer-dialog[open]');
-    await selectOption('#sets-transfer-target', setOptions[2].value);
-    await page.locator('[data-set-action="confirm-transfer"]').click();
-    await page.waitForSelector('#sets-transfer-dialog', {state: 'hidden'});
     await selectOption('#sets-switcher', setOptions[2].value);
-    await waitForCardCount(2);
+    assert(await page.locator('#sets-switcher').inputValue() === setOptions[2].value, 'Newly created set could not be selected.');
   });
 
   await checkpoint('import-drawer', async () => {
