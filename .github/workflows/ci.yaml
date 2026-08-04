@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: desktop-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   APP_SPARSE_PATHS: |
     /*
@@ -33,7 +37,9 @@ jobs:
       - uses: actions/checkout@v5
         with:
           filter: blob:none
-          fetch-depth: 0
+          # A PR merge ref contains its exact base/head trees as direct parents.
+          # Default-branch pushes retain full history because `before` may span several commits.
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
           sparse-checkout-cone-mode: false
           sparse-checkout: ${{ env.APP_SPARSE_PATHS }}
       - uses: actions/setup-node@v5

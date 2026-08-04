@@ -8,7 +8,9 @@ const base = argumentsMap.get('--base') || process.env.GITHUB_BASE_SHA || proces
 const head = argumentsMap.get('--head') || process.env.GITHUB_HEAD_SHA || process.env.GITHUB_SHA || 'HEAD';
 if (!base || /^0+$/.test(base)) throw new Error('A non-zero base SHA is required for safe change classification.');
 
-const output = execFileSync('git', ['diff', '--name-status', '--find-renames', `${base}...${head}`], {encoding: 'utf8'});
+// Both values are immutable event SHAs, so a direct tree comparison is safer
+// and faster than discovering a merge base in a shallow pull-request clone.
+const output = execFileSync('git', ['diff', '--name-status', '--find-renames', base, head], {encoding: 'utf8'});
 const changedPaths = output.trim().split(/\r?\n/).filter(Boolean).flatMap((line) => {
   const fields = line.split('\t');
   return /^[RC]/.test(fields[0]) ? fields.slice(1, 3) : fields.slice(1, 2);
