@@ -44,6 +44,11 @@ test('base package retains renderer-global frame assets', () => {
 	assert.match(forge, /packConfig\.baseRuntimeAssets/);
 });
 
+test('sparse Electron fixture supplies derived frame thumbnails', () => {
+  const smoke = source('scripts/test-electron.mjs');
+  assert.match(smoke, /asset\.replace\(\/\\\.png\$\/i, 'Thumb\.png'\)/);
+});
+
 test('update action is absent unless the current state is actionable', () => {
   const bridge = source('js/desktopBridge.js');
   const css = source('css/style-9.css');

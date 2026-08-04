@@ -25,7 +25,7 @@ for (const asarPath of asarPaths.filter(existsSync)) {
 }
 const config = readFileSync(path.join(root, 'forge.config.ts'), 'utf8');
 for (const item of forbidden) {
-  if (item === 'img/frames' && !config.includes('img\\/frames')) throw new Error('Frame assets are not excluded from the base installer.');
+  if (item === 'img/frames' && !config.includes('excludedFramePayload')) throw new Error('Frame assets are not excluded from the base installer.');
   if (item === 'img/setSymbols' && !config.includes('img\\/setSymbols')) throw new Error('Set-symbol assets are not excluded from the base installer.');
 }
 console.log('Packaged surface verification passed.');

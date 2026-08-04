@@ -22,12 +22,17 @@ async function buildMinimalPackFixture() {
   assets.add('img/frames/m15/regular/m15FrameA.png');
   const placeholder = path.join(root, 'img', 'frames', 'cornerCutout.png');
   for (const asset of assets) {
-    const destination = path.join(packFixture, asset);
-    await mkdir(path.dirname(destination), {recursive: true});
-    if (asset.toLowerCase().endsWith('.svg')) {
-      await writeFile(destination, '<svg xmlns="http://www.w3.org/2000/svg" width="1005" height="1407"><rect width="1005" height="1407" fill="#111827"/></svg>\n');
-    } else {
-      await copyFile(placeholder, destination);
+    const variants = asset.toLowerCase().endsWith('.png')
+      ? [asset, asset.replace(/\.png$/i, 'Thumb.png')]
+      : [asset];
+    for (const variant of variants) {
+      const destination = path.join(packFixture, variant);
+      await mkdir(path.dirname(destination), {recursive: true});
+      if (variant.toLowerCase().endsWith('.svg')) {
+        await writeFile(destination, '<svg xmlns="http://www.w3.org/2000/svg" width="1005" height="1407"><rect width="1005" height="1407" fill="#111827"/></svg>\n');
+      } else {
+        await copyFile(placeholder, destination);
+      }
     }
   }
   const symbol = path.join(packFixture, 'img', 'setSymbols', 'custom', 'test-c.png');
