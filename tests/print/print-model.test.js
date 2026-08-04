@@ -21,3 +21,8 @@ test('mirrors back columns without compacting a partial final row', () => {
 	const cards = ['a','b','c','d','e'];
 	assert.deepEqual(Print.backSlots(cards), ['d','c','b','a',null,null,null,'e']);
 });
+
+test('uses dedicated full-resolution print sources instead of list thumbnails', () => {
+	assert.equal(Print.source({printSource:'blob:sharp-card', thumbnail:'data:image/webp;base64,tiny'}), 'blob:sharp-card');
+	assert.equal(Print.source({thumbnail:'data:image/webp;base64,tiny'}), '');
+});

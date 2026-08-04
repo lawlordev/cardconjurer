@@ -115,7 +115,8 @@ async function registerApplicationProtocol(appRoot: string): Promise<void> {
     const url = new URL(request.url);
     if (url.hostname === 'app') {
       const relative = decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname);
-      let target = relative.startsWith('/img/frames/') ? packs?.resolveFrameAsset(relative) || null : null;
+      const isPackAsset = relative.startsWith('/img/frames/') || relative.startsWith('/img/setSymbols/');
+      let target = isPackAsset ? packs?.resolvePackAsset(relative) || null : null;
       if (!target) target = containedPath(appRoot, relative);
       if (!target || !existsSync(target) || statSync(target).isDirectory()) return new Response('Not found', {status: 404});
       const response = await net.fetch(pathToFileURL(target).toString());
@@ -138,7 +139,7 @@ function preferencePath(): string {
 }
 
 function readOnboardingComplete(): boolean {
-  try { return JSON.parse(readFileSync(preferencePath(), 'utf8')).onboardingComplete === true && Boolean(packs?.hasStandard()); }
+  try { return JSON.parse(readFileSync(preferencePath(), 'utf8')).onboardingComplete === true && Boolean(packs?.hasRequiredPacks()); }
   catch { return false; }
 }
 
@@ -192,7 +193,7 @@ function createWindow(appRoot: string): BrowserWindow {
 
 function installLiveReload(appRoot: string): void {
   if (app.isPackaged) return;
-  const targets = ['index.html', 'creator', 'css', 'js', 'core', 'data', 'fonts', 'generated/frame-definitions', 'img/frames'];
+  const targets = ['index.html', 'creator', 'css', 'js', 'core', 'data', 'fonts', 'generated/frame-definitions', 'img/frames', 'img/setSymbols'];
   let reloadTimer: NodeJS.Timeout | null = null;
   const reload = () => {
     if (reloadTimer) clearTimeout(reloadTimer);
@@ -219,7 +220,7 @@ function registerIPC(): void {
 
   ipcMain.handle(IPC.appInfo, trusted(() => ({name: 'Set Conjurer', version: app.getVersion(), platform: process.platform, arch: process.arch, channel: updates?.channel() || 'stable'})));
   ipcMain.handle(IPC.onboardingStatus, trusted(() => readOnboardingComplete()));
-  ipcMain.handle(IPC.onboardingComplete, trusted(() => { if (!packs?.hasStandard()) throw new Error('Install the Standard pack before continuing.'); writeOnboardingComplete(); }));
+  ipcMain.handle(IPC.onboardingComplete, trusted(() => { if (!packs?.hasRequiredPacks()) throw new Error('Install Set Symbols and Standard before continuing.'); writeOnboardingComplete(); }));
   ipcMain.handle(IPC.storageLoad, trusted(() => storage!.load()));
   ipcMain.handle(IPC.storageSave, trusted((_event, value) => storage!.save(saveStateSchema.parse(value))));
   ipcMain.handle(IPC.storageFlush, trusted(() => storage!.flush()));

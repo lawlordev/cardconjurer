@@ -61,6 +61,7 @@ const config: ForgeConfig = {
       /^\/tests(?:\/|$)/,
       /^\/data\/images(?:\/|$)/,
       /^\/img\/frames(?:\/|$)/,
+      /^\/img\/setSymbols(?:\/|$)/,
       /^\/build(?:\/|$)/,
       /^\/out(?:\/|$)/,
       /^\/node_modules\/\.cache(?:\/|$)/,

@@ -14,7 +14,7 @@ vm.runInContext(readFileSync(path.join(root, 'js', 'frameRegistry.js'), 'utf8'),
 const registry = registryContext.window.FRAME_REGISTRY;
 const searchSource = readFileSync(path.join(root, 'js', 'frameSearch.js'), 'utf8');
 const packIds = [...searchSource.matchAll(/\[\s*'(?:[^'\\]|\\.)*'\s*,\s*'([^']+)'\s*\]/g)].map((match) => match[1]);
-const groups = new Map(['standard','booster-fun','tokens','basics','legacy','custom'].map((id) => [id, new Set()]));
+const groups = new Map(['set-symbols','standard','booster-fun','tokens','basics','legacy','custom'].map((id) => [id, new Set()]));
 
 for (const pack of new Set(packIds.concat(Object.keys(registry.components)))) {
   const definition = registry.definition(pack); const category = definition.category || 'standard';
@@ -36,7 +36,9 @@ function walk(directory) {
 }
 const catalog = {schemaVersion: 1, packs: []};
 for (const [id, directories] of groups) {
-  const files = [...directories].flatMap((directory) => { const target = path.join(root, 'img', 'frames', directory); return statSafe(target) ? [path.relative(root, target)] : (() => { try { return walk(target); } catch { return []; } })(); });
+  const files = id === 'set-symbols'
+    ? walk(path.join(root, 'img', 'setSymbols'))
+    : [...directories].flatMap((directory) => { const target = path.join(root, 'img', 'frames', directory); return statSafe(target) ? [path.relative(root, target)] : (() => { try { return walk(target); } catch { return []; } })(); });
   const expanded = files.reduce((total, file) => { try { return total + statSync(path.join(root, file)).size; } catch { return total; } }, 0);
   const manifestName = `frame-pack-${id}-manifest.json`;
   writeFileSync(path.join(output, manifestName), `${JSON.stringify({schemaVersion:1, id, version:tag.replace(/^packs-v/,''), files:[...new Set(files)].sort(), installedBytes:expanded}, null, 2)}\n`);

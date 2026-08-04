@@ -34,14 +34,48 @@ test('development mode reloads renderer changes without weakening packaged build
 
 test('desktop boot hides the legacy page until the Sets workspace is ready', () => {
 	const boot = fs.readFileSync(path.join(__dirname, '../../js/desktopBoot.js'), 'utf8');
+	const index = fs.readFileSync(path.join(__dirname, '../../index.html'), 'utf8');
 	const workspace = fs.readFileSync(path.join(__dirname, '../../js/setWorkspace.js'), 'utf8');
 	assert.match(boot, /desktop-booting/);
 	assert.match(boot, /SetConjurerBoot/);
+	assert.match(index, /hx-trigger="doCreate from:body"/);
+	assert.doesNotMatch(index, /Welcome to Card Conjurer/);
 	assert.match(workspace, /SetConjurerBoot\.finish\(\)/);
+});
+
+test('set workspace tabs use CSP-safe delegated navigation', () => {
+	const workspace = fs.readFileSync(path.join(__dirname, '../../js/setWorkspace.js'), 'utf8');
+	assert.match(workspace, /data-set-tab=/);
+	assert.match(workspace, /closest\('\[data-set-tab\]'\)/);
+	assert.doesNotMatch(workspace, /onclick="CardConjurerSets\.selectTab/);
 });
 
 test('local developer packages seed every selectable frame pack', () => {
 	const seed = fs.readFileSync(path.join(__dirname, '../../scripts/build-local-pack-seed.mjs'), 'utf8');
-	for (const id of ['standard', 'booster-fun', 'tokens', 'basics', 'legacy', 'custom']) assert.match(seed, new RegExp(`['\"]${id}['\"]`));
+	for (const id of ['set-symbols', 'standard', 'booster-fun', 'tokens', 'basics', 'legacy', 'custom']) assert.match(seed, new RegExp(`['\"]${id}['\"]`));
 	assert.match(seed, /requested === 'all'/);
+});
+
+test('set symbols are a required independently released asset pack', () => {
+	const contracts = fs.readFileSync(path.join(__dirname, '../../desktop/ipc/contracts.ts'), 'utf8');
+	const service = fs.readFileSync(path.join(__dirname, '../../desktop/services/pack-service.ts'), 'utf8');
+	const main = fs.readFileSync(path.join(__dirname, '../../desktop/main.ts'), 'utf8');
+	const release = fs.readFileSync(path.join(__dirname, '../../scripts/build-frame-pack-release.mjs'), 'utf8');
+	const forge = fs.readFileSync(path.join(__dirname, '../../forge.config.ts'), 'utf8');
+	assert.match(contracts, /PACK_IDS = \['set-symbols', 'standard'/);
+	assert.match(service, /'set-symbols': \{displayName: 'Set Symbols'.*required: true/);
+	assert.match(service, /REQUIRED_PACK_IDS: PackId\[\] = \['set-symbols', 'standard'\]/);
+	assert.match(main, /relative\.startsWith\('\/img\/setSymbols\/'\)/);
+	assert.match(release, /id === 'set-symbols'/);
+	assert.match(release, /path\.join\(root, 'img', 'setSymbols'\)/);
+	assert.match(forge, /img\\\/setSymbols/);
+});
+
+test('set-symbol controls use CSP-safe delegated handlers', () => {
+	const workspace = fs.readFileSync(path.join(__dirname, '../../js/setWorkspace.js'), 'utf8');
+	assert.match(workspace, /data-symbol-load-all/);
+	assert.match(workspace, /data-symbol-upload/);
+	assert.match(workspace, /data-symbol-clear/);
+	assert.doesNotMatch(workspace, /onclick="CardConjurerSets\.loadSymbolsByCode/);
+	assert.doesNotMatch(workspace, /onclick="CardConjurerSets\.clearSymbols/);
 });

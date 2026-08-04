@@ -19,7 +19,7 @@
 
 Turn the current local static Card Conjurer fork into a polished, downloadable desktop application without replacing its established editor UI or canvas renderer. Set Conjurer should feel like the same application the user has been refining at `localhost:8081`, but it should own its data, frame packs, file imports and exports, printing, updates, and operating-system integration.
 
-A first-time user downloads a signed installer from GitHub, opens Set Conjurer, sees a short Card Conjurer attribution, and completes a compact onboarding flow. The Standard frame pack is selected and required. The user may also select Booster Fun, Tokens, Basics, Legacy, and Custom. The application downloads and verifies those packs with visible progress before opening the editor. Thereafter the editor and installed assets work offline.
+A first-time user downloads a signed installer from GitHub, opens Set Conjurer, sees a short Card Conjurer attribution, and completes a compact onboarding flow. The Set Symbols and Standard packs are selected and required. The user may also select Booster Fun, Tokens, Basics, Legacy, and Custom. The application downloads and verifies those packs with visible progress before opening the editor. Thereafter the editor and installed assets work offline.
 
 Sets, cards, undo history, preferences, user-uploaded art, symbols, watermarks, and card-specific custom frame images live in the application's standard local data directory. Users choose a filesystem location only when explicitly importing or exporting. There are no accounts and no server-side user data.
 
@@ -35,7 +35,7 @@ Set and card printing use a new same-window preview tailored to real cards: fixe
 - The visual editor remains recognizably identical to the current three-column Set Editor. Packaging does not introduce a framework rewrite.
 - The renderer has no Node.js access. Context isolation and sandboxing are enabled; privileged work is available only through a typed, validated preload API.
 - No application page can navigate to arbitrary content, create arbitrary windows, execute downloaded code, or read arbitrary paths through an IPC message.
-- The base installer excludes the multi-gigabyte frame library. Onboarding requires the Standard pack and offers the five optional parent packs.
+- The base installer excludes the multi-gigabyte frame library and the independently versioned set-symbol library. Onboarding requires Set Symbols and Standard and offers the five optional parent packs.
 - A pack installs all definitions, variants, components, and declared dependencies beneath that parent. Pack archives are immutable, content-verified, and contain data/assets rather than remotely executable JavaScript.
 - Installed frame packs work offline. Missing network access affects onboarding downloads, Scryfall lookups, issue reporting, and update checks with clear retryable states rather than damaging local work.
 - A frame added to an existing optional pack can ship independently of an application release when it uses an already trusted renderer. Frames requiring new renderer logic declare a minimum app version and ship with an app update first.
@@ -103,7 +103,7 @@ Set and card printing use a new same-window preview tailored to real cards: fixe
 | Local data | Use `app.getPath('userData')` with an application-owned directory layout. Do not ask users to select an app-data folder. Keep Chromium `sessionData` in a separate cache path. |
 | Database | Use Electron's pinned Node 24 `node:sqlite` in a dedicated worker thread. The worker owns transactions so the synchronous SQLite API never blocks the Electron main/UI thread. Keep a narrow storage adapter so SQLite can be replaced without touching editor logic if the release-candidate API changes. |
 | User assets | Store validated content-addressed files outside JSON rows; reference them by hash/asset ID. Deduplicate uploads and embed them in portable exports. |
-| Packs | Six parent IDs: `standard`, `booster-fun`, `tokens`, `basics`, `legacy`, and `custom`. Standard is required. “Custom” is the existing catalog category, not the future user-created frame library. |
+| Packs | Seven asset-pack IDs: `set-symbols`, `standard`, `booster-fun`, `tokens`, `basics`, `legacy`, and `custom`. Set Symbols and Standard are required. “Custom” is the existing catalog category, not the future user-created frame library. |
 | Pack safety | Downloaded packs are declarative manifests/definitions/assets only. Specialized executable renderer code is bundled and trusted with the app and selected through allowlisted renderer IDs. |
 | Pack identity | Saved cards reference `packId`, exact `packVersion`, stable `frameDefinitionId`, and definition version. Old pack archives remain available so shared files can reproduce the sender's rendering. |
 | Updating | Metadata checks may be automatic; bytes never download until Update Now. App and installed-pack updates stage together and activate on Restart Now. |
@@ -355,13 +355,13 @@ First-run onboarding is a small modal/full-window step within the editor shell:
 
 1. **Welcome to Set Conjurer** with the SC icon and a one-sentence explanation.
 2. A short acknowledgment: Set Conjurer is an open-source desktop fork of Kyle Burton's Card Conjurer, adapted for creating and managing custom sets; link to full About details.
-3. Frame-pack selection cards showing download sizes. Standard is checked, labeled Required, and disabled from unchecking. The other five are optional.
+3. Asset-pack selection rows showing download sizes. Set Symbols appears immediately before Standard; both are checked and disabled from unchecking without an additional Required label. The other five are optional.
 4. **Download and Continue** starts one operation with aggregate determinate progress and the current pack name. It may be retried after interruption; no cancel control is required.
-5. The editor opens only when Standard is installed and the initial local database is healthy.
+5. The editor opens only when Set Symbols and Standard are installed and the initial local database is healthy.
 
-If the first run is offline, retain selections and show a concise connection/retry state. Never open an unusable editor with a substituted or partial Standard pack.
+If the first run is offline, retain selections and show a concise connection/retry state. Never open an unusable editor with a substituted or partial required pack.
 
-**Manage Frame Packs** remains accessible in the top application bar and opens the established left drawer. It shows installed version, available version, download/installed size, status, Install/Update/Remove, and any application-version requirement. Removing a used pack presents its affected-card count and explains temporary unrenderability; the destructive confirmation does not imply card deletion.
+**Manage Frame Packs** remains accessible from Settings and opens the established left drawer. Set Symbols appears immediately before Standard; both required rows show Installed and cannot be removed. Optional rows show installed version, available version, download/installed size, status, and Install/Update/Uninstall actions. Removing a used optional pack presents its affected-card count and explains temporary unrenderability; the destructive confirmation does not imply card deletion.
 
 ## Portable files and operating-system integration
 
@@ -454,7 +454,7 @@ Before staging is declared complete:
 3. Create the pre-update snapshot and verify it can be opened/read.
 4. Record pending app version, pack generation, schema target, and snapshot ID.
 
-On next launch, validate executable version, pack compatibility, migrations, database integrity, Standard pack availability, and a minimal offscreen render. Only then mark activation successful. On failure, restore the snapshot/previous generation, write a local diagnostic, and show a recoverable failure message with Report Issue.
+On next launch, validate executable version, pack compatibility, migrations, database integrity, required-pack availability, and a minimal offscreen render. Only then mark activation successful. On failure, restore the snapshot/previous generation, write a local diagnostic, and show a recoverable failure message with Report Issue.
 
 ## Printing design
 
@@ -611,7 +611,7 @@ docs/
 
 Use TypeScript only where it buys a stronger privilege boundary and build-time contracts. Do not convert the existing renderer wholesale. Compile desktop TypeScript with an explicit `tsconfig.desktop.json`; package only compiled privileged code, the allowlisted renderer files, core shared visual assets, and static editor/print UI. Forge ignore/include rules must be tested by inspecting the packaged ASAR so `img/frames`, legacy data/images, source pack scripts, tests, and website routes cannot inflate the installer.
 
-The small base application may include shared editor dependencies that are not frame packs: fonts, mana symbols, set symbols, watermarks, UI artwork, and the Standard Card Back. Their current footprint is modest relative to the frame library and keeping them in the signed app avoids a partially functional editor. The six downloadable archives own frame definitions, frame thumbnails, and frame-layer assets, including every child/variant/component beneath the selected parent.
+The small base application may include shared editor dependencies that are not downloadable packs: fonts, mana symbols, watermarks, UI artwork, and the Standard Card Back. The seven downloadable archives include the independently versioned Set Symbols library plus six frame archives that own frame definitions, thumbnails, and layer assets, including every child/variant/component beneath the selected parent. Requiring Set Symbols and Standard during onboarding avoids opening a partially functional editor while allowing either asset library to update independently of the app.
 
 ## Ordered implementation plan
 
@@ -704,7 +704,7 @@ Intended files:
 
 Work:
 
-- Freeze stable IDs for the six parents and every currently selectable definition/variant/component.
+- Freeze stable IDs for the seven asset packs and every currently selectable definition/variant/component.
 - Build the controlled extractor and produce a conversion report before deleting or bypassing legacy runtime loading.
 - Classify every dynamic layout function as bundled trusted renderer behavior and map it to an allowlisted ID.
 - Resolve/dedupe assets and fail builds for missing assets, external execution, arbitrary handlers, or unsafe paths.
@@ -735,7 +735,7 @@ Work:
 - Store exact pack/version/definition references on cards and infer them for legacy records.
 - Add explicit missing-pack model and rendering/thumbnail behavior with Download Pack.
 - Add reference-aware archive retention and rollback-safe garbage collection.
-- Prevent Standard removal at the service and UI-contract levels.
+- Prevent Set Symbols and Standard removal at the service and UI-contract levels.
 
 Checkpoint:
 
@@ -753,16 +753,16 @@ Intended files:
 
 Work:
 
-- Add the compact attribution and six pack choices with Standard locked on.
+- Add the compact attribution and seven pack choices with Set Symbols and Standard locked on.
 - Add aggregate progress, retry/offline/error states, and the editor gate.
 - Add Manage Frame Packs to the top app bar and implement the matching left drawer.
 - Show installed/available versions, exact size/status, updates, requirements, and affected-card removal warnings.
 - Restore focus, trap drawer focus, support keyboard close, and preserve narrow-window behavior.
-- Ensure onboarding completion is committed only after a healthy Standard generation exists.
+- Ensure onboarding completion is committed only after healthy Set Symbols and Standard generations exist.
 
 Checkpoint:
 
-- Fresh-profile flows pass for Standard-only, all packs, optional partial failure/retry, first-run offline, interrupted download, and relaunch.
+- Fresh-profile flows pass for required-packs-only, all packs, optional partial failure/retry, first-run offline, interrupted download, and relaunch.
 - Existing-profile startup bypasses onboarding and opens the last active set.
 - Human visual review confirms the additions match the current Set Conjurer design.
 
@@ -786,7 +786,7 @@ Work:
 
 Checkpoint:
 
-- A set exported on macOS imports identically on Windows with only Standard installed, prompts for missing packs, and renders identically after download.
+- A set exported on macOS imports identically on Windows with only the required packs installed, prompts for missing optional packs, and renders identically after download.
 - Version-one card/set fixtures import correctly.
 - Double-click/open-with focuses the existing instance and never imports twice.
 
@@ -930,7 +930,7 @@ Work:
 - Inspect ASAR/package contents, Electron fuses, entitlements, signatures, notarization tickets, Windows signature chain, update feeds, release asset hashes, and absence of private secrets.
 - Perform an accessibility pass for onboarding, both drawers, update controls, missing-pack prompts, print quantities, keyboard navigation, focus restoration, reduced motion, and screen-reader labels.
 - Capture visual acceptance evidence from the actual installed app, not the browser-only surface.
-- Write release notes that clearly state local-only data, first-run Standard download, OS support, beta expectations, and file portability.
+- Write release notes that clearly state local-only data, first-run required-pack downloads, OS support, beta expectations, and file portability.
 
 Checkpoint:
 
@@ -974,7 +974,7 @@ node --test tests/*.test.js
 
 Use Playwright's Electron API against an unfused development build for repeatable UI/IPC behavior:
 
-- fresh onboarding and Standard gate;
+- fresh onboarding and required-pack gate;
 - editor load and autosave/reload;
 - pack drawer install/remove/missing state;
 - file import dialogs stubbed through main-process test hooks;
@@ -1001,7 +1001,7 @@ Run packaged binary smoke tests separately because hardened fuses disable the in
 
 ### Performance/scale fixtures
 
-- Cold start with Standard only and with all six packs.
+- Cold start with required packs only and with all seven packs.
 - A representative large set with hundreds of cards and 40 undo snapshots.
 - Multi-gigabyte optional-pack download resume without buffering the archive in memory.
 - Import/export containing large user art assets near defined limits.
@@ -1014,7 +1014,7 @@ Set measurable budgets after the first baseline rather than inventing numbers in
 
 Capture screenshots from installed builds at a consistent representative window size:
 
-- Welcome/pack onboarding with Standard locked and optional packs.
+- Welcome/pack onboarding with Set Symbols and Standard locked and optional packs.
 - Existing editor after onboarding to prove UI continuity.
 - Manage Frame Packs installed/available state and affected-card removal warning.
 - Missing-pack card state and one-click recovery.
@@ -1044,7 +1044,7 @@ Never place certificate blobs, API private keys, Azure credentials, or catalog p
 
 | Failure | Required behavior |
 | --- | --- |
-| First-run network unavailable | Keep onboarding state, explain that Standard is required, retry without creating a partial active pack. |
+| First-run network unavailable | Keep onboarding state, explain that Set Symbols and Standard are required, retry without creating a partial active pack. |
 | Pack download interrupted | Retain hash-addressed partial staging when resumable; otherwise restart that artifact. Active generation stays unchanged. |
 | Pack signature/hash invalid | Delete/quarantine staging, show verification failure, never activate. |
 | Required exact pack no longer in latest catalog | Search catalog history/immutable release mapping; retain import staged and provide version details for issue reporting. Never substitute. |

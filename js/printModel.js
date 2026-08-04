@@ -22,5 +22,6 @@
 		while (slots.length < 8) slots.push(null);
 		return slots.slice(0, 4).reverse().concat(slots.slice(4, 8).reverse());
 	}
-	return {PAPERS: PAPERS, quantity: quantity, expand: expand, pages: pages, backSlots: backSlots};
+	function source(card) { return card && card.printSource || ''; }
+	return {PAPERS: PAPERS, quantity: quantity, expand: expand, pages: pages, backSlots: backSlots, source: source};
 });

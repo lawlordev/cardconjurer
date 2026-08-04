@@ -796,6 +796,89 @@ function renderFrameCheckboxControl(titleText, optionText, checked, onchange) {
 	return field;
 }
 
+function closeFrameCascade(control) {
+	if (!control) return;
+	control.classList.remove('open', 'open-up', 'align-right');
+	control.style.removeProperty('--workspace-menu-max-height');
+	const menu = control.querySelector(':scope > .frame-cascade-menu');
+	['position', 'top', 'right', 'bottom', 'left', 'width', 'min-width', 'max-width', 'max-height'].forEach(property => menu?.style.removeProperty(property));
+	control.querySelector(':scope > [aria-expanded]')?.setAttribute('aria-expanded', 'false');
+}
+
+function closeOpenFrameCascades(except = null) {
+	document.querySelectorAll('.frame-cascade.open').forEach(control => {
+		if (control !== except) closeFrameCascade(control);
+	});
+}
+
+function closeOpenActionDropdowns(except = null) {
+	document.querySelectorAll('details.creator-action-dropdown[open]').forEach(dropdown => {
+		if (dropdown === except) return;
+		dropdown.removeAttribute('open');
+		resetActionDropdownPosition(dropdown);
+	});
+}
+
+function resetActionDropdownPosition(dropdown) {
+	const menu = dropdown?.querySelector(':scope > .creator-action-dropdown-menu');
+	['position', 'top', 'right', 'bottom', 'left', 'width', 'min-width', 'max-width', 'max-height'].forEach(property => menu?.style.removeProperty(property));
+}
+
+function positionActionDropdownMenu(dropdown) {
+	const trigger = dropdown?.querySelector(':scope > summary');
+	const menu = dropdown?.querySelector(':scope > .creator-action-dropdown-menu');
+	if (!trigger || !menu || !dropdown.open) return;
+	const viewportMargin = 8;
+	const menuGap = 6;
+	const triggerBounds = trigger.getBoundingClientRect();
+	const availableBelow = Math.max(0, window.innerHeight - triggerBounds.bottom - menuGap - viewportMargin);
+	const availableAbove = Math.max(0, triggerBounds.top - menuGap - viewportMargin);
+	const openUp = menu.scrollHeight > availableBelow && availableAbove > availableBelow;
+	const maxHeight = Math.max(1, openUp ? availableAbove : availableBelow);
+	const maximumWidth = Math.max(1, window.innerWidth - (viewportMargin * 2));
+	const menuWidth = Math.min(Math.max(menu.scrollWidth, triggerBounds.width), maximumWidth);
+	const menuLeft = Math.max(viewportMargin, Math.min(triggerBounds.left, window.innerWidth - menuWidth - viewportMargin));
+	Object.assign(menu.style, {
+		position: 'fixed',
+		top: openUp ? 'auto' : (triggerBounds.bottom + menuGap) + 'px',
+		right: 'auto',
+		bottom: openUp ? (window.innerHeight - triggerBounds.top + menuGap) + 'px' : 'auto',
+		left: menuLeft + 'px',
+		width: 'max-content',
+		minWidth: Math.min(triggerBounds.width, maximumWidth) + 'px',
+		maxWidth: maximumWidth + 'px',
+		maxHeight: maxHeight + 'px'
+	});
+}
+
+function positionFrameCascadeMenu(control, trigger, menu) {
+	const viewportMargin = 8;
+	const menuGap = 6;
+	const triggerBounds = trigger.getBoundingClientRect();
+	const availableBelow = Math.max(0, window.innerHeight - triggerBounds.bottom - menuGap - viewportMargin);
+	const availableAbove = Math.max(0, triggerBounds.top - menuGap - viewportMargin);
+	const openUp = menu.scrollHeight > availableBelow && availableAbove > availableBelow;
+	const maxHeight = Math.max(1, openUp ? availableAbove : availableBelow);
+	const maximumWidth = Math.max(1, window.innerWidth - (viewportMargin * 2));
+	const menuWidth = Math.min(Math.max(menu.scrollWidth, triggerBounds.width), maximumWidth);
+	const menuLeft = Math.max(viewportMargin, Math.min(triggerBounds.left, window.innerWidth - menuWidth - viewportMargin));
+
+	control.classList.toggle('open-up', openUp);
+	control.classList.toggle('align-right', menuLeft < triggerBounds.left);
+	control.style.setProperty('--workspace-menu-max-height', maxHeight + 'px');
+	Object.assign(menu.style, {
+		position: 'fixed',
+		top: openUp ? 'auto' : (triggerBounds.bottom + menuGap) + 'px',
+		right: 'auto',
+		bottom: openUp ? (window.innerHeight - triggerBounds.top + menuGap) + 'px' : 'auto',
+		left: menuLeft + 'px',
+		width: 'max-content',
+		minWidth: Math.min(triggerBounds.width, maximumWidth) + 'px',
+		maxWidth: maximumWidth + 'px',
+		maxHeight: maxHeight + 'px'
+	});
+}
+
 function renderFrameCascadeControl(group) {
 	const field = document.createElement('div');
 	field.className = 'frame-customize-field frame-cascade-field';
@@ -803,7 +886,6 @@ function renderFrameCascadeControl(group) {
 	title.textContent = group.control;
 	const cascade = document.createElement('div');
 	cascade.className = 'frame-cascade';
-	let cascadeCloseTimer = null;
 	const trigger = document.createElement('button');
 	trigger.type = 'button';
 	trigger.className = 'input frame-cascade-trigger';
@@ -812,11 +894,21 @@ function renderFrameCascadeControl(group) {
 	const selected = activeFrameComponentOptions[group.slot];
 	const selectedOption = selected ? group.options.find(option => option.pack === selected.pack && option.frame === selected.frame) : null;
 	appendFrameColorChoiceContent(trigger, selectedOption || {label:group.defaultLabel, frame:''});
+	const triggerChevron = document.createElement('span');
+	triggerChevron.className = 'card-specific-chevron';
+	triggerChevron.setAttribute('aria-hidden', 'true');
+	trigger.appendChild(triggerChevron);
 	trigger.onclick = () => {
 		const open = !cascade.classList.contains('open');
-		document.querySelectorAll('.frame-cascade.open').forEach(menu => menu.classList.remove('open'));
+		closeOpenActionDropdowns();
+		closeOpenFrameCascades(cascade);
 		cascade.classList.toggle('open', open);
 		trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+		if (!open) {
+			closeFrameCascade(cascade);
+			return;
+		}
+		requestAnimationFrame(() => positionFrameCascadeMenu(cascade, trigger, menu));
 	};
 
 	const menu = document.createElement('div');
@@ -830,8 +922,7 @@ function renderFrameCascadeControl(group) {
 		button.setAttribute('role', 'menuitem');
 		button.onclick = async event => {
 			event.stopPropagation();
-			cascade.classList.remove('open');
-			trigger.setAttribute('aria-expanded', 'false');
+			closeFrameCascade(cascade);
 			await applyFrameComponentCustomization(group.slot, value);
 		};
 		parent.appendChild(button);
@@ -861,12 +952,18 @@ function renderFrameCascadeControl(group) {
 		submenu.setAttribute('role', 'menu');
 		let submenuCloseTimer = null;
 		const positionSubmenu = () => requestAnimationFrame(() => {
+			const viewportMargin = 8;
 			const bounds = groupButton.getBoundingClientRect();
-			const top = Math.max(8, Math.min(bounds.top, window.innerHeight - submenu.offsetHeight - 8));
+			const maximumWidth = Math.max(1, window.innerWidth - (viewportMargin * 2));
+			submenu.style.maxHeight = Math.max(1, window.innerHeight - (viewportMargin * 2)) + 'px';
+			const submenuWidth = Math.min(submenu.offsetWidth, maximumWidth);
+			const opensLeft = bounds.left - submenuWidth >= viewportMargin;
+			const top = Math.max(viewportMargin, Math.min(bounds.top, window.innerHeight - submenu.offsetHeight - viewportMargin));
 			// Slightly overlap the flyout with its parent row so there is no
 			// one-pixel dead zone while the pointer crosses between them.
-			submenu.style.left = (bounds.left + 3) + 'px';
+			submenu.style.left = (opensLeft ? bounds.left + 3 : Math.min(bounds.right - 3, window.innerWidth - submenuWidth - viewportMargin)) + 'px';
 			submenu.style.top = top + 'px';
+			submenu.style.transform = opensLeft ? 'translateX(-100%)' : 'none';
 		});
 		const openSubmenu = () => {
 			clearTimeout(submenuCloseTimer);
@@ -892,14 +989,6 @@ function renderFrameCascadeControl(group) {
 		menu.appendChild(submenuGroup);
 	});
 	group.options.filter(option => !option.group).forEach(option => addChoice(menu, option, option.pack + '::' + option.frame, selected?.pack === option.pack && selected?.frame === option.frame));
-	cascade.onmouseenter = () => clearTimeout(cascadeCloseTimer);
-	cascade.onmouseleave = () => {
-		clearTimeout(cascadeCloseTimer);
-		cascadeCloseTimer = setTimeout(() => {
-			cascade.classList.remove('open');
-			trigger.setAttribute('aria-expanded', 'false');
-		}, 320);
-	};
 	cascade.append(trigger, menu);
 	field.append(title, cascade);
 	return field;
@@ -950,19 +1039,22 @@ function enhanceWorkspaceSelect(select) {
 	trigger.setAttribute('aria-haspopup', 'listbox');
 	trigger.setAttribute('aria-expanded', 'false');
 	trigger.setAttribute('aria-label', select.getAttribute('aria-label') || select.previousElementSibling?.textContent?.trim() || 'Select an option');
+	const triggerLabel = document.createElement('span');
+	triggerLabel.className = 'workspace-select-label';
+	const triggerChevron = document.createElement('span');
+	triggerChevron.className = 'card-specific-chevron';
+	triggerChevron.setAttribute('aria-hidden', 'true');
+	trigger.append(triggerLabel, triggerChevron);
 	const menu = document.createElement('div');
 	menu.className = 'frame-cascade-menu workspace-select-menu';
 	menu.setAttribute('role', 'listbox');
-	let closeTimer = null;
 
 	const close = () => {
-		dropdown.classList.remove('open');
-		dropdown.classList.remove('open-up');
-		trigger.setAttribute('aria-expanded', 'false');
+		closeFrameCascade(dropdown);
 	};
 	const sync = () => {
 		const selected = select.options[select.selectedIndex];
-		trigger.textContent = selected?.textContent || select.getAttribute('placeholder') || 'Select';
+		triggerLabel.textContent = selected?.textContent || select.getAttribute('placeholder') || 'Select';
 		trigger.disabled = select.disabled;
 		menu.querySelectorAll('.workspace-select-choice').forEach(choice => {
 			const chosen = choice.dataset.value === select.value;
@@ -1000,26 +1092,14 @@ function enhanceWorkspaceSelect(select) {
 		event.stopPropagation();
 		if (trigger.disabled) return;
 		const open = !dropdown.classList.contains('open');
-		document.querySelectorAll('.frame-cascade.open').forEach(control => {
-			control.classList.remove('open');
-			control.querySelector('[aria-expanded]')?.setAttribute('aria-expanded', 'false');
-		});
+		closeOpenActionDropdowns();
+		closeOpenFrameCascades(dropdown);
 		if (open) {
 			rebuild();
 			dropdown.classList.add('open');
 			trigger.setAttribute('aria-expanded', 'true');
-			requestAnimationFrame(() => {
-				const triggerBounds = trigger.getBoundingClientRect();
-				const availableBelow = window.innerHeight - triggerBounds.bottom - 8;
-				const availableAbove = triggerBounds.top - 8;
-				dropdown.classList.toggle('open-up', menu.offsetHeight > availableBelow && availableAbove > availableBelow);
-			});
+			requestAnimationFrame(() => positionFrameCascadeMenu(dropdown, trigger, menu));
 		}
-	};
-	dropdown.onmouseenter = () => clearTimeout(closeTimer);
-	dropdown.onmouseleave = () => {
-		clearTimeout(closeTimer);
-		closeTimer = setTimeout(close, 320);
 	};
 	select.addEventListener('change', sync);
 	new MutationObserver(rebuild).observe(select, {childList:true, subtree:true, attributes:true});
@@ -1032,16 +1112,52 @@ function enhanceWorkspaceSelect(select) {
 }
 
 function initializeWorkspaceSelects() {
-	const workspace = document.querySelector('.creator-workspace');
-	if (!workspace) return;
+	if (document.documentElement.dataset.workspaceSelectDismissal !== 'true') {
+		document.documentElement.dataset.workspaceSelectDismissal = 'true';
+		document.addEventListener('toggle', event => {
+			const dropdown = event.target;
+			if (!(dropdown instanceof HTMLDetailsElement) || !dropdown.classList.contains('creator-action-dropdown')) return;
+			if (!dropdown.open) {
+				resetActionDropdownPosition(dropdown);
+				return;
+			}
+			closeOpenActionDropdowns(dropdown);
+			requestAnimationFrame(() => positionActionDropdownMenu(dropdown));
+		}, true);
+		document.addEventListener('pointerdown', event => {
+			document.querySelectorAll('.frame-cascade.open').forEach(control => {
+				if (!control.contains(event.target)) closeFrameCascade(control);
+			});
+			document.querySelectorAll('details.creator-action-dropdown[open]').forEach(dropdown => {
+				if (dropdown.contains(event.target)) return;
+				dropdown.removeAttribute('open');
+				resetActionDropdownPosition(dropdown);
+			});
+		});
+		document.addEventListener('keydown', event => {
+			if (event.key !== 'Escape') return;
+			const openControl = document.querySelector('.frame-cascade.open');
+			if (openControl) {
+				const trigger = openControl.querySelector(':scope > [aria-expanded]');
+				closeFrameCascade(openControl);
+				trigger?.focus();
+				return;
+			}
+			const openDropdown = document.querySelector('details.creator-action-dropdown[open]');
+			if (!openDropdown) return;
+			openDropdown.removeAttribute('open');
+			resetActionDropdownPosition(openDropdown);
+			openDropdown.querySelector(':scope > summary')?.focus();
+		});
+	}
 	const enhanceAll = root => {
 		if (root.matches?.('select.input')) enhanceWorkspaceSelect(root);
 		root.querySelectorAll?.('select.input').forEach(enhanceWorkspaceSelect);
 	};
-	enhanceAll(workspace);
+	enhanceAll(document);
 	new MutationObserver(mutations => mutations.forEach(mutation => mutation.addedNodes.forEach(node => {
 		if (node.nodeType === Node.ELEMENT_NODE) enhanceAll(node);
-	}))).observe(workspace, {childList:true, subtree:true});
+	}))).observe(document.body, {childList:true, subtree:true});
 }
 
 async function applyFrameComponentCustomization(slot, value) {

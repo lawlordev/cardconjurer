@@ -15,6 +15,15 @@ function fixUri(input) {
 	} else {
 		return prefix + input; //input.replace('/img/frames', prefix + '/img/frames');
 	} */
+	if (typeof input !== 'string') return input;
+	if (window.location.protocol === 'set-conjurer:') {
+		try {
+			var source = new URL(input, window.location.href);
+			if (['localhost', '127.0.0.1', '::1'].includes(source.hostname)) {
+				return source.pathname + source.search + source.hash;
+			}
+		} catch (error) {}
+	}
 	return input;
 }
 function setImageUrl(image, source) {
@@ -3486,6 +3495,7 @@ function artStopDrag(e) {
 }
 //SET SYMBOL TAB
 function uploadSetSymbol(imageSource, otherParams) {
+	imageSource = fixUri(imageSource || '/img/blank.png');
 	ImageLoadTracker.track(imageSource);
 	if (otherParams && otherParams == 'resetSetSymbol') {
 		setSymbol.onload = function() {
@@ -4257,7 +4267,7 @@ function drawCard() {
 	if (document.querySelector('#grayscale-art').checked) {
 		cardContext.filter='grayscale(1)';
 	}
-	cardContext.drawImage(art, 0, 0, art.width * card.artZoom, art.height * card.artZoom);
+	if (isDrawableImage(art)) cardContext.drawImage(art, 0, 0, art.width * card.artZoom, art.height * card.artZoom);
 	cardContext.restore();
 	// frame elements
 	if (card.version.includes('planeswalker') && typeof planeswalkerPreFrameCanvas !== "undefined") {

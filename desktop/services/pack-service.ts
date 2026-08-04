@@ -6,6 +6,7 @@ import type {PackId, PackStatus} from '../ipc/contracts.js';
 import {PACK_IDS} from '../ipc/contracts.js';
 
 const PACK_DETAILS: Record<PackId, {displayName: string; description: string; required: boolean}> = {
+  'set-symbols': {displayName: 'Set Symbols', description: 'Official and bundled custom set-symbol families.', required: true},
   standard: {displayName: 'Standard', description: 'Modern frames and every linked standard variant.', required: true},
   'booster-fun': {displayName: 'Booster Fun', description: 'Showcase, borderless, and special-treatment frames.', required: false},
   tokens: {displayName: 'Tokens', description: 'Token, emblem, marker, and helper-card frames.', required: false},
@@ -13,6 +14,7 @@ const PACK_DETAILS: Record<PackId, {displayName: string; description: string; re
   legacy: {displayName: 'Legacy', description: 'Classic, old-border, and historical frame families.', required: false},
   custom: {displayName: 'Custom', description: 'Bundled experimental and future user-imported frame families.', required: false}
 };
+const REQUIRED_PACK_IDS: PackId[] = ['set-symbols', 'standard'];
 const RELEASES_URL = 'https://api.github.com/repos/lawlordev/cardconjurer/releases?per_page=30';
 const MAX_PACK_BYTES = 3 * 1024 * 1024 * 1024;
 const MAX_EXPANDED_BYTES = 8 * 1024 * 1024 * 1024;
@@ -128,7 +130,8 @@ export class PackService {
   }
 
   async install(ids: PackId[]): Promise<PackStatus[]> {
-    const uniqueIds = [...new Set(['standard' as PackId, ...ids])];
+    const missingRequired = REQUIRED_PACK_IDS.filter((id) => !this.#state.packs.some((item) => item.id === id));
+    const uniqueIds = [...new Set([...missingRequired, ...ids])];
     if (!this.#developmentRoot && uniqueIds.some((id) => !this.#sourceFor(id))) await this.#refreshCatalog();
     for (const id of uniqueIds) {
       let source = this.#sourceFor(id); let version = '1.0.0';
@@ -145,12 +148,13 @@ export class PackService {
     this.#writeState(); return this.list();
   }
   remove(id: PackId): PackStatus[] {
-    if (id === 'standard') throw new Error('The Standard frame pack is required and cannot be removed.');
+    if (REQUIRED_PACK_IDS.includes(id)) throw new Error(`The ${PACK_DETAILS[id].displayName} pack is required and cannot be removed.`);
     this.#state.packs = this.#state.packs.filter((item) => item.id !== id); this.#writeState(); return this.list();
   }
-  hasStandard(): boolean { return this.#state.packs.some((item) => item.id === 'standard'); }
-  resolveFrameAsset(relativePath: string): string | null {
-    const clean = relativePath.replace(/^\/+/, ''); if (!clean.startsWith('img/frames/')) return null;
+  hasRequiredPacks(): boolean { return REQUIRED_PACK_IDS.every((id) => this.#state.packs.some((item) => item.id === id)); }
+  resolvePackAsset(relativePath: string): string | null {
+    const clean = relativePath.replace(/^\/+/, '');
+    if (!clean.startsWith('img/frames/') && !clean.startsWith('img/setSymbols/')) return null;
     for (const pack of this.#state.packs) {
       const candidate = path.resolve(pack.sourceRoot, clean); const root = path.resolve(pack.sourceRoot);
       if ((candidate === root || candidate.startsWith(`${root}${path.sep}`)) && existsSync(candidate)) return candidate;
