@@ -16,8 +16,18 @@ concurrency:
 env:
   APP_SPARSE_PATHS: |
     /*
+    !/about/
+    !/askurza/
+    !/converter/
+    !/data/images/
+    !/gallery/
     !/img/frames/*
     !/img/setSymbols/
+    !/legal/
+    !/phyrexian/
+    !/theme/
+    !/tutorial/
+    !/launcher*
     /img/frames/cornerCutout.png
     /img/frames/maskRightHalf.png
     /img/frames/maskMiddleThird.png

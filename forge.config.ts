@@ -68,6 +68,7 @@ const config: ForgeConfig = {
       /^\/img\/setSymbols(?:\/|$)/,
       /^\/build(?:\/|$)/,
       /^\/out(?:\/|$)/,
+      /^\/launcher(?:-linux|-macos|\.exe|\.sh|\.bat)?$/,
       /^\/node_modules\/\.cache(?:\/|$)/,
       /^\/(?:dev_server\.py|start-dev-server\.ps1|docker-compose\.ya?ml|Dockerfile|Makefile)$/
     ]

@@ -39,8 +39,18 @@ jobs:
           sparse-checkout-cone-mode: false
           sparse-checkout: |
             /*
+            !/about/
+            !/askurza/
+            !/converter/
+            !/data/images/
+            !/gallery/
             !/img/frames/*
             !/img/setSymbols/
+            !/legal/
+            !/phyrexian/
+            !/theme/
+            !/tutorial/
+            !/launcher*
             /img/frames/cornerCutout.png
             /img/frames/maskRightHalf.png
             /img/frames/maskMiddleThird.png

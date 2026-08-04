@@ -14,7 +14,7 @@ const baseFrameAssets = packConfig.baseRuntimeAssets.map((asset) => `/${asset.re
 for (const asarPath of asarPaths.filter(existsSync)) {
   if (statSync(asarPath).size === 0) throw new Error('The packaged app is empty.');
   const inventory = listPackage(asarPath).map((entry) => entry.replace(/\\/g, '/'));
-  for (const prefix of ['/img/setSymbols/', '/about/', '/gallery/', '/converter/', '/tutorial/', '/tests/', '/docs/', '/.git/']) {
+  for (const prefix of ['/img/setSymbols/', '/about/', '/gallery/', '/converter/', '/data/images/', '/tutorial/', '/tests/', '/docs/', '/.git/', '/launcher']) {
     if (inventory.some((entry) => entry.startsWith(prefix))) throw new Error(`Forbidden packaged path: ${prefix}`);
   }
   const unexpectedFrames = inventory.filter((entry) => entry.startsWith('/img/frames/') && !baseFrameAssets.includes(entry));

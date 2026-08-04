@@ -10,4 +10,5 @@ test('CI uses blobless sparse checkout and an aggregate required gate', () => {
   assert.match(workflow, /sparse-checkout-cone-mode:\s*false/);
   assert.match(workflow, /name:\s*required/);
   assert.match(workflow, /report-checkout-surface\.mjs --expect-sparse/);
+  for (const payload of ['gallery', 'data/images', 'launcher']) assert.match(workflow, new RegExp(`!/${payload}`));
 });
