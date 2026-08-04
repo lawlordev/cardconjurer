@@ -58,7 +58,7 @@ async function selectOption(control, value) {
   } else {
     const dropdown = select.locator('xpath=following-sibling::div[contains(concat(" ", normalize-space(@class), " "), " workspace-select ")][1]');
     await dropdown.locator('.workspace-select-trigger').click();
-    await dropdown.locator(`.workspace-select-choice[data-value="${value}"]`).click();
+    await dropdown.locator(`.workspace-select-choice[data-value="${value}"]`).click({force: true});
   }
   assert(await select.inputValue() === value, `Select did not change to ${value}.`);
 }
