@@ -247,7 +247,7 @@ jobs:
             if ($env:WINDOWS_SIGNED -eq 'true') {
               $signature = Get-AuthenticodeSignature -FilePath $file
               if ($signature.Status -ne 'Valid') {
-                throw "Invalid Authenticode signature for $file: $($signature.Status) $($signature.StatusMessage)"
+                throw "Invalid Authenticode signature for ${file}: $($signature.Status) $($signature.StatusMessage)"
               }
             }
           }
