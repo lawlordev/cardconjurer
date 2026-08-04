@@ -22,6 +22,14 @@ foreach ($required in @($updateExe, $stableExe, $startMenuShortcut, $desktopShor
   if (!(Test-Path -LiteralPath $required)) { throw "Windows installation integration is missing: $required" }
 }
 
+$windowsShell = New-Object -ComObject WScript.Shell
+foreach ($shortcut in @($startMenuShortcut, $desktopShortcut)) {
+  $target = $windowsShell.CreateShortcut($shortcut).TargetPath
+  if ((Resolve-Path -LiteralPath $target).Path -ne (Resolve-Path -LiteralPath $stableExe).Path) {
+    throw "Windows shortcut does not target the stable launcher: $shortcut -> $target"
+  }
+}
+
 $uninstall = Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' |
   ForEach-Object { Get-ItemProperty $_.PSPath } |
   Where-Object { $_.DisplayName -eq 'Set Conjurer' } |
@@ -30,4 +38,4 @@ if (!$uninstall) { throw 'Set Conjurer is missing from Windows Installed Apps.' 
 
 Get-Process 'set-conjurer' -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Process -FilePath $updateExe -ArgumentList '--uninstall','-s' -Wait -WindowStyle Hidden
-Write-Host 'Windows Setup, shortcuts, stable stub, and Installed Apps registration passed.'
+Write-Host 'Windows Setup, stable-launcher shortcuts, stable stub, and Installed Apps registration passed.'
