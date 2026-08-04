@@ -235,16 +235,33 @@ jobs:
         env:
           WINDOWS_SIGNED: ${{ steps.signing.outputs.enabled }}
         run: |
+          $installerDir = Join-Path $env:GITHUB_WORKSPACE 'out\make\squirrel.windows\x64'
+          $appExe = Join-Path $env:SET_CONJURER_WINDOWS_APP_DIR 'set-conjurer.exe'
+          $setupExe = Join-Path $installerDir 'Set-Conjurer-Windows-x64-Setup.exe'
+          $packages = @(Get-ChildItem -Path $installerDir -Filter '*.nupkg' -File)
+          if ($packages.Count -ne 1) {
+            throw "Expected exactly one Windows NuGet package, found $($packages.Count)."
+          }
           $criticalFiles = @(
-            (Join-Path $env:SET_CONJURER_WINDOWS_APP_DIR 'set-conjurer.exe')
-            (Join-Path $env:SET_CONJURER_WINDOWS_APP_DIR 'Squirrel.exe')
-            (Join-Path $env:GITHUB_WORKSPACE 'out\make\squirrel.windows\x64\Set-Conjurer-Windows-x64-Setup.exe')
+            $appExe
+            $setupExe
+            $packages[0].FullName
           )
           foreach ($file in $criticalFiles) {
             if (!(Test-Path $file -PathType Leaf)) {
               throw "Expected Windows release file was not created: $file"
             }
-            if ($env:WINDOWS_SIGNED -eq 'true') {
+          }
+          if ($env:WINDOWS_SIGNED -eq 'true') {
+            $packageZip = Join-Path $env:RUNNER_TEMP 'set-conjurer-release-package.zip'
+            $expandedPackage = Join-Path $env:RUNNER_TEMP 'set-conjurer-release-package'
+            Copy-Item -Path $packages[0].FullName -Destination $packageZip
+            Expand-Archive -Path $packageZip -DestinationPath $expandedPackage -Force
+            $embeddedUpdaters = @(Get-ChildItem -Path $expandedPackage -Recurse -Filter 'Squirrel.exe' -File)
+            if ($embeddedUpdaters.Count -ne 1) {
+              throw "Expected exactly one embedded signed Squirrel updater, found $($embeddedUpdaters.Count)."
+            }
+            foreach ($file in @($appExe, $setupExe, $embeddedUpdaters[0].FullName)) {
               $signature = Get-AuthenticodeSignature -FilePath $file
               if ($signature.Status -ne 'Valid') {
                 throw "Invalid Authenticode signature for ${file}: $($signature.Status) $($signature.StatusMessage)"

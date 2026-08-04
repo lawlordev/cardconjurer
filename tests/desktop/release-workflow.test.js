@@ -26,6 +26,8 @@ test('Windows previews fall back explicitly until Azure signing is available', (
   assert.match(workflow, /AZURE_ARTIFACT_SIGNING_PROFILE is not configured/);
   assert.match(workflow, /UNSIGNED PREVIEW: Windows trust warnings are expected/);
   assert.match(workflow, /steps\.signing\.outputs\.enabled == 'true'/);
+  assert.match(workflow, /Get-ChildItem -Path \$installerDir -Filter '\*\.nupkg'/);
+  assert.match(workflow, /embedded signed Squirrel updater/);
 });
 
 test('macOS release artifacts are signed, notarized, stapled, and assessed', () => {
