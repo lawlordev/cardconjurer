@@ -19,7 +19,10 @@ function handleSquirrelLifecycle(): boolean {
   if (process.platform !== 'win32') return false;
   const event = process.argv[1];
   if (!event?.startsWith('--squirrel-')) return false;
-  if (event === '--squirrel-obsolete') return true;
+  if (event === '--squirrel-obsolete') {
+    app.quit();
+    return true;
+  }
   const updateExe = path.resolve(path.dirname(process.execPath), '..', 'Update.exe');
   const shortcutAction = event === '--squirrel-uninstall' ? '--removeShortcut' : '--createShortcut';
   try {
@@ -27,12 +30,15 @@ function handleSquirrelLifecycle(): boolean {
   } catch (error) {
     console.error('Could not complete the Windows installer lifecycle event.', error);
   }
+  // Squirrel invokes the app during installation and gives it a short window
+  // to finish lifecycle work. Keep the event loop alive long enough for
+  // Update.exe to create/remove both shortcuts before this process exits.
+  setTimeout(() => app.quit(), 1_000);
   return true;
 }
 
 const squirrelLifecycleEvent = handleSquirrelLifecycle();
 if (process.platform === 'win32') app.setAppUserModelId('com.squirrel.set_conjurer.set-conjurer');
-if (squirrelLifecycleEvent) app.quit();
 
 protocol.registerSchemesAsPrivileged([{
   scheme: 'set-conjurer',

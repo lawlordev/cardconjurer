@@ -34,6 +34,7 @@ test('Windows Squirrel lifecycle creates launch shortcuts and uses a stable AUMI
   assert.match(main, /--squirrel-/);
   assert.match(main, /--createShortcut/);
   assert.match(main, /--removeShortcut/);
+  assert.match(main, /setTimeout\(\(\) => app\.quit\(\), 1_000\)/);
   assert.match(main, /setAppUserModelId\('com\.squirrel\.set_conjurer\.set-conjurer'\)/);
 });
 
