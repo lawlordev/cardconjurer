@@ -6,17 +6,19 @@ const root = process.cwd();
 const out = path.join(root, 'out');
 if (!existsSync(out)) throw new Error('No packaged output exists. Run npm run package first.');
 const forbidden = ['img/frames', 'img/setSymbols', 'about', 'gallery', 'converter', 'tutorial', '.git'];
-const appPaths = process.platform === 'darwin'
-  ? [path.join(out, 'Set Conjurer-darwin-arm64', 'Set Conjurer.app')]
-  : [];
-for (const appPath of appPaths.filter(existsSync)) {
-  if (statSync(appPath).size === 0) throw new Error('The packaged app is empty.');
-  const asarPath = path.join(appPath, 'Contents', 'Resources', 'app.asar');
-  const inventory = listPackage(asarPath);
-  for (const prefix of ['/img/frames/', '/img/setSymbols/', '/about/', '/gallery/', '/converter/', '/tutorial/', '/tests/', '/docs/', '/.git/']) {
+const asarPaths = process.platform === 'darwin'
+  ? [path.join(out, 'Set Conjurer-darwin-arm64', 'Set Conjurer.app', 'Contents', 'Resources', 'app.asar')]
+  : [path.join(out, `Set Conjurer-${process.platform}-${process.arch}`, 'resources', 'app.asar')];
+const baseFrameAssets = ['/img/frames/cornerCutout.png', '/img/frames/maskRightHalf.png', '/img/frames/maskMiddleThird.png', '/img/frames/serial.png'];
+for (const asarPath of asarPaths.filter(existsSync)) {
+  if (statSync(asarPath).size === 0) throw new Error('The packaged app is empty.');
+  const inventory = listPackage(asarPath).map((entry) => entry.replace(/\\/g, '/'));
+  for (const prefix of ['/img/setSymbols/', '/about/', '/gallery/', '/converter/', '/tutorial/', '/tests/', '/docs/', '/.git/']) {
     if (inventory.some((entry) => entry.startsWith(prefix))) throw new Error(`Forbidden packaged path: ${prefix}`);
   }
-  for (const required of ['/dist/desktop/main.js', '/dist/desktop/preload.js', '/js/desktopBridge.js', '/generated/frame-definitions/manifest.json', '/core/standard-card-back.png']) {
+  const unexpectedFrames = inventory.filter((entry) => entry.startsWith('/img/frames/') && !baseFrameAssets.includes(entry));
+  if (unexpectedFrames.length) throw new Error(`Unexpected frame asset in base package: ${unexpectedFrames[0]}`);
+  for (const required of ['/dist/desktop/main.js', '/dist/desktop/preload.js', '/js/desktopBridge.js', '/generated/frame-definitions/manifest.json', '/core/standard-card-back.png', '/node_modules/yauzl/index.js', ...baseFrameAssets]) {
     if (!inventory.includes(required)) throw new Error(`Required packaged path is missing: ${required}`);
   }
 }

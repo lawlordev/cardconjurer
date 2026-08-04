@@ -12,9 +12,9 @@ The current beta fails as a chain: the pack catalog is unavailable when onboardi
 
 1. Running `Set-Conjurer-Windows-x64-Setup.exe` once installs a launchable Start-menu entry and desktop shortcut, registers Set Conjurer in Windows Installed Apps, and launches through the stable Squirrel stub. The downloaded Setup file may remain in Downloads, but it is not needed for ordinary launches.
 2. Squirrel install, update, uninstall, and first-run arguments are handled before normal app startup. A first-run installer launch does not create a second editor instance or race updater checks.
-3. Fresh packaged onboarding loads and validates the published catalog before pack choices become interactive. Set Symbols and Standard remain selected and locked; every published optional pack can be selected. Offline/catalog failures show a retryable message rather than presenting published packs as permanently disabled.
+3. Fresh packaged onboarding loads and validates the published catalog before pack choices become interactive. Set Symbols and Standard remain selected and locked; every published optional pack can be selected. Every row shows that pack's human-readable compressed download size before consent, and the action area shows the combined download size for the current selection. Offline/catalog failures show a retryable message rather than presenting published packs as permanently disabled.
 4. Pack downloads stream to disk with bounded memory, retry transient failures, resume valid partial files, verify declared size and SHA-256, extract incrementally with the current traversal/symlink/expanded-size protections, and atomically activate one healthy pack at a time. Relaunching after an interruption never converts a partial pack into an installed pack.
-5. Progress is based on actual downloaded and extracted bytes across all archive parts. It continues updating through download, verification, extraction, and activation, and does not use the current fixed 70/76/95 percent jumps.
+5. Onboarding presents one smooth aggregate progress indicator for the complete selected operation, based on actual downloaded and extracted bytes across every selected pack and archive part. It continues updating through download, verification, extraction, and activation, does not use the current fixed 70/76/95 percent jumps, and does not show per-pack completion indicators or require the user to track individual pack state.
 6. Release pack construction includes every renderer-global dependency and gives every downloadable asset exactly one owning pack (with Standard owning truly shared assets because it is required). It eliminates the current multi-pack directory duplication and limits every release part to at most 256 MiB.
 7. A pack marked installed passes a health check against its immutable release manifest. Existing beta profiles with the broken `packs-v0.1.0` Standard generation are detected and offered repair/update rather than trusted because `active.json` contains an entry.
 8. The editor does not initialize or persist a workspace behind incomplete onboarding. It captures its default card template only after the required packs and global renderer images are healthy and the default M15 layout has completed.
@@ -107,7 +107,7 @@ The current beta fails as a chain: the pack catalog is unavailable when onboardi
 4. Replace coarse top-directory grouping with a deterministic asset-ownership manifest/resolver. Standard owns assets used by Standard and any optional category; each optional pack owns assets used only by that category. Build fails on unresolved references, duplicate ownership, missing files, unsafe names, or unbudgeted size growth.
 5. Limit release archive parts to 256 MiB and stream both download and extraction. Use a ZIP reader that supports lazy entry streaming (for example `yauzl`) behind a small internal adapter so path containment, symlink rejection, CRC/error handling, file-count limits, and expanded-byte limits remain explicit and testable.
 6. Persist downloads as versioned `.partial` files with sidecar metadata under the pack staging directory. Retry transient fetch/stream errors with bounded exponential backoff; resume only when server Range/validator behavior and the local length match expectations; otherwise safely restart that part.
-7. Treat each pack as an independent atomic operation. Build next state locally, activate only after every archive and required health file verifies, then atomically write `active.json`. Required success is retained if an optional pack later fails; the UI reports per-pack results and retries only failed packs.
+7. Treat each pack as an independent atomic storage operation while presenting the selected set as one user-facing onboarding operation. Build next state locally, activate only after every archive and required health file verifies, then atomically write `active.json`. Required success is retained if an optional pack later fails; onboarding reports one overall result and retries only failed work internally without adding per-pack completion UI.
 8. Load catalog state before onboarding choices. Cache the last verified catalog for later/offline management, but require network access for a fresh profile with no archives. Catalog failure remains a first-run gate with Retry and a clear offline explanation.
 9. Gate editor initialization on verified onboarding completion and required-pack health. A default workspace is never written while onboarding is open or while the default renderer template is incomplete.
 10. Make card loading defensive (`text`, frames, masks, bottom info, and collections normalized before iteration), then add a targeted beta repair migration after a healthy default template is available. Snapshot first, merge only missing/corrupt structural defaults, render-check the repaired active card, and commit once.
@@ -215,10 +215,10 @@ Work:
 - Add explicit catalog states (`loading`, `ready`, `offline/error`) and refresh/cache APIs; stop inventing `1.0.0` without metadata.
 - Validate installed entries against source existence, immutable manifest identity, declared health paths, and expected version before reporting installed/healthy.
 - Stream parts to durable staging files with bounded retry/resume and checksum verification. Stream ZIP entries to a temporary generation with containment, symlink, count, per-file, total-expanded, and declared-size checks.
-- Emit byte-based phase/per-pack/aggregate progress and human-readable downloaded/total sizes.
+- Emit byte-based internal per-pack progress plus a public aggregate operation total. The renderer shows one overall bar/percentage and downloaded/total size for all selected packs; it does not render per-pack completion states during onboarding.
 - Commit activation state after each successful pack; leave the previous healthy generation active on any failure and retain only safe resumable partials.
 - Expose repair/update/retry state in onboarding and Settings. Required packs cannot be removed; unhealthy required packs show Repair rather than Installed.
-- During onboarding, allow optional selection after catalog load, install required packs first, retain successful optional installs, and summarize/retry any optional failures.
+- During onboarding, show each pack's compressed catalog size next to its name, recompute the combined selected size whenever a checkbox changes, allow optional selection after catalog load, install required packs first, retain successful optional installs, and summarize/retry failures through the single operation status.
 
 Checkpoint:
 
@@ -333,9 +333,9 @@ Add focused scripts/tests to the appropriate npm commands rather than relying on
 
 ### Unit and service coverage
 
-- Catalog parsing/caching/availability and SemVer comparisons.
+- Catalog parsing/caching/availability, pack and selected-total byte formatting, selection recalculation, and SemVer comparisons.
 - Pack health manifests, source containment, activation transaction, and prior-generation preservation.
-- Retry classification, Range resume, validators, partial lengths, checksum, cancellation/exit cleanup, and byte progress monotonicity.
+- Retry classification, Range resume, validators, partial lengths, checksum, cancellation/exit cleanup, aggregate byte progress monotonicity across multiple selected packs, and a final exact 100 percent state.
 - Lazy ZIP extraction, CRC/read errors, traversal, absolute/drive paths, symlinks, file-count/expanded-size limits, and disk errors.
 - Asset ownership: every profile/component/runtime source resolves from base + required + selected optional pack; zero duplicate owners; archive part budget.
 - Workspace normalization and targeted beta repair preserve user fields and do not alter valid frameless cards.
@@ -365,7 +365,7 @@ The packaged Electron test is adequate for deterministic renderer/IPC/download f
 
 Exercise all of the following even when no screenshot is retained:
 
-- clean/offline/catalog-retry onboarding;
+- clean/offline/catalog-retry onboarding, per-pack displayed sizes, selection-total recalculation, and one aggregate multi-pack progress flow;
 - required-only, all-packs, optional partial failure, interrupted/resumed, corrupt/tampered, disk-full, and relaunch pack flows;
 - clean and damaged-beta workspace startup, set-details edit, new set/card, save, relaunch, and frame/category selection;
 - healthy, missing, stale, and repaired installed pack generations;
@@ -375,9 +375,9 @@ Exercise all of the following even when no screenshot is retained:
 
 ### Minimal PR visual set
 
-1. **Windows onboarding choices** - installed Windows build at 1665x1040; show Set Symbols/Standard locked, optional published packs enabled, measured size/status, and ready-to-download state. Purpose: prove the fresh public-package catalog path.
+1. **Windows onboarding choices** - installed Windows build at 1665x1040; show Set Symbols/Standard locked, optional published packs enabled, each pack's measured download size, and the combined selected size. Purpose: prove informed consent and the fresh public-package catalog path.
 2. **Healthy first editor** - same installed build after required-only onboarding; show rendered Regular frame, default set/card, and Saved successfully. Purpose: cover default-set load, saving, and frame rendering together.
-3. **Resumable pack operation** - Settings drawer at 1665x1040 during a resumed optional download/extraction with byte progress and phase text. Purpose: demonstrate recovery/progress; other optional packs receive a concise coverage statement rather than repeated screenshots.
+3. **Aggregate onboarding download** - onboarding at 1665x1040 during a resumed multi-pack download/extraction with one overall bar, percentage, downloaded/total size, and phase text. Purpose: demonstrate seamless aggregate recovery/progress without per-pack completion noise; Settings repair and other optional packs receive a concise coverage statement rather than repeated screenshots.
 4. **Actionable update only** - N-1 installed build at 1665x1040 showing the actual newer version's Update Now or determinate progress. Pair its caption with verified no-update/up-to-date states where the control was absent. Purpose: prove actionability and state separation.
 5. **Windows installation integration** - Start menu/Installed Apps view showing Set Conjurer after Setup. Purpose: prove ordinary relaunch/uninstall entry points; no duplicate desktop screenshot is needed if the checklist confirms the desktop shortcut.
 
@@ -395,4 +395,4 @@ Render every selected image inline in the PR description and verify it is legibl
 
 ## Review checkpoint
 
-Review and approve this plan before implementation. After approval, execute it in this same `fix/windows-desktop-reliability` worktree and branch with the Standardized Feature workflow.
+Approved by the owner on August 4, 2026. Implementation is complete on `fix/windows-desktop-reliability`; the immutable corrective pack release, application version/tag, signed publication, and fresh-runner installed-artifact/N-1 promotion checks remain release activities rather than feature-branch side effects.

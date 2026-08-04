@@ -2,6 +2,7 @@ import {
   app, BrowserWindow, dialog, ipcMain, net, protocol, session, shell
 } from 'electron';
 import { createHash } from 'node:crypto';
+import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, watch, writeFileSync, renameSync, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -12,6 +13,25 @@ import { FileService } from './services/file-service.js';
 import { PackService } from './services/pack-service.js';
 import { StorageService } from './services/storage-service.js';
 import { UpdateService } from './services/update-service.js';
+
+function handleSquirrelLifecycle(): boolean {
+  if (process.platform !== 'win32') return false;
+  const event = process.argv[1];
+  if (!event?.startsWith('--squirrel-')) return false;
+  if (event === '--squirrel-obsolete') return true;
+  const updateExe = path.resolve(path.dirname(process.execPath), '..', 'Update.exe');
+  const shortcutAction = event === '--squirrel-uninstall' ? '--removeShortcut' : '--createShortcut';
+  try {
+    spawn(updateExe, [shortcutAction, path.basename(process.execPath)], {detached: true, stdio: 'ignore'}).unref();
+  } catch (error) {
+    console.error('Could not complete the Windows installer lifecycle event.', error);
+  }
+  return true;
+}
+
+const squirrelLifecycleEvent = handleSquirrelLifecycle();
+if (process.platform === 'win32') app.setAppUserModelId('com.squirrel.set_conjurer.set-conjurer');
+if (squirrelLifecycleEvent) app.quit();
 
 protocol.registerSchemesAsPrivileged([{
   scheme: 'set-conjurer',
@@ -229,6 +249,7 @@ function registerIPC(): void {
   ipcMain.handle(IPC.exportSave, trusted((_event, request) => files.saveExport(request)));
   ipcMain.handle(IPC.importChoose, trusted((_event, kind: 'card' | 'set') => files.chooseImport(kind)));
   ipcMain.handle(IPC.packsList, trusted(() => packs!.list()));
+  ipcMain.handle(IPC.packsRefresh, trusted(() => packs!.refreshCatalog()));
   ipcMain.handle(IPC.packsInstall, trusted((_event, ids: unknown[]) => packs!.install(ids.map((id) => packIdSchema.parse(id)))));
   ipcMain.handle(IPC.packsRemove, trusted((_event, id: unknown) => packs!.remove(packIdSchema.parse(id))));
   ipcMain.handle(IPC.updateState, trusted(() => updates!.state()));
@@ -264,6 +285,8 @@ function registerIPC(): void {
     if (installer) {
       const error = await shell.openPath(installer);
       if (error) throw new Error(error);
+      app.exit(0);
+      return;
     }
     app.relaunch();
     app.exit(0);
@@ -289,7 +312,7 @@ app.on('second-instance', (_event, argv) => {
   void dispatchAssociatedFiles();
 });
 
-app.whenReady().then(async () => {
+if (!squirrelLifecycleEvent) app.whenReady().then(async () => {
   app.setName('Set Conjurer');
   const userDataPath = app.getPath('userData');
   mkdirSync(userDataPath, {recursive: true});
@@ -303,6 +326,10 @@ app.whenReady().then(async () => {
   registerIPC();
   mainWindow = createWindow(appRoot);
   installLiveReload(appRoot);
+  if (app.isPackaged) setTimeout(() => {
+    void packs?.refreshCatalog().catch((error) => console.warn('Background frame-pack check failed:', error));
+    void updates?.check();
+  }, 15_000);
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow(appRoot); });
 });
 

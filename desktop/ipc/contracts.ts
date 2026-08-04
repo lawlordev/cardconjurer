@@ -46,11 +46,20 @@ export interface PackStatus {
   required: boolean;
   installed: boolean;
   installedVersion: string | null;
-  availableVersion: string;
+  availableVersion: string | null;
   archiveBytes: number;
   installedBytes: number;
   available: boolean;
+  updateAvailable: boolean;
   source: 'development' | 'bundled-seed' | 'github' | 'unavailable';
+}
+
+export interface PackProgress {
+  phase: 'preparing' | 'downloading' | 'extracting' | 'activating';
+  percent: number;
+  message: string;
+  receivedBytes: number;
+  totalBytes: number;
 }
 
 export interface UpdateState {
@@ -84,9 +93,10 @@ export interface DesktopAPI {
   };
   packs: {
     list(): Promise<PackStatus[]>;
+    refresh(): Promise<PackStatus[]>;
     install(ids: PackId[]): Promise<PackStatus[]>;
     remove(id: PackId): Promise<PackStatus[]>;
-    onProgress(listener: (progress: {id: PackId; percent: number; message: string}) => void): () => void;
+    onProgress(listener: (progress: PackProgress) => void): () => void;
   };
   updates: {
     state(): Promise<UpdateState>;
@@ -118,6 +128,7 @@ export const IPC = Object.freeze({
   importChoose: 'desktop:import-choose',
   associatedFile: 'desktop:associated-file',
   packsList: 'desktop:packs-list',
+  packsRefresh: 'desktop:packs-refresh',
   packsInstall: 'desktop:packs-install',
   packsRemove: 'desktop:packs-remove',
   packsProgress: 'desktop:packs-progress',

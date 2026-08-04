@@ -47,8 +47,32 @@ jobs:
       - run: npm ci
       - run: npm run packs:compile
       - run: npm run build:desktop
+      - if: runner.os == 'Windows'
+        run: npm test
+      - if: runner.os == 'Windows'
+        run: npm run test:electron
       - run: npx electron-forge package --arch=${{ matrix.arch }}
       - run: npm run package:verify
+      - if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          npm run packs:seed
+          $env:SET_CONJURER_INCLUDE_DEV_PACKS = '1'
+          npx electron-forge package --arch=${{ matrix.arch }}
+          $env:SET_CONJURER_TEST_EXECUTABLE = (Resolve-Path 'out/Set Conjurer-win32-x64/set-conjurer.exe').Path
+          npm run test:electron
+          Remove-Item Env:SET_CONJURER_INCLUDE_DEV_PACKS
+          Remove-Item Env:SET_CONJURER_TEST_EXECUTABLE
+          npx electron-forge package --arch=${{ matrix.arch }}
+          npm run package:verify
+      - if: runner.os == 'Windows'
+        run: npm run make -- --arch=${{ matrix.arch }}
+      - if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path out -Recurse -Filter 'Set-Conjurer-Windows-x64-Setup.exe' | Select-Object -First 1
+          if (!$installer) { throw 'Windows Setup executable was not produced.' }
+          ./scripts/test-windows-installer.ps1 -Installer $installer.FullName
       - uses: actions/upload-artifact@v4
         with:
           name: unsigned-${{ runner.os }}-${{ matrix.arch }}

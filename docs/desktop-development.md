@@ -27,4 +27,14 @@ The Electron renderer has no Node access. It runs sandboxed with context isolati
 
 `npm run package` creates a base app without the multi-gigabyte frame library or set-symbol library. `npm run make:local` creates a local-only developer installer whose seven asset-pack seeds point back to this checkout. Set Symbols and Standard are required; the other five packs are optional. That developer build is useful on the same machine but is not distributable. Public artifacts obtain packs from immutable GitHub pack releases.
 
+The pack service downloads each archive into a resumable `.partial` file and extracts ZIP entries as streams. Tests must not reintroduce whole-archive `Buffer.concat`/JSZip extraction. `npm test` compiles the desktop service and exercises a local Range-capable HTTP fixture, checksum verification, monotonic aggregate progress, streamed extraction, and unsafe archive rejection.
+
+On Windows, `npm run make -- --arch=x64` produces the Squirrel Setup. The CI integration script installs that Setup into the disposable runner profile, then verifies the stable executable stub, Start-menu and desktop shortcuts, Installed Apps registration, and uninstall. Run the same check from PowerShell with:
+
+```powershell
+./scripts/test-windows-installer.ps1 -Installer ./out/make/squirrel.windows/x64/Set-Conjurer-Windows-x64-Setup.exe
+```
+
+This is an installed-artifact test and modifies the current Windows user profile; use a test account or disposable machine for local runs.
+
 Local macOS output uses ad-hoc signing when `APPLE_SIGN_IDENTITY` is absent. It proves bundle integrity but is not Developer ID trust or notarization.

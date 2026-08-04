@@ -8,7 +8,7 @@ const IPC = Object.freeze({
   appInfo: 'desktop:app-info', onboardingStatus: 'desktop:onboarding-status', onboardingComplete: 'desktop:onboarding-complete', restart: 'desktop:restart', reportIssue: 'desktop:report-issue',
   storageLoad: 'desktop:storage-load', storageSave: 'desktop:storage-save', storageFlush: 'desktop:storage-flush', storageSnapshot: 'desktop:storage-snapshot',
   exportSave: 'desktop:export-save', importChoose: 'desktop:import-choose', associatedFile: 'desktop:associated-file',
-  packsList: 'desktop:packs-list', packsInstall: 'desktop:packs-install', packsRemove: 'desktop:packs-remove', packsProgress: 'desktop:packs-progress',
+  packsList: 'desktop:packs-list', packsRefresh: 'desktop:packs-refresh', packsInstall: 'desktop:packs-install', packsRemove: 'desktop:packs-remove', packsProgress: 'desktop:packs-progress',
   updateState: 'desktop:update-state', updateCheck: 'desktop:update-check', updateBegin: 'desktop:update-begin', updateChannel: 'desktop:update-channel', updateSetChannel: 'desktop:update-set-channel', updateChanged: 'desktop:update-changed',
   printRun: 'desktop:print-run', externalOpen: 'desktop:external-open'
 });
@@ -41,6 +41,7 @@ const api: DesktopAPI = Object.freeze({
   },
   packs: {
     list: () => ipcRenderer.invoke(IPC.packsList),
+    refresh: () => ipcRenderer.invoke(IPC.packsRefresh),
     install: (ids: PackId[]) => ipcRenderer.invoke(IPC.packsInstall, ids),
     remove: (id: PackId) => ipcRenderer.invoke(IPC.packsRemove, id),
     onProgress: (listener: Parameters<DesktopAPI['packs']['onProgress']>[0]) => subscribe(IPC.packsProgress, listener)

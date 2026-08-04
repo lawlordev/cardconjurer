@@ -18,6 +18,7 @@ const config: ForgeConfig = {
     appBundleId: 'com.lawlordev.setconjurer',
     appCategoryType: 'public.app-category.graphics-design',
     asar: true,
+    ...(process.env.SET_CONJURER_ELECTRON_ZIP_DIR ? {electronZipDir: process.env.SET_CONJURER_ELECTRON_ZIP_DIR} : {}),
     icon: path.resolve('resources/icons/set-conjurer'),
     osxSign: {
       identity: signingIdentity
@@ -60,7 +61,7 @@ const config: ForgeConfig = {
       /^\/docs(?:\/|$)/,
       /^\/tests(?:\/|$)/,
       /^\/data\/images(?:\/|$)/,
-      /^\/img\/frames(?:\/|$)/,
+      /^\/img\/frames\/(?!(?:cornerCutout|maskRightHalf|maskMiddleThird|serial)\.png$)/,
       /^\/img\/setSymbols(?:\/|$)/,
       /^\/build(?:\/|$)/,
       /^\/out(?:\/|$)/,

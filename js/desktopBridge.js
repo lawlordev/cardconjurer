@@ -6,9 +6,17 @@
 	var activePackActionId = null;
 	var selectedPaper = (function() { try { return ['US','CA'].includes(new Intl.Locale(navigator.language).region) ? 'letter' : 'a4'; } catch (error) { return 'letter'; } })();
 	var selectedBack = 'standard';
+	var onboardingPacks = [];
+	var resolveEditorReady;
+	var editorReady = new Promise(function(resolve) { resolveEditorReady = resolve; });
 
 	function escapeHtml(value) {
 		return String(value == null ? '' : value).replace(/[&<>"']/g, function(character) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]; });
+	}
+	function formatBytes(value) {
+		var bytes = Math.max(0, Number(value) || 0); if (!bytes) return '0 B';
+		var units = ['B','KB','MB','GB','TB']; var index = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+		var amount = bytes / Math.pow(1024, index); return amount.toFixed(index > 1 && amount < 10 ? 1 : 0) + ' ' + units[index];
 	}
 	function icon(name) {
 		if (name === 'packs') return '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7 12 3l8 4-8 4-8-4Z"/><path d="m4 12 8 4 8-4M4 17l8 4 8-4"/></svg>';
@@ -24,13 +32,14 @@
 			'<button type="button" class="creator-app-action desktop-icon-action desktop-menu-action" id="desktop-settings" title="Settings" aria-label="Settings">' + icon('settings') + '</button>' +
 			'<div id="desktop-overlay" class="desktop-overlay" hidden></div>' +
 			'<aside id="desktop-drawer" class="textbox-editor layout-drawer desktop-drawer" role="dialog" aria-modal="true" aria-labelledby="desktop-drawer-title" aria-hidden="true"><div class="textbox-editor-heading"><h2 id="desktop-drawer-title" class="textbox-editor-title">Set Conjurer</h2></div><button type="button" class="textbox-editor-close" aria-label="Close drawer">×</button><div id="desktop-drawer-body" class="layout-drawer-body"></div></aside>' +
-			'<dialog id="desktop-onboarding" class="sets-dialog desktop-onboarding"><form method="dialog"><header class="desktop-onboarding-header"><img class="desktop-onboarding-mark" src="/resources/icons/set-conjurer.png" alt="Set Conjurer"><h2>Welcome to Set Conjurer</h2><p>Choose the frame packs you want to download.</p></header><div id="desktop-onboarding-packs" class="desktop-pack-list desktop-onboarding-pack-list"></div><div id="desktop-onboarding-progress" class="desktop-inline-status" aria-live="polite"></div><footer class="desktop-onboarding-footer"><small class="desktop-onboarding-credit">Set Conjurer is an open-source desktop fork of Kyle Burton\'s Card Conjurer, adapted for local set creation. <a href="https://github.com/lawlordev/cardconjurer" target="_blank" rel="noreferrer">View repository</a></small><button id="desktop-onboarding-start" type="button" class="sets-confirm">Download &amp; Continue</button></footer></form></dialog>' +
+			'<dialog id="desktop-onboarding" class="sets-dialog desktop-onboarding"><form method="dialog"><header class="desktop-onboarding-header"><img class="desktop-onboarding-mark" src="/resources/icons/set-conjurer.png" alt="Set Conjurer"><h2>Welcome to Set Conjurer</h2><p>Choose the frame packs you want available offline. Pack sizes are shown before anything downloads.</p></header><div id="desktop-onboarding-packs" class="desktop-pack-list desktop-onboarding-pack-list"></div><div class="desktop-onboarding-download"><strong id="desktop-onboarding-total">Calculating download…</strong><button id="desktop-onboarding-retry" type="button" class="input" hidden>Retry pack list</button></div><div id="desktop-onboarding-progress" class="desktop-pack-progress desktop-onboarding-progress" hidden aria-live="polite"><span class="desktop-pack-progress-label"></span><span class="desktop-pack-progress-track" aria-hidden="true"><i></i></span></div><footer class="desktop-onboarding-footer"><small class="desktop-onboarding-credit">Set Conjurer is an open-source desktop fork of Kyle Burton\'s Card Conjurer, adapted for local set creation. <a href="https://github.com/lawlordev/cardconjurer" target="_blank" rel="noreferrer">View repository</a></small><button id="desktop-onboarding-start" type="button" class="sets-confirm" disabled>Download &amp; Continue</button></footer></form></dialog>' +
 			'<section id="desktop-print" class="desktop-print" hidden aria-label="Print cards"><header class="desktop-print-toolbar"><button type="button" class="creator-app-action desktop-print-back" id="desktop-print-close">' + icon('back') + '<span>Back</span></button><div class="desktop-print-toolbar-actions"><select id="desktop-print-paper" class="input desktop-print-select" aria-label="Paper size"><option value="letter">US Letter</option><option value="a4">A4</option></select><select id="desktop-print-backs" class="input desktop-print-select desktop-print-back-select" aria-label="Card backs"><option value="standard">Standard card back</option><option value="none">No backs</option></select><button type="button" class="creator-app-action desktop-print-run" id="desktop-print-run" disabled>' + icon('print') + '<span>Print</span></button></div></header><div class="desktop-print-content"><aside class="desktop-print-sidebar"><div id="desktop-print-cards" class="desktop-print-card-list"></div></aside><main class="desktop-print-preview"><div id="desktop-print-pages" class="desktop-print-pages"></div></main></div></section>'
 		);
 		document.querySelector('#desktop-settings').addEventListener('click', function(event) { void openSettings(event.currentTarget); });
 		document.querySelector('#desktop-drawer .textbox-editor-close').addEventListener('click', closeDrawer);
 		document.querySelector('#desktop-overlay').addEventListener('click', closeDrawer);
 		document.querySelector('#desktop-onboarding-start').addEventListener('click', completeOnboarding);
+		document.querySelector('#desktop-onboarding-retry').addEventListener('click', function() { void loadOnboardingCatalog(); });
 		document.querySelector('#desktop-print-close').addEventListener('click', closePrint);
 		document.querySelector('#desktop-print-run').addEventListener('click', runPrint);
 		document.querySelector('#desktop-print-paper').addEventListener('change', function(event) { selectedPaper = event.target.value; renderPrintPages(); });
@@ -61,10 +70,12 @@
 		var required = pack.required || pack.id === 'standard';
 		var checked = required || pack.installed;
 		var disabled = pack.required || !pack.available || pack.id === 'standard';
-		if (!selectable) return '<label class="checkbox-container input workspace-checkbox desktop-onboarding-pack"><span>' + escapeHtml(pack.displayName) + '</span><input type="checkbox" data-pack-id="' + pack.id + '" ' + (checked ? 'checked ' : '') + (disabled ? 'disabled ' : '') + '><span class="checkmark"></span></label>';
+		if (!selectable) return '<label class="checkbox-container input workspace-checkbox desktop-onboarding-pack"><span><strong>' + escapeHtml(pack.displayName) + '</strong><small>' + escapeHtml(pack.archiveBytes ? formatBytes(pack.archiveBytes) : 'Size unavailable') + '</small></span><input type="checkbox" data-pack-id="' + pack.id + '" ' + (checked ? 'checked ' : '') + (disabled ? 'disabled ' : '') + '><span class="checkmark"></span></label>';
 		var version = pack.installedVersion || pack.availableVersion || '';
 		var status = pack.installed ? 'Installed' + (version ? ' · ' + escapeHtml(version) : '') : pack.available ? 'Version ' + escapeHtml(version) : 'Not available in this build yet';
-		var action = pack.installed
+		var action = pack.installed && pack.updateAvailable
+			? '<button type="button" class="creator-app-action desktop-pack-action sets-primary" data-install-pack="' + pack.id + '">Update</button>'
+			: pack.installed
 			? required
 				? '<button type="button" class="creator-app-action desktop-pack-action" disabled>Installed</button>'
 				: '<button type="button" class="creator-app-action desktop-pack-action danger" data-uninstall-pack="' + pack.id + '">Uninstall</button>'
@@ -78,7 +89,7 @@
 	}
 	function packRow(id) { return document.querySelector('#desktop-drawer [data-pack-row="' + id + '"]'); }
 	function setPackProgress(progress) {
-		var row = packRow(progress.id); if (!row) return false;
+		var row = activePackActionId && packRow(activePackActionId); if (!row) return false;
 		var container = row.querySelector('.desktop-pack-progress'); var label = row.querySelector('.desktop-pack-progress-label'); var fill = row.querySelector('.desktop-pack-progress-track i');
 		container.hidden = false; container.classList.remove('is-error'); label.textContent = progress.message + ' ' + Math.round(progress.percent) + '%'; fill.style.width = Math.max(0, Math.min(100, progress.percent)) + '%';
 		var button = row.querySelector('.desktop-pack-action'); if (button) button.disabled = true;
@@ -112,32 +123,51 @@
 		var packs = await api.packs.list(); openDrawer('Frame Packs', packDrawerContent(packs), trigger); bindPackActions(trigger);
 	}
 	async function openSettings(trigger) {
-		var info = await api.app.info(); var channel = await api.updates.channel(); var packs = await api.packs.list();
+		var info = await api.app.info(); var channel = await api.updates.channel(); var packs; try { packs = await api.packs.refresh(); } catch (error) { packs = await api.packs.list(); }
 		openDrawer('Settings', '<section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>Frame Packs</h3></div>' + packDrawerContent(packs) + '</section><section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>Updates</h3></div><label class="desktop-setting-row"><span><strong>Release channel</strong><small>Stable receives finished releases. Beta also receives preview builds.</small></span><select id="desktop-channel" class="input"><option value="stable" ' + (channel === 'stable' ? 'selected' : '') + '>Stable</option><option value="beta" ' + (channel === 'beta' ? 'selected' : '') + '>Beta</option></select></label><button id="desktop-check-update" class="input" type="button">Check for Updates</button></section><section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>About</h3></div><p class="desktop-about-product"><strong>Set Conjurer ' + escapeHtml(info.version) + '</strong><small>' + escapeHtml(info.platform + ' · ' + info.arch) + '</small></p><p class="desktop-about-copy">A local-first open-source desktop fork of Card Conjurer, originally created by Kyle Burton and maintained by its contributors. No account, cloud storage, or telemetry.</p><button id="desktop-report-issue" class="input" type="button">Report an Issue on GitHub</button></section>', trigger);
 		bindPackActions(trigger);
-		document.querySelector('#desktop-channel').addEventListener('change', function(event) { void api.updates.setChannel(event.target.value); });
-		document.querySelector('#desktop-check-update').addEventListener('click', function() { void api.updates.check(); });
+		var updateButton = document.querySelector('#desktop-check-update');
+		updateButton.insertAdjacentHTML('afterend', '<p id="desktop-update-status" class="desktop-inline-status" aria-live="polite"></p>');
+		document.querySelector('#desktop-channel').addEventListener('change', async function(event) { await api.updates.setChannel(event.target.value); updateSettingsStatus(await api.updates.check()); });
+		updateButton.addEventListener('click', async function() { updateSettingsStatus(await api.updates.check()); });
 		document.querySelector('#desktop-report-issue').addEventListener('click', function() { void api.app.reportIssue(); });
 	}
+	function selectedOnboardingIds() { return Array.from(document.querySelectorAll('#desktop-onboarding-packs [data-pack-id]:checked')).map(function(input) { return input.dataset.packId; }); }
+	function updateOnboardingTotal() {
+		var ids = selectedOnboardingIds(); var bytes = onboardingPacks.filter(function(pack) { return ids.includes(pack.id) && !pack.installed; }).reduce(function(total, pack) { return total + (pack.archiveBytes || 0); }, 0);
+		document.querySelector('#desktop-onboarding-total').textContent = 'Total download: ' + formatBytes(bytes);
+	}
+	function renderOnboardingPacks(packs) {
+		onboardingPacks = packs; document.querySelector('#desktop-onboarding-packs').innerHTML = packs.map(function(pack) { return packCard(pack, false); }).join('');
+		document.querySelectorAll('#desktop-onboarding-packs [data-pack-id]').forEach(function(input) { input.addEventListener('change', updateOnboardingTotal); });
+		updateOnboardingTotal();
+	}
+	async function loadOnboardingCatalog() {
+		var progress = document.querySelector('#desktop-onboarding-progress'); var retry = document.querySelector('#desktop-onboarding-retry'); var button = document.querySelector('#desktop-onboarding-start');
+		progress.hidden = false; progress.classList.remove('is-error'); progress.querySelector('.desktop-pack-progress-label').textContent = 'Loading available frame packs…'; progress.querySelector('i').style.width = '0%'; retry.hidden = true; button.disabled = true;
+		try { var packs = await api.packs.refresh(); renderOnboardingPacks(packs); progress.hidden = true; button.disabled = !packs.filter(function(pack) { return pack.required; }).every(function(pack) { return pack.available; }); }
+		catch (error) { renderOnboardingPacks(await api.packs.list()); progress.classList.add('is-error'); progress.querySelector('.desktop-pack-progress-label').textContent = error.message || String(error); retry.hidden = false; }
+	}
 	async function onboarding() {
-		if (await api.app.onboardingComplete()) return;
-		var packs = await api.packs.list(); document.querySelector('#desktop-onboarding-packs').innerHTML = packs.map(function(pack) { return packCard(pack, false); }).join('');
-		document.querySelector('#desktop-onboarding').showModal();
+		if (await api.app.onboardingComplete()) { resolveEditorReady(); return; }
+		document.querySelector('#desktop-onboarding').showModal(); await loadOnboardingCatalog();
 	}
 	async function completeOnboarding() {
-		var status = document.querySelector('#desktop-onboarding-progress'); var button = document.querySelector('#desktop-onboarding-start');
-		button.disabled = true; status.textContent = 'Preparing frame packs…';
-		try { var ids = Array.from(document.querySelectorAll('#desktop-onboarding-packs [data-pack-id]:checked')).map(function(input) { return input.dataset.packId; }); await api.packs.install(ids); await api.app.completeOnboarding(); location.reload(); }
-		catch (error) { status.textContent = error.message; button.disabled = false; }
+		var progress = document.querySelector('#desktop-onboarding-progress'); var button = document.querySelector('#desktop-onboarding-start');
+		button.disabled = true; progress.hidden = false; progress.classList.remove('is-error'); progress.querySelector('.desktop-pack-progress-label').textContent = 'Preparing selected frame packs…'; progress.querySelector('i').style.width = '0%';
+		try { await api.packs.install(selectedOnboardingIds()); await api.app.completeOnboarding(); location.reload(); }
+		catch (error) { progress.classList.add('is-error'); progress.querySelector('.desktop-pack-progress-label').textContent = error.message || String(error); button.disabled = false; }
 	}
+	function updateSettingsStatus(state) { var status = document.querySelector('#desktop-update-status'); if (status) status.textContent = state.message; }
 	function updateControl(state) {
 		var button = document.querySelector('#desktop-update'); if (!button) return;
-		button.hidden = !['available','downloading','verifying','staged','failed'].includes(state.phase);
+		button.hidden = !['available','downloading','verifying','staged'].includes(state.phase);
 		button.className = 'creator-app-action desktop-update-action phase-' + state.phase;
 		button.disabled = ['downloading','verifying'].includes(state.phase);
 		button.style.setProperty('--update-progress', Math.round(state.progress || 0) * 3.6 + 'deg');
 		button.textContent = state.phase === 'staged' ? 'Restart' : state.phase === 'available' ? 'Update Now' : state.phase === 'failed' ? 'Retry Update' : Math.round(state.progress || 0) + '%';
 		button.title = state.message;
+		updateSettingsStatus(state);
 	}
 	async function updateAction() { var state = await api.updates.state(); if (state.phase === 'staged') return api.app.restart(); if (state.phase === 'available') return api.updates.begin(); return api.updates.check(); }
 	async function ensureRequiredPacks(requirements) {
@@ -207,12 +237,20 @@
 		catch (error) { console.error(error); }
 		finally { button.removeAttribute('aria-busy'); button.disabled = false; }
 	}
-	root.SetConjurerDesktop = {openPacks: openPacks, openSettings: openSettings, openPrint: openPrint, ensureRequiredPacks: ensureRequiredPacks};
+	root.SetConjurerDesktop = {ready: editorReady, openPacks: openPacks, openSettings: openSettings, openPrint: openPrint, ensureRequiredPacks: ensureRequiredPacks};
 
 	shell();
 	document.body.addEventListener('htmx:afterSwap', function() { toolbar(); });
 	var observer = new MutationObserver(toolbar); observer.observe(document.querySelector('#content'), {childList:true, subtree:true});
-	api.packs.onProgress(function(progress) { if (activePackActionId && progress.id !== activePackActionId) return; if (setPackProgress(progress)) return; var status = document.querySelector('#desktop-onboarding-progress'); if (status) status.textContent = progress.message + ' ' + Math.round(progress.percent) + '%'; });
+	api.packs.onProgress(function(progress) {
+		var onboardingDialog = document.querySelector('#desktop-onboarding');
+		if (onboardingDialog && onboardingDialog.open) {
+			var container = document.querySelector('#desktop-onboarding-progress'); container.hidden = false; container.classList.remove('is-error');
+			container.querySelector('.desktop-pack-progress-label').textContent = progress.message + ' ' + Math.round(progress.percent) + '% · ' + formatBytes(progress.receivedBytes) + ' / ' + formatBytes(progress.totalBytes);
+			container.querySelector('i').style.width = Math.max(0, Math.min(100, progress.percent)) + '%'; return;
+		}
+		setPackProgress(progress);
+	});
 	api.updates.onState(updateControl); api.files.onAssociatedFile(function(file) { if (root.CardConjurerSets) void root.CardConjurerSets.importText(file.name.endsWith('.cardconjurer-card') ? 'card' : 'set', file.content); });
 	void api.updates.state().then(updateControl); void onboarding(); toolbar();
 })(window);

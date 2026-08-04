@@ -3210,6 +3210,7 @@ html.desktop-booting #desktop-boot-screen { position: fixed; inset: 0; z-index: 
 .desktop-menu-action { position: fixed; top: .825rem; right: var(--workspace-panel-gutter); z-index: 3480; box-sizing: border-box; width: 2.35rem; height: 2.35rem; }
 .desktop-menu-action svg { width: 1.15rem; height: 1.15rem; }
 .desktop-update-action { position: relative; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 5.7rem; height: 2.35rem; min-height: 2.35rem; padding: 0 .75rem; overflow: hidden; border-color: var(--workspace-accent); color: #0b151d; background: var(--workspace-accent); font: inherit; font-size: .7rem; font-weight: 800; white-space: nowrap; }
+.desktop-update-action[hidden] { display: none !important; }
 .desktop-update-action.phase-downloading,.desktop-update-action.phase-verifying { color: #0b151d; }
 .desktop-update-action.phase-downloading::before,.desktop-update-action.phase-verifying::before { content: ''; width: .9rem; height: .9rem; margin-right: .35rem; border-radius: 50%; background: conic-gradient(#0b151d var(--update-progress), rgba(11,21,29,.22) 0); -webkit-mask: radial-gradient(circle, transparent 46%, #000 49%); mask: radial-gradient(circle, transparent 46%, #000 49%); }
 .desktop-overlay { position: fixed; inset: 0; z-index: 3490; background: rgba(2,6,23,.68); }
@@ -3242,12 +3243,18 @@ html.desktop-booting #desktop-boot-screen { position: fixed; inset: 0; z-index: 
 .desktop-about-product small,.desktop-about-copy { color: var(--workspace-muted); font-size: .65rem; line-height: 1.45; }
 .desktop-onboarding { width: min(29rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); font-family: Montserrat-Medium, Helvetica, Tahoma, Verdana, sans-serif; }
 .desktop-onboarding form { max-height: calc(100vh - 4rem); gap: .8rem; overflow-y: auto; }
-.desktop-onboarding-header { display: grid; justify-items: center; text-align: center; }
+.desktop-onboarding-header { display: grid; justify-items: center; padding: 0; text-align: center; }
+.desktop-onboarding-header,.desktop-onboarding-footer { overflow: visible; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
 .desktop-onboarding-mark { display: block; width: 3.5rem; height: 3.5rem; margin: 0 0 .7rem; object-fit: contain; }
 .desktop-onboarding h2 { margin: 0; color: var(--workspace-text); font-size: 1rem; line-height: 1.2; }
 .desktop-onboarding p { margin: .35rem 0 0; color: var(--workspace-muted); font-size: .7rem; line-height: 1.45; }
 .desktop-onboarding-pack-list { gap: .35rem; margin: .15rem 0 0; }
 .sets-dialog .desktop-onboarding-pack { display: flex; align-items: center; min-height: 2.35rem; margin: 0; padding: .4rem .55rem .4rem 2.45rem; border: 1px solid var(--workspace-border-soft); border-radius: var(--workspace-radius,.55rem); color: var(--workspace-text); background: var(--workspace-panel-raised); font-size: .72rem; font-weight: 700; }
+.desktop-onboarding-pack > span:first-child { display: grid; flex: 1 1 auto; gap: .16rem; }
+.desktop-onboarding-pack > span:first-child small { color: var(--workspace-muted); font-size: .6rem; font-weight: 500; }
+.desktop-onboarding-download { display: flex; align-items: center; justify-content: space-between; gap: .7rem; color: var(--workspace-text); font-size: .68rem; }
+.desktop-onboarding-download .input { width: auto; min-height: 2rem; padding: .35rem .6rem; font-size: .62rem; }
+.desktop-onboarding-progress { grid-column: auto; }
 .desktop-onboarding-pack .checkmark { top: 50%; left: .55rem; width: 1.35rem; height: 1.35rem; transform: translateY(-50%); border: 1px solid #465269; background: #0b1017; box-shadow: inset 0 0 0 2px #141b26; }
 .desktop-onboarding-pack .checkmark:after { left: .43rem; top: .2rem; border-color: #071310; }
 .desktop-onboarding-pack input:checked ~ .checkmark { border-color: var(--workspace-accent-strong); background: var(--workspace-accent); box-shadow: 0 0 0 3px rgba(110,231,216,.09); }
@@ -3257,7 +3264,7 @@ html.desktop-booting #desktop-boot-screen { position: fixed; inset: 0; z-index: 
 .desktop-onboarding-pack input:disabled ~ .checkmark { opacity: .58; cursor: not-allowed; }
 .desktop-onboarding-pack:has(input:disabled):hover .checkmark { border-color: #465269; }
 .desktop-onboarding-pack:has(input:checked:disabled):hover .checkmark { border-color: var(--workspace-accent-strong); }
-.desktop-onboarding-footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; padding-top: .7rem; border-top: 1px solid var(--workspace-border-soft); }
+.desktop-onboarding-footer { display: flex; grid-template-columns: none; align-items: flex-end; justify-content: space-between; gap: 1rem; padding: .7rem 0 0; border-top: 1px solid var(--workspace-border-soft); }
 .desktop-onboarding-credit { min-width: 0; flex: 1 1 auto; margin: 0; color: var(--workspace-muted); font-size: .52rem; line-height: 1.4; text-align: left; }
 .desktop-onboarding-credit a { flex: 0 0 auto; color: var(--workspace-accent); font-size: .54rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
 .desktop-onboarding-credit a:hover,.desktop-onboarding-credit a:focus-visible { text-decoration: underline; }

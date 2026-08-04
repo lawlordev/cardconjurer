@@ -246,6 +246,18 @@
 	async function bootstrap() {
 		var loaded = await Storage.loadState();
 		state = Object.assign(state, loaded);
+		var damagedCards = state.cards.filter(function(record) { return !record.cardData || !record.cardData.text || typeof record.cardData.text !== 'object' || Array.isArray(record.cardData.text); });
+		if (damagedCards.length && initialBlankCardData && initialBlankCardData.text) {
+			if (root.setConjurerDesktop) await root.setConjurerDesktop.storage.createPreUpdateSnapshot('repair-beta-card-layouts');
+			damagedCards.forEach(function(record) {
+				var current = record.cardData && typeof record.cardData === 'object' ? record.cardData : {};
+				var repaired = Object.assign({}, clone(initialBlankCardData), current);
+				repaired.text = clone(initialBlankCardData.text);
+				if (!Array.isArray(current.frames) || !current.frames.length) repaired.frames = clone(initialBlankCardData.frames || []);
+				record.cardData = repaired;
+			});
+			await persist(true);
+		}
 		if (!state.sets.length) {
 			var set = Model.createDefaultSet([]);
 			var blankData = initialBlankCardData || (typeof cardStorageSnapshot === 'function' ? cardStorageSnapshot() : {});
@@ -1395,6 +1407,7 @@
 	async function initialize() {
 		if (initialized) return;
 		try {
+			if (root.SetConjurerDesktop && root.SetConjurerDesktop.ready) await root.SetConjurerDesktop.ready;
 			loadWorkspaceLayout(); applyWorkspaceLayout(); initializeWorkspaceResizers();
 			if (root.frameCatalogReadyPromise) await root.frameCatalogReadyPromise;
 			initialBlankCardData = stripSetOwned(typeof cardStorageSnapshot === 'function' ? cardStorageSnapshot() : {});

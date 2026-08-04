@@ -7,7 +7,7 @@ Public release is intentionally manual. Before publishing:
 1. Confirm the inherited GNU GPL v3.0 license and contributor credits remain present in the packaged release.
 2. Configure Apple Developer ID Application credentials and App Store Connect API notarization credentials.
 3. Configure Azure Artifact Signing when public-trust identity validation is available. Until then, Windows artifacts are explicitly labeled unsigned previews.
-4. Publish an immutable `packs-vX.Y.Z` asset-pack release containing at least Set Symbols and Standard.
+4. Publish an immutable `packs-vX.Y.Z` asset-pack release containing all catalog entries before publishing the application that consumes it. Archives target 256 MiB source parts, every payload file has one owner, and the catalog records measured compressed and installed sizes.
 5. Validate macOS arm64, best-effort macOS x64, and Windows x64 artifacts on real systems.
 
 ## GitHub secrets
@@ -45,8 +45,12 @@ For the current unsigned Windows preview lane, use `windows_signing: auto`. Afte
 
 Frame packs use the separate **Release Frame Packs** workflow and `packs-vX.Y.Z` namespace. They are prereleases and never become the repository's latest application release. Pack archives are immutable; new versions receive new URLs and SHA-256 values.
 
+Inspect `frame-pack-ownership.json` before promotion: renderer-global base assets must not be present, every payload file must have exactly one owner, and no compressed archive may exceed the desktop safety limit. Complete onboarding with at least Standard plus two optional packs and verify that the single aggregate bar is monotonic, reaches exactly 100 percent, and resumes after interrupting one archive.
+
 ## Updates
 
-The app checks GitHub metadata but downloads nothing until **Update Now**. It creates a SQLite snapshot immediately before staging, verifies the published checksum, shows determinate circular progress, and changes the same control to **Restart** when ready. Stable is the default; beta is explicit opt-in.
+The app checks GitHub metadata after startup but downloads nothing until **Update Now**. The toolbar action remains absent while idle, checking, up to date, offline, or failed; those details remain in Settings. It creates a SQLite snapshot immediately before staging, verifies the published checksum, shows determinate circular progress, and changes the same control to **Restart** when ready. Windows launches the staged Setup and exits the old process without relaunching into Squirrel's installation lock. Stable is the default; beta is explicit opt-in.
+
+Before release, install the Windows Setup and run the installed-artifact check. Also validate an N-1 upgrade using a disposable user profile and confirm that workspace data, active pack generations, Start-menu/Desktop shortcuts, Installed Apps registration, and the running version survive the upgrade. A damaged beta workspace must create a `repair-beta-card-layouts` snapshot before targeted card repair.
 
 No workflow releases automatically, and no website or S3 bucket is touched.
