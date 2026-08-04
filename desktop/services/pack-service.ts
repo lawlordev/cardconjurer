@@ -16,13 +16,15 @@ const PACK_DETAILS: Record<PackId, {displayName: string; description: string; re
 };
 const REQUIRED_PACK_IDS: PackId[] = ['set-symbols', 'standard'];
 const RELEASES_URL = 'https://api.github.com/repos/lawlordev/cardconjurer/releases?per_page=30';
-const MAX_PACK_BYTES = 3 * 1024 * 1024 * 1024;
+const MAX_ARCHIVE_BYTES = 2 * 1024 * 1024 * 1024;
+const MAX_PACK_BYTES = 8 * 1024 * 1024 * 1024;
 const MAX_EXPANDED_BYTES = 8 * 1024 * 1024 * 1024;
 
 interface InstalledPack {id: PackId; version: string; sourceRoot: string; installedAt: string}
 interface InstallationState {schemaVersion: 1; packs: InstalledPack[]}
-interface CatalogPack {id: PackId; version: string; url: string; sha256: string; archiveBytes: number; installedBytes: number}
-interface Catalog {schemaVersion: 1; packs: CatalogPack[]}
+interface CatalogArchive {url: string; sha256: string; archiveBytes: number}
+interface CatalogPack {id: PackId; version: string; archives: CatalogArchive[]; archiveBytes: number; installedBytes: number}
+interface Catalog {schemaVersion: 2; packs: CatalogPack[]}
 
 export class PackService {
   readonly #statePath: string;
@@ -30,7 +32,7 @@ export class PackService {
   readonly #developmentRoot: string | null;
   readonly #seedRoot: string | null;
   #state: InstallationState;
-  #catalog: Catalog = {schemaVersion: 1, packs: []};
+  #catalog: Catalog = {schemaVersion: 2, packs: []};
   #progress: (value: {id: PackId; percent: number; message: string}) => void = () => {};
 
   constructor(options: {userDataPath: string; appRoot: string; resourcesPath: string; packaged: boolean}) {
@@ -87,42 +89,51 @@ export class PackService {
     const catalogResponse = await fetch(asset.browser_download_url, {headers: {'User-Agent': 'Set-Conjurer'}});
     if (!catalogResponse.ok) throw new Error('Could not download the frame-pack catalog.');
     const value = await catalogResponse.json() as Catalog;
-    if (value.schemaVersion !== 1 || !Array.isArray(value.packs)) throw new Error('The frame-pack catalog is invalid.');
+    if (value.schemaVersion !== 2 || !Array.isArray(value.packs)) throw new Error('The frame-pack catalog is invalid.');
     for (const pack of value.packs) {
-      if (!PACK_IDS.includes(pack.id) || !/^https:\/\//.test(pack.url) || !/^[a-f0-9]{64}$/i.test(pack.sha256)) throw new Error('The frame-pack catalog contains an unsafe entry.');
-      if (pack.archiveBytes < 1 || pack.archiveBytes > MAX_PACK_BYTES || pack.installedBytes > MAX_EXPANDED_BYTES) throw new Error('A frame pack exceeds the application safety limit.');
+      if (!PACK_IDS.includes(pack.id) || !Array.isArray(pack.archives) || pack.archives.length < 1) throw new Error('The frame-pack catalog contains an unsafe entry.');
+      for (const archive of pack.archives) {
+        if (!/^https:\/\//.test(archive.url) || !/^[a-f0-9]{64}$/i.test(archive.sha256)) throw new Error('The frame-pack catalog contains an unsafe entry.');
+        if (archive.archiveBytes < 1 || archive.archiveBytes >= MAX_ARCHIVE_BYTES) throw new Error('A frame-pack archive exceeds the application safety limit.');
+      }
+      const declaredArchiveBytes = pack.archives.reduce((total, archive) => total + archive.archiveBytes, 0);
+      if (pack.archiveBytes !== declaredArchiveBytes || pack.archiveBytes > MAX_PACK_BYTES || pack.installedBytes > MAX_EXPANDED_BYTES) throw new Error('A frame pack exceeds the application safety limit.');
     }
     this.#catalog = value;
     writeFileSync(path.join(this.#packRoot, 'catalog.json'), `${JSON.stringify(value, null, 2)}\n`, {mode: 0o600});
   }
 
   async #installRemote(id: PackId, catalog: CatalogPack): Promise<string> {
-    this.#progress({id, percent: 2, message: `Downloading ${PACK_DETAILS[id].displayName}…`});
-    const response = await fetch(catalog.url, {headers: {'User-Agent': 'Set-Conjurer'}});
-    if (!response.ok || !response.body) throw new Error(`Could not download ${PACK_DETAILS[id].displayName}.`);
-    const reader = response.body.getReader(); const chunks: Uint8Array[] = []; let received = 0;
-    for (;;) {
-      const {done, value} = await reader.read(); if (done) break; received += value.byteLength;
-      if (received > MAX_PACK_BYTES) throw new Error('The frame-pack download exceeded its safety limit.');
-      chunks.push(value); this.#progress({id, percent: Math.min(70, 5 + (received / Math.max(catalog.archiveBytes, 1)) * 65), message: `Downloading ${PACK_DETAILS[id].displayName}…`});
-    }
-    const archive = Buffer.concat(chunks);
-    if (createHash('sha256').update(archive).digest('hex').toLowerCase() !== catalog.sha256.toLowerCase()) throw new Error(`${PACK_DETAILS[id].displayName} failed checksum verification.`);
-    this.#progress({id, percent: 76, message: `Verifying ${PACK_DETAILS[id].displayName}…`});
-    const zip = await JSZip.loadAsync(archive, {checkCRC32: true});
     const temporary = path.join(this.#packRoot, `.install-${id}-${Date.now()}`); const destination = path.join(this.#packRoot, id, catalog.version);
-    mkdirSync(temporary, {recursive: true}); let expandedBytes = 0;
+    mkdirSync(temporary, {recursive: true}); let expandedBytes = 0; let receivedForPack = 0;
     try {
-      for (const [name, entry] of Object.entries(zip.files)) {
-        const normalized = name.replace(/\\/g, '/');
-        if (!normalized || normalized.startsWith('/') || normalized.split('/').includes('..')) throw new Error('A frame pack attempted to write outside its install directory.');
-        const permissions = typeof entry.unixPermissions === 'number' ? entry.unixPermissions : 0;
-        if ((permissions & 0o170000) === 0o120000) throw new Error('Frame-pack symbolic links are not allowed.');
-        const target = path.join(temporary, normalized);
-        if (entry.dir) { mkdirSync(target, {recursive: true}); continue; }
-        const data = await entry.async('nodebuffer'); expandedBytes += data.byteLength;
-        if (expandedBytes > MAX_EXPANDED_BYTES || expandedBytes > Math.max(catalog.installedBytes * 1.1, catalog.installedBytes + 1024 * 1024)) throw new Error('The frame pack expanded beyond its declared size.');
-        mkdirSync(path.dirname(target), {recursive: true}); writeFileSync(target, data, {mode: 0o600});
+      for (const [archiveIndex, catalogArchive] of catalog.archives.entries()) {
+        const label = catalog.archives.length > 1 ? ` (${archiveIndex + 1}/${catalog.archives.length})` : '';
+        this.#progress({id, percent: Math.min(70, 5 + (receivedForPack / Math.max(catalog.archiveBytes, 1)) * 65), message: `Downloading ${PACK_DETAILS[id].displayName}${label}…`});
+        const response = await fetch(catalogArchive.url, {headers: {'User-Agent': 'Set-Conjurer'}});
+        if (!response.ok || !response.body) throw new Error(`Could not download ${PACK_DETAILS[id].displayName}.`);
+        const reader = response.body.getReader(); const chunks: Uint8Array[] = []; let receivedForArchive = 0;
+        for (;;) {
+          const {done, value} = await reader.read(); if (done) break; receivedForArchive += value.byteLength; receivedForPack += value.byteLength;
+          if (receivedForArchive >= MAX_ARCHIVE_BYTES || receivedForPack > MAX_PACK_BYTES) throw new Error('The frame-pack download exceeded its safety limit.');
+          chunks.push(value); this.#progress({id, percent: Math.min(70, 5 + (receivedForPack / Math.max(catalog.archiveBytes, 1)) * 65), message: `Downloading ${PACK_DETAILS[id].displayName}${label}…`});
+        }
+        if (receivedForArchive !== catalogArchive.archiveBytes) throw new Error(`${PACK_DETAILS[id].displayName} did not match its declared download size.`);
+        const archive = Buffer.concat(chunks);
+        if (createHash('sha256').update(archive).digest('hex').toLowerCase() !== catalogArchive.sha256.toLowerCase()) throw new Error(`${PACK_DETAILS[id].displayName} failed checksum verification.`);
+        this.#progress({id, percent: 76, message: `Verifying ${PACK_DETAILS[id].displayName}${label}…`});
+        const zip = await JSZip.loadAsync(archive, {checkCRC32: true});
+        for (const [name, entry] of Object.entries(zip.files)) {
+          const normalized = name.replace(/\\/g, '/');
+          if (!normalized || normalized.startsWith('/') || normalized.split('/').includes('..')) throw new Error('A frame pack attempted to write outside its install directory.');
+          const permissions = typeof entry.unixPermissions === 'number' ? entry.unixPermissions : 0;
+          if ((permissions & 0o170000) === 0o120000) throw new Error('Frame-pack symbolic links are not allowed.');
+          const target = path.join(temporary, normalized);
+          if (entry.dir) { mkdirSync(target, {recursive: true}); continue; }
+          const data = await entry.async('nodebuffer'); expandedBytes += data.byteLength;
+          if (expandedBytes > MAX_EXPANDED_BYTES || expandedBytes > Math.max(catalog.installedBytes * 1.1, catalog.installedBytes + 1024 * 1024)) throw new Error('The frame pack expanded beyond its declared size.');
+          mkdirSync(path.dirname(target), {recursive: true}); writeFileSync(target, data, {mode: 0o600});
+        }
       }
       mkdirSync(path.dirname(destination), {recursive: true}); rmSync(destination, {recursive: true, force: true}); renameSync(temporary, destination);
       return destination;
