@@ -8,7 +8,7 @@
 - Text styles: `.creator-eyebrow` for compact uppercase context and `.input` for controls — defined in `css/style-9.css`.
 
 ## Screen scaffold
-- Header: `.creator-app-bar` aligns the set selector with the set-count edge and the fixed Settings control with the right-panel gutter; the save card preserves the same `.5rem` control gap used by New Set/Undo/Redo — `creator/index.html` and `css/style-9.css`.
+- Header: `.creator-app-bar` aligns the set selector with the set-count edge and the fixed Settings control with the right-panel gutter; the content-sized save card preserves the same `.5rem` control gap used by New Set/Undo/Redo — `creator/index.html` and `css/style-9.css`.
 - Workspace: three-column `.creator-grid` containing the set library, live preview, and editor menu — `creator/index.html` and `css/style-9.css`.
 - Primary and secondary buttons: teal is explicitly scoped to `.creator-new-set`, the New Card `.sets-primary`, and segmented-tab selectors; every other action uses the shared dark bordered control treatment — `creator/index.html` and `css/style-9.css`.
 - Drawers: shared `.textbox-editor` left drawer with a close-button row followed by one `.textbox-editor-title` and a divider; its fixed-height input, select, and button controls use zero block padding for consistent vertical centering across card text, searches, art layout, and watermark layout — `creator/index.html` and `css/style-9.css`.
@@ -39,7 +39,7 @@
 | Keep card thumbnails current | Final canvas renders patch the active card thumbnail in place and persist it for reloads | `js/creator-23.js`, `js/setWorkspace.js` |
 | Resize workspace panels | `.workspace-resizer` draggable separators with persisted widths | `creator/index.html`, `js/setWorkspace.js` |
 | Hydrate the saved workspace | Full-screen `.creator-loading-screen` until preferences, set data, and the active card finish rendering | `creator/index.html`, `js/setWorkspace.js` |
-| Communicate autosave health | Fixed-width `.creator-app-context` status card matching the Settings button height; blue Saved successfully, minimum-half-second orange Saving, and red Issue saving states | `creator/index.html`, `js/setWorkspace.js`, `css/style-9.css` |
+| Communicate autosave health | Content-sized `.creator-app-context` status card matching the Settings button height, with consistent horizontal padding; it remains blue Saved successfully during writes and changes to red Issue saving only after a failed write | `creator/index.html`, `js/setWorkspace.js`, `css/style-9.css` |
 | Manage desktop settings and asset packs | One left `.desktop-drawer` opened from the fixed top-right Settings control; grouped Frame Packs, Updates, and About sections use the layout-drawer card pattern, with locked installed rows for required Set Symbols and Standard above direct optional Install/Uninstall progress | `js/desktopBridge.js`, `css/style-9.css` |
 | Complete first-run setup | Workspace-themed `.sets-dialog` with compact multi-select pack rows and one primary action | `js/desktopBridge.js`, `css/style-9.css` |
 | Configure and preview print jobs | Minimal full-workspace print view: standard app-bar Back/select/Print controls, visual card rows with compact minus/count/plus quantity controls, and unlabelled paper previews; list thumbnails stay lightweight while each printable front receives a dedicated full-resolution PNG source | `js/desktopBridge.js`, `js/setWorkspace.js`, `js/printModel.js`, `css/style-9.css` |

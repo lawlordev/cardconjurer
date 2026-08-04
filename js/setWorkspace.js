@@ -9,10 +9,6 @@
 	var captureTimer = null;
 	var editorDirty = false;
 	var persistTimer = null;
-	var statusTransitionTimer = null;
-	var statusTransitionRevision = 0;
-	var statusSavingSince = 0;
-	var currentStatusKind = 'saved';
 	var drawerReturnFocus = null;
 	var cardSearchReturnFocus = null;
 	var pendingCardSelection = null;
@@ -181,7 +177,6 @@
 		clearTimeout(persistTimer);
 		var save = async function() {
 			state.revision = Date.now();
-			setStatus('Saving', 'saving');
 			try {
 				await Storage.saveState(state);
 				setStatus('Saved successfully', 'saved');
@@ -216,36 +211,17 @@
 	function applyStatus(message, kind) {
 		var globalStatus = document.querySelector('#sets-global-status');
 		var localStatus = document.querySelector('#sets-status');
-		var globalMessage = kind === 'saving' ? 'Saving' : kind === 'error' ? 'Issue saving' : 'Saved successfully';
+		var globalMessage = kind === 'error' ? 'Issue saving' : 'Saved successfully';
 		if (globalStatus) globalStatus.textContent = globalMessage;
 		if (localStatus) { localStatus.textContent = message; localStatus.dataset.kind = kind || ''; }
 		var dot = document.querySelector('.creator-status-dot');
 		if (dot) dot.dataset.kind = kind || '';
 		var context = document.querySelector('.creator-app-context');
 		if (context) context.dataset.kind = kind || '';
-		currentStatusKind = kind;
 	}
 
 	function setStatus(message, kind) {
-		kind = kind === 'saving' || kind === 'error' ? kind : 'saved';
-		statusTransitionRevision += 1;
-		var revision = statusTransitionRevision;
-		clearTimeout(statusTransitionTimer);
-		statusTransitionTimer = null;
-		if (kind === 'saving') {
-			if (currentStatusKind !== 'saving') statusSavingSince = Date.now();
-			applyStatus(message, kind);
-			return;
-		}
-		if (kind === 'saved' && currentStatusKind === 'saving') {
-			var remaining = Math.max(0, 500 - (Date.now() - statusSavingSince));
-			if (remaining) {
-				statusTransitionTimer = setTimeout(function() {
-					if (revision === statusTransitionRevision) applyStatus(message, kind);
-				}, remaining);
-				return;
-			}
-		}
+		kind = kind === 'error' ? 'error' : 'saved';
 		applyStatus(message, kind);
 	}
 
@@ -1150,7 +1126,6 @@
 		await captureActiveCard();
 		var beforeImport = snapshot();
 		closeCardSearch(false);
-		setStatus('Importing card…', 'saving');
 		try {
 			var record = Model.createDefaultCard(set.id, stripSetOwned(initialBlankCardData || {}));
 			record.sortOrder = Math.max(0, ...cardsFor(set.id).map(function(item) { return Number(item.sortOrder || 0); })) + 1;
@@ -1396,7 +1371,7 @@
 		}
 	}
 
-	if (channel) channel.onmessage = async function(event) { if (!initialized || !event.data || event.data.revision <= state.revision) return; setStatus('Another tab changed this set — refreshing…','saving'); try { var loaded=await Storage.loadState(); state=Object.assign(state,loaded); numberAllSets(); renderWorkspace(); await loadActiveCard(); } catch(error){showWorkspaceError(error.message);} };
+	if (channel) channel.onmessage = async function(event) { if (!initialized || !event.data || event.data.revision <= state.revision) return; try { var loaded=await Storage.loadState(); state=Object.assign(state,loaded); numberAllSets(); renderWorkspace(); await loadActiveCard(); } catch(error){showWorkspaceError(error.message);} };
 
 	root.CardConjurerSets = {
 		initialize: initialize, captureActiveCard: captureActiveCard, queueCapture: queueCapture, resetActiveCard: resetActiveCard,
