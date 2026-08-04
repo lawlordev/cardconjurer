@@ -31,6 +31,7 @@ test('onboarding presents one aggregate operation progress bar', () => {
 
 test('Windows Squirrel lifecycle creates launch shortcuts and uses a stable AUMID', () => {
   const main = source('desktop/main.ts');
+  const forge = source('forge.config.ts');
   assert.match(main, /--squirrel-/);
   assert.match(main, /--createShortcut/);
   assert.match(main, /--removeShortcut/);
@@ -39,6 +40,8 @@ test('Windows Squirrel lifecycle creates launch shortcuts and uses a stable AUMI
   assert.doesNotMatch(main, /startsWith\('--squirrel-'\)/);
   assert.match(main, /setTimeout\(\(\) => app\.quit\(\), 1_000\)/);
   assert.match(main, /WINDOWS_APP_USER_MODEL_ID = 'com\.squirrel\.set_conjurer\.set-conjurer'/);
+  assert.match(forge, /SquirrelAwareVersion: '1'/);
+  assert.match(forge, /markSquirrelAware/);
 });
 
 test('base package retains renderer-global frame assets', () => {
