@@ -6,7 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 interface RequestMessage {
   id: number;
-  action: 'load' | 'save' | 'flush' | 'snapshot' | 'close';
+  action: 'load' | 'save' | 'flush' | 'snapshot' | 'restore' | 'close';
   payload?: unknown;
 }
 
@@ -117,6 +117,28 @@ function snapshot(label: string): string {
   return destination;
 }
 
+function restore(snapshotPath: string): void {
+  const normalizedRoot = path.resolve(backupRoot);
+  const normalizedSnapshot = path.resolve(snapshotPath);
+  if (!normalizedSnapshot.startsWith(`${normalizedRoot}${path.sep}`)) throw new Error('The requested recovery snapshot is outside the managed backup directory.');
+  const sourcePath = path.join(normalizedSnapshot, path.basename(databasePath));
+  const backup = new DatabaseSync(sourcePath, {readOnly: true});
+  try {
+    const integrity = backup.prepare('PRAGMA integrity_check').get() as {integrity_check?: string};
+    if (integrity.integrity_check !== 'ok') throw new Error('The recovery snapshot failed its integrity check.');
+    const row = backup.prepare('SELECT revision, payload_json, updated_at FROM app_state WHERE id = 1').get() as {revision?: number; payload_json?: string; updated_at?: string} | undefined;
+    database.exec('BEGIN IMMEDIATE');
+    try {
+      database.prepare('DELETE FROM app_state WHERE id = 1').run();
+      if (row?.payload_json) saveStatement.run(Number(row.revision || 0), row.payload_json, row.updated_at || new Date().toISOString());
+      database.exec('COMMIT');
+    } catch (error) {
+      database.exec('ROLLBACK');
+      throw error;
+    }
+  } finally { backup.close(); }
+}
+
 port.on('message', (message: RequestMessage) => {
   try {
     let value: unknown;
@@ -127,6 +149,10 @@ port.on('message', (message: RequestMessage) => {
       value = null;
     }
     if (message.action === 'snapshot') value = snapshot(String(message.payload || 'pre-update'));
+    if (message.action === 'restore') {
+      restore(String(message.payload || ''));
+      value = null;
+    }
     if (message.action === 'close') {
       database.close();
       value = null;

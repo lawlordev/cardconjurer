@@ -38,8 +38,10 @@ test('Windows Squirrel lifecycle creates launch shortcuts and uses a stable AUMI
 });
 
 test('base package retains renderer-global frame assets', () => {
-  const forge = source('forge.config.ts');
-  for (const asset of ['cornerCutout', 'maskRightHalf', 'maskMiddleThird', 'serial']) assert.match(forge, new RegExp(asset));
+	const forge = source('forge.config.ts');
+	const config = JSON.parse(source('packs/config.json'));
+	for (const asset of ['cornerCutout.png', 'maskRightHalf.png', 'maskMiddleThird.png', 'serial.png']) assert.ok(config.baseRuntimeAssets.some((value) => value.endsWith(asset)));
+	assert.match(forge, /packConfig\.baseRuntimeAssets/);
 });
 
 test('update action is absent unless the current state is actionable', () => {
@@ -48,6 +50,18 @@ test('update action is absent unless the current state is actionable', () => {
   assert.match(bridge, /\['available','downloading','verifying','staged'\]/);
   assert.doesNotMatch(bridge, /\['available','downloading','verifying','staged','failed'\]/);
   assert.match(css, /\.desktop-update-action\[hidden\]\s*\{\s*display:\s*none\s*!important/);
+});
+
+test('installed pack updates are presented only through the consolidated transaction', () => {
+  const bridge = source('js/desktopBridge.js');
+  const main = source('desktop/main.ts');
+  const coordinator = source('desktop/services/update-coordinator.ts');
+  assert.match(bridge, /pack\.installed && pack\.updateAvailable[\s\S]{0,160}Update available/);
+  assert.doesNotMatch(bridge, /pack\.updateAvailable[\s\S]{0,300}data-install-pack/);
+  assert.match(main, /new UpdateCoordinator/);
+  assert.match(coordinator, /stageUpdates/);
+  assert.match(coordinator, /activateStaged/);
+  assert.match(main, /storage!\.snapshot\(`update-\$\{Date\.now\(\)\}`\)/);
 });
 
 test('damaged beta cards are snapshotted and repaired without touching valid frameless cards', () => {

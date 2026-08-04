@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 $resolvedInstaller = (Resolve-Path -LiteralPath $Installer).Path
 $appRoot = Join-Path $env:LOCALAPPDATA 'set_conjurer'
 $updateExe = Join-Path $appRoot 'Update.exe'
-$currentExe = Join-Path $appRoot 'current\set-conjurer.exe'
+$stableExe = Join-Path $appRoot 'set-conjurer.exe'
 $startMenuShortcut = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Set Conjurer.lnk'
 $desktopShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Set Conjurer.lnk'
 
@@ -18,7 +18,7 @@ while ((Get-Date) -lt $deadline -and !(Test-Path -LiteralPath $startMenuShortcut
   Start-Sleep -Milliseconds 250
 }
 
-foreach ($required in @($updateExe, $currentExe, $startMenuShortcut, $desktopShortcut)) {
+foreach ($required in @($updateExe, $stableExe, $startMenuShortcut, $desktopShortcut)) {
   if (!(Test-Path -LiteralPath $required)) { throw "Windows installation integration is missing: $required" }
 }
 

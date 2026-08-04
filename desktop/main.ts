@@ -12,7 +12,8 @@ import {
 import { FileService } from './services/file-service.js';
 import { PackService } from './services/pack-service.js';
 import { StorageService } from './services/storage-service.js';
-import { UpdateService } from './services/update-service.js';
+import { UpdateCoordinator } from './services/update-coordinator.js';
+import { UpdateService as AppUpdateService } from './services/update-service.js';
 
 function handleSquirrelLifecycle(): boolean {
   if (process.platform !== 'win32') return false;
@@ -41,7 +42,7 @@ protocol.registerSchemesAsPrivileged([{
 let mainWindow: BrowserWindow | null = null;
 let storage: StorageService | null = null;
 let packs: PackService | null = null;
-let updates: UpdateService | null = null;
+let updates: UpdateCoordinator | null = null;
 const liveReloadWatchers: FSWatcher[] = [];
 const files = new FileService();
 const pendingAssociatedFiles: string[] = [];
@@ -254,7 +255,11 @@ function registerIPC(): void {
   ipcMain.handle(IPC.packsRemove, trusted((_event, id: unknown) => packs!.remove(packIdSchema.parse(id))));
   ipcMain.handle(IPC.updateState, trusted(() => updates!.state()));
   ipcMain.handle(IPC.updateCheck, trusted(() => updates!.check()));
-  ipcMain.handle(IPC.updateBegin, trusted(async () => { await storage!.flush(); await storage!.snapshot(`update-${Date.now()}`); return updates!.begin(); }));
+  ipcMain.handle(IPC.updateBegin, trusted(async () => {
+    await storage!.flush();
+    const snapshotPath = await storage!.snapshot(`update-${Date.now()}`);
+    return updates!.begin(snapshotPath);
+  }));
   ipcMain.handle(IPC.updateChannel, trusted(() => updates!.channel()));
   ipcMain.handle(IPC.updateSetChannel, trusted((_event, channel: unknown) => updates!.setChannel(channelSchema.parse(channel))));
   ipcMain.handle(IPC.externalOpen, trusted(async (_event, value: unknown) => { await shell.openExternal(externalUrlSchema.parse(value)); }));
@@ -292,7 +297,13 @@ function registerIPC(): void {
     app.exit(0);
   }));
   ipcMain.on('desktop:renderer-ready', (event) => {
-    try { validateSender(event as unknown as Electron.IpcMainInvokeEvent); rendererReady = true; void dispatchAssociatedFiles(); } catch {}
+    try {
+      validateSender(event as unknown as Electron.IpcMainInvokeEvent);
+      const firstReady = !rendererReady;
+      rendererReady = true;
+      void dispatchAssociatedFiles();
+      if (firstReady && app.isPackaged && !process.env.SET_CONJURER_TEST_PACK_ROOT) void updates?.check({background: true});
+    } catch {}
   });
 }
 
@@ -318,18 +329,16 @@ if (!squirrelLifecycleEvent) app.whenReady().then(async () => {
   mkdirSync(userDataPath, {recursive: true});
   const appRoot = app.getAppPath();
   storage = new StorageService(userDataPath);
-  packs = new PackService({userDataPath, appRoot, resourcesPath: process.resourcesPath, packaged: app.isPackaged});
-  updates = new UpdateService({userDataPath, currentVersion: app.getVersion()});
+  packs = new PackService({userDataPath, appRoot, resourcesPath: process.resourcesPath, packaged: app.isPackaged, currentVersion: app.getVersion()});
+  const appUpdates = new AppUpdateService({userDataPath, currentVersion: app.getVersion()});
+  updates = new UpdateCoordinator({userDataPath, currentVersion: app.getVersion(), packs, appUpdates, storage});
+  await updates.recoverAtStartup();
   packs.onProgress((value) => mainWindow?.webContents.send(IPC.packsProgress, value));
   installContentSecurityPolicy(appRoot);
   await registerApplicationProtocol(appRoot);
   registerIPC();
   mainWindow = createWindow(appRoot);
   installLiveReload(appRoot);
-  if (app.isPackaged) setTimeout(() => {
-    void packs?.refreshCatalog().catch((error) => console.warn('Background frame-pack check failed:', error));
-    void updates?.check();
-  }, 15_000);
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow(appRoot); });
 });
 

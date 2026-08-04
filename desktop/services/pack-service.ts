@@ -1,8 +1,10 @@
 import {existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync} from 'node:fs';
 import path from 'node:path';
+import semver from 'semver';
 import type {PackId, PackProgress, PackStatus} from '../ipc/contracts.js';
 import {PACK_IDS} from '../ipc/contracts.js';
 import {downloadArchive, extractArchive} from './pack-archive.js';
+import type {StagedPackTarget} from './update-transaction-store.js';
 
 const PACK_DETAILS: Record<PackId, {displayName: string; description: string; required: boolean}> = {
   'set-symbols': {displayName: 'Set Symbols', description: 'Official and bundled custom set-symbol families.', required: true},
@@ -21,49 +23,55 @@ const MAX_EXPANDED_BYTES = 8 * 1024 * 1024 * 1024;
 const MAX_PACK_FILES = 250_000;
 
 interface InstalledPack {id: PackId; version: string; sourceRoot: string; installedAt: string}
-interface InstallationState {schemaVersion: 1; packs: InstalledPack[]}
+interface InstallationState {schemaVersion: 1 | 2; packs: InstalledPack[]; previousPacks?: InstalledPack[]}
 interface CatalogArchive {url: string; sha256: string; archiveBytes: number}
 interface CatalogPack {id: PackId; version: string; archives: CatalogArchive[]; archiveBytes: number; installedBytes: number}
 interface Catalog {schemaVersion: 2; packs: CatalogPack[]}
+interface CatalogV3Version extends CatalogPack {packSchema: number; rendererApiVersion: number; minimumAppVersion: string; revoked?: boolean}
+interface CatalogV3 {schemaVersion: 3; packs: Array<{id: PackId; versions: CatalogV3Version[]}>}
 
 export class PackService {
   readonly #statePath: string;
   readonly #packRoot: string;
   readonly #developmentRoot: string | null;
   readonly #seedRoot: string | null;
+  readonly #currentVersion: string;
   #state: InstallationState;
   #catalog: Catalog = {schemaVersion: 2, packs: []};
-  #progress: (value: PackProgress) => void = () => {};
+  #progressListeners = new Set<(value: PackProgress) => void>();
   #lastPercent = 0;
 
-  constructor(options: {userDataPath: string; appRoot: string; resourcesPath: string; packaged: boolean}) {
+  constructor(options: {userDataPath: string; appRoot: string; resourcesPath: string; packaged: boolean; currentVersion?: string}) {
     this.#packRoot = path.join(options.userDataPath, 'packs');
     mkdirSync(this.#packRoot, {recursive: true});
     this.#statePath = path.join(this.#packRoot, 'active.json');
-    this.#developmentRoot = options.packaged ? null : options.appRoot;
+    this.#currentVersion = options.currentVersion || '0.0.0';
+    const testPackRoot = process.env.SET_CONJURER_TEST_PACK_ROOT;
+    this.#developmentRoot = testPackRoot ? path.resolve(testPackRoot) : (options.packaged ? null : options.appRoot);
     const seedRoot = path.join(options.resourcesPath, 'local-pack-seed');
     this.#seedRoot = existsSync(seedRoot) ? seedRoot : null;
     this.#state = this.#readState();
     try { this.#catalog = this.#validateCatalog(JSON.parse(readFileSync(path.join(this.#packRoot, 'catalog.json'), 'utf8'))); } catch {}
   }
 
-  onProgress(listener: (value: PackProgress) => void): void { this.#progress = listener; }
+  onProgress(listener: (value: PackProgress) => void): void { this.#progressListeners.add(listener); }
 
   #emit(progress: PackProgress): void {
     const percent = Math.max(this.#lastPercent, Math.min(100, progress.percent));
     this.#lastPercent = percent;
-    this.#progress({...progress, percent});
+    for (const listener of this.#progressListeners) listener({...progress, percent});
   }
 
   #readState(): InstallationState {
     try {
       const value = JSON.parse(readFileSync(this.#statePath, 'utf8')) as InstallationState;
-      if (value.schemaVersion === 1 && Array.isArray(value.packs)) return value;
+      if ((value.schemaVersion === 1 || value.schemaVersion === 2) && Array.isArray(value.packs)) return value;
     } catch {}
     return {schemaVersion: 1, packs: []};
   }
 
   #writeState(): void {
+    this.#state.schemaVersion = 2;
     const temporary = `${this.#statePath}.tmp`;
     writeFileSync(temporary, `${JSON.stringify(this.#state, null, 2)}\n`, {mode: 0o600});
     renameSync(temporary, this.#statePath);
@@ -118,8 +126,22 @@ export class PackService {
   }
 
   #validateCatalog(input: unknown): Catalog {
-    const value = input as Catalog;
-    if (value?.schemaVersion !== 2 || !Array.isArray(value.packs)) throw new Error('The frame-pack catalog is invalid.');
+    const raw = input as Catalog | CatalogV3;
+    let value: Catalog;
+    if (raw?.schemaVersion === 3 && Array.isArray(raw.packs)) {
+      const packs = raw.packs.flatMap((history) => {
+        if (!PACK_IDS.includes(history.id) || !Array.isArray(history.versions)) return [];
+        const compatible = history.versions
+          .filter((version) => !version.revoked && version.packSchema === 3 && version.rendererApiVersion === 1)
+          .filter((version) => semver.valid(version.version) && semver.valid(version.minimumAppVersion) && semver.gte(this.#currentVersion, version.minimumAppVersion))
+          .sort((left, right) => semver.rcompare(left.version, right.version));
+        if (!compatible.length) return [];
+        const selected = compatible[0]!;
+        return [{id: history.id, version: selected.version, archives: selected.archives, archiveBytes: selected.archiveBytes, installedBytes: selected.installedBytes}];
+      });
+      value = {schemaVersion: 2, packs};
+    } else if (raw?.schemaVersion === 2 && Array.isArray(raw.packs)) value = raw;
+    else throw new Error('The frame-pack catalog is invalid.');
     const seen = new Set<PackId>();
     for (const pack of value.packs) {
       if (!PACK_IDS.includes(pack.id) || seen.has(pack.id) || !Array.isArray(pack.archives) || pack.archives.length < 1) throw new Error('The frame-pack catalog contains an unsafe entry.');
@@ -139,7 +161,8 @@ export class PackService {
     const response = await fetch(RELEASES_URL, {headers: {'Accept': 'application/vnd.github+json', 'User-Agent': 'Set-Conjurer'}});
     if (!response.ok) throw new Error(`Could not check frame packs (${response.status}).`);
     const releases = await response.json() as Array<{draft?: boolean; assets?: Array<{name: string; browser_download_url: string}>}>;
-    const asset = releases.filter((release) => !release.draft).flatMap((release) => release.assets || []).find((item) => item.name === 'frame-packs.json');
+    const assets = releases.filter((release) => !release.draft).flatMap((release) => release.assets || []);
+    const asset = assets.find((item) => item.name === 'frame-pack-catalog-v3.json') || assets.find((item) => item.name === 'frame-packs.json');
     if (!asset) throw new Error('No frame-pack catalog is published for this build yet.');
     const catalogResponse = await fetch(asset.browser_download_url, {headers: {'User-Agent': 'Set-Conjurer'}});
     if (!catalogResponse.ok) throw new Error('Could not download the frame-pack catalog.');
@@ -244,6 +267,54 @@ export class PackService {
     }
     this.#emit({phase: 'activating', percent: 100, receivedBytes: operation.networkTotal, totalBytes: operation.networkTotal, message: 'Frame packs are ready'});
     return this.list();
+  }
+
+  installedUpdates(): PackStatus[] {
+    return this.list().filter((pack) => pack.installed && pack.updateAvailable);
+  }
+
+  async stageUpdates(ids: PackId[]): Promise<StagedPackTarget[]> {
+    this.#lastPercent = 0;
+    const requested = [...new Set(ids)].filter((id) => Boolean(this.#installedPack(id)));
+    const catalogs = requested.map((id) => {
+      const installed = this.#installedPack(id);
+      const catalog = this.#catalog.packs.find((item) => item.id === id);
+      if (!installed || !catalog || installed.version === catalog.version) return null;
+      return {id, installed, catalog};
+    }).filter((item): item is {id: PackId; installed: InstalledPack; catalog: CatalogPack} => Boolean(item));
+    const operation = {
+      networkDone: 0, expandedDone: 0,
+      networkTotal: catalogs.reduce((total, item) => total + item.catalog.archiveBytes, 0),
+      expandedTotal: catalogs.reduce((total, item) => total + item.catalog.installedBytes, 0)
+    };
+    const staged: StagedPackTarget[] = [];
+    for (const {id, installed, catalog} of catalogs) {
+      const sourceRoot = await this.#installRemote(id, catalog, operation);
+      staged.push({id, version: catalog.version, sourceRoot, previousVersion: installed.version, previousSourceRoot: installed.sourceRoot});
+    }
+    return staged;
+  }
+
+  activateStaged(targets: StagedPackTarget[]): void {
+    const prior = JSON.parse(JSON.stringify(this.#state)) as InstallationState;
+    for (const target of targets) {
+      if (!existsSync(target.sourceRoot)) throw new Error(`The staged ${PACK_DETAILS[target.id].displayName} pack is missing.`);
+      const health = JSON.parse(readFileSync(path.join(target.sourceRoot, '.set-conjurer-pack.json'), 'utf8')) as {id?: string; version?: string};
+      if (health.id !== target.id || health.version !== target.version) throw new Error(`The staged ${PACK_DETAILS[target.id].displayName} pack failed its health check.`);
+    }
+    try {
+      this.#state.previousPacks = prior.packs;
+      for (const target of targets) {
+        const installed = {id: target.id, version: target.version, sourceRoot: target.sourceRoot, installedAt: new Date().toISOString()};
+        const index = this.#state.packs.findIndex((item) => item.id === target.id);
+        if (index >= 0) this.#state.packs[index] = installed;
+        else this.#state.packs.push(installed);
+      }
+      this.#writeState();
+    } catch (error) {
+      this.#state = prior;
+      throw error;
+    }
   }
 
   remove(id: PackId): PackStatus[] {

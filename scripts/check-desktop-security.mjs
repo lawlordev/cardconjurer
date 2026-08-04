@@ -14,7 +14,7 @@ async function files(directory) {
   return result;
 }
 for (const file of await files(root)) {
-  const relative = path.relative(root, file);
+  const relative = path.relative(root, file).replace(/\\/g, '/');
   if (relative === 'js/htmx.min.js' || relative.startsWith('docs/') || relative.startsWith('data/') || relative.startsWith('print/') || relative.startsWith('about/') || relative.startsWith('askurza/') || relative.startsWith('converter/') || relative.startsWith('gallery/') || relative.startsWith('legal/') || relative.startsWith('phyrexian/') || relative.startsWith('theme/') || relative.startsWith('tutorial/')) continue;
   const source = await readFile(file, 'utf8');
   if (/\beval\s*\(|\bnew\s+Function\s*\(/.test(source)) failures.push(`${relative}: runtime code evaluation`);

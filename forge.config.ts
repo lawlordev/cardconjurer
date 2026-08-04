@@ -6,10 +6,13 @@ import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
-import {readdirSync} from 'node:fs';
+import {readFileSync, readdirSync} from 'node:fs';
 
 const includeDevelopmentPacks = process.env.SET_CONJURER_INCLUDE_DEV_PACKS === '1';
 const signingIdentity = process.env.APPLE_SIGN_IDENTITY || '-';
+const packConfig = JSON.parse(readFileSync(path.resolve('packs/config.json'), 'utf8')) as {baseRuntimeAssets: string[]};
+const baseRuntimeNames = packConfig.baseRuntimeAssets.map((asset) => path.basename(asset).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+const excludedFramePayload = new RegExp(`^\\/img\\/frames\\/(?!(?:${baseRuntimeNames.join('|')})$)`);
 
 const config: ForgeConfig = {
   packagerConfig: {
@@ -61,7 +64,7 @@ const config: ForgeConfig = {
       /^\/docs(?:\/|$)/,
       /^\/tests(?:\/|$)/,
       /^\/data\/images(?:\/|$)/,
-      /^\/img\/frames\/(?!(?:cornerCutout|maskRightHalf|maskMiddleThird|serial)\.png$)/,
+      excludedFramePayload,
       /^\/img\/setSymbols(?:\/|$)/,
       /^\/build(?:\/|$)/,
       /^\/out(?:\/|$)/,

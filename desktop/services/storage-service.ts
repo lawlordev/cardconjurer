@@ -52,6 +52,10 @@ export class StorageService {
     return this.#request('snapshot', label) as Promise<string>;
   }
 
+  async restore(snapshotPath: string): Promise<void> {
+    await this.#request('restore', snapshotPath);
+  }
+
   async close(): Promise<void> {
     await this.#request('close');
     await this.#worker.terminate();

@@ -1,4 +1,4 @@
-import {mkdtemp, mkdir, rm} from 'node:fs/promises';
+import {copyFile, mkdtemp, mkdir, readFile, rm, writeFile} from 'node:fs/promises';
 import {spawn} from 'node:child_process';
 import {createServer} from 'node:net';
 import os from 'node:os';
@@ -8,12 +8,34 @@ import { _electron as electron, chromium } from 'playwright';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const userData = await mkdtemp(path.join(os.tmpdir(), 'set-conjurer-e2e-'));
+const packFixture = await mkdtemp(path.join(os.tmpdir(), 'set-conjurer-pack-fixture-'));
 const evidence = process.env.SET_CONJURER_EVIDENCE_DIR || path.join(os.tmpdir(), 'set-conjurer-evidence');
 await mkdir(evidence, {recursive: true});
 const errors = [];
 let application;
 const packagedExecutable = process.env.SET_CONJURER_TEST_EXECUTABLE || '';
 let packagedProcess;
+
+async function buildMinimalPackFixture() {
+  const source = await readFile(path.join(root, 'js', 'frames', 'packM15Regular-1.js'), 'utf8');
+  const assets = new Set([...source.matchAll(/['"`](\/img\/frames\/[^'"`$}]+)['"`]/g)].map((match) => match[1].replace(/^\//, '')));
+  assets.add('img/frames/m15/regular/m15FrameA.png');
+  const placeholder = path.join(root, 'img', 'frames', 'cornerCutout.png');
+  for (const asset of assets) {
+    const destination = path.join(packFixture, asset);
+    await mkdir(path.dirname(destination), {recursive: true});
+    if (asset.toLowerCase().endsWith('.svg')) {
+      await writeFile(destination, '<svg xmlns="http://www.w3.org/2000/svg" width="1005" height="1407"><rect width="1005" height="1407" fill="#111827"/></svg>\n');
+    } else {
+      await copyFile(placeholder, destination);
+    }
+  }
+  const symbol = path.join(packFixture, 'img', 'setSymbols', 'custom', 'test-c.png');
+  await mkdir(path.dirname(symbol), {recursive: true});
+  await copyFile(placeholder, symbol);
+}
+
+await buildMinimalPackFixture();
 
 async function availablePort() {
   const server = createServer();
@@ -27,7 +49,7 @@ async function launchPackaged() {
   const port = await availablePort();
   packagedProcess = spawn(packagedExecutable, [`--remote-debugging-port=${port}`], {
     cwd: root,
-    env: {...process.env, SET_CONJURER_USER_DATA: userData, ELECTRON_ENABLE_LOGGING: '1'},
+    env: {...process.env, SET_CONJURER_USER_DATA: userData, SET_CONJURER_TEST_PACK_ROOT: packFixture, ELECTRON_ENABLE_LOGGING: '1'},
     detached: true,
     windowsHide: true,
     stdio: 'ignore'
@@ -51,7 +73,7 @@ async function launchPackaged() {
 try {
   application = packagedExecutable ? await launchPackaged() : await electron.launch({
     args: [root], cwd: root,
-    env: {...process.env, SET_CONJURER_USER_DATA: userData, SET_CONJURER_ALLOW_TEST_INSTANCE: '1', ELECTRON_ENABLE_LOGGING: '1'}
+    env: {...process.env, SET_CONJURER_USER_DATA: userData, SET_CONJURER_TEST_PACK_ROOT: packFixture, SET_CONJURER_ALLOW_TEST_INSTANCE: '1', ELECTRON_ENABLE_LOGGING: '1'}
   });
   const page = await application.firstWindow();
   page.on('console', (message) => { if (message.type() === 'error' && !message.text().includes('Failed to load resource')) errors.push(`console: ${message.text()}`); });
@@ -267,4 +289,5 @@ try {
   if (packagedProcess && !packagedProcess.killed) packagedProcess.kill();
   await new Promise((resolve) => setTimeout(resolve, 400));
   await rm(userData, {recursive: true, force: true, maxRetries: 20, retryDelay: 100});
+  await rm(packFixture, {recursive: true, force: true, maxRetries: 20, retryDelay: 100});
 }

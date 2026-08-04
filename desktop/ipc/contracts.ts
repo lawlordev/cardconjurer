@@ -63,12 +63,27 @@ export interface PackProgress {
 }
 
 export interface UpdateState {
-  phase: 'idle' | 'checking' | 'available' | 'downloading' | 'verifying' | 'staged' | 'failed';
+  phase: 'idle' | 'checking' | 'available' | 'downloading' | 'verifying' | 'staged' | 'failed' | 'compatibility-blocked' | 'recovery-required';
   progress: number;
   message: string;
   availableVersion: string | null;
   includesApp: boolean;
   packIds: PackId[];
+  transactionId: string | null;
+  totalBytes: number;
+  completedBytes: number;
+  lastCheckedAt: string | null;
+  recoverable: boolean;
+  items: Array<{
+    kind: 'app' | 'pack';
+    id: string;
+    displayName: string;
+    currentVersion: string | null;
+    targetVersion: string;
+    bytes: number;
+    phase: 'available' | 'downloading' | 'verifying' | 'staged' | 'failed';
+    error: string | null;
+  }>;
 }
 
 export interface DesktopAPI {

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "catalog": {
+    "assetName": "frame-packs.json",
+    "knownGoodTag": null,
+    "sha256": null
+  },
+  "supportedPackSchemas": [2, 3],
+  "supportedRendererApi": {
+    "minimum": 1,
+    "maximum": 1
+  },
+  "requiredPacks": {
+    "set-symbols": "1.0.0",
+    "standard": "1.0.0"
+  }
+}

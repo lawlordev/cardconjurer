@@ -33,11 +33,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-        with: {ref: '${{ inputs.tag }}'}
+        with:
+          ref: '${{ inputs.tag }}'
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/img/frames/*
+            !/img/setSymbols/
+            /img/frames/cornerCutout.png
+            /img/frames/maskRightHalf.png
+            /img/frames/maskMiddleThird.png
+            /img/frames/serial.png
       - uses: actions/setup-node@v5
         with: {node-version: 24}
       - name: Validate immutable release request
         run: node scripts/validate-release-request.mjs "${{ inputs.tag }}" "${{ inputs.channel }}"
+      - name: Validate pinned frame-pack compatibility metadata
+        run: node scripts/validate-app-pack-compatibility.mjs "${{ inputs.channel }}"
       - name: Require Apple signing and notarization secrets
         env:
           MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
@@ -67,11 +80,21 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-        with: {ref: '${{ inputs.tag }}'}
+        with:
+          ref: '${{ inputs.tag }}'
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/img/frames/*
+            !/img/setSymbols/
+            /img/frames/cornerCutout.png
+            /img/frames/maskRightHalf.png
+            /img/frames/maskMiddleThird.png
+            /img/frames/serial.png
       - uses: actions/setup-node@v5
         with: {node-version: 24, cache: npm}
       - run: npm ci
-      - run: npm run packs:compile
       - name: Import Developer ID certificate
         env:
           CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
@@ -125,11 +148,21 @@ jobs:
       signed: ${{ steps.signing.outputs.enabled }}
     steps:
       - uses: actions/checkout@v5
-        with: {ref: '${{ inputs.tag }}'}
+        with:
+          ref: '${{ inputs.tag }}'
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/img/frames/*
+            !/img/setSymbols/
+            /img/frames/cornerCutout.png
+            /img/frames/maskRightHalf.png
+            /img/frames/maskMiddleThird.png
+            /img/frames/serial.png
       - uses: actions/setup-node@v5
         with: {node-version: 24, cache: npm}
       - run: npm ci
-      - run: npm run packs:compile
       - name: Determine Windows signing mode
         id: signing
         shell: pwsh

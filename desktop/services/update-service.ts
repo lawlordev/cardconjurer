@@ -1,9 +1,8 @@
 import { createHash } from 'node:crypto';
-import { createWriteStream, existsSync, mkdirSync, readFileSync, renameSync } from 'node:fs';
+import { createWriteStream, existsSync, mkdirSync, readFileSync, readdirSync, renameSync } from 'node:fs';
 import { Readable } from 'node:stream';
 import path from 'node:path';
 import semver from 'semver';
-import type { BrowserWindow } from 'electron';
 import type { PackId, ReleaseChannel, UpdateState } from '../ipc/contracts.js';
 
 interface GitHubAsset {
@@ -20,14 +19,15 @@ interface GitHubRelease {
 }
 
 const INITIAL_STATE: UpdateState = {
-  phase: 'idle', progress: 0, message: 'Up to date', availableVersion: null, includesApp: false, packIds: []
+  phase: 'idle', progress: 0, message: 'Up to date', availableVersion: null, includesApp: false, packIds: [],
+  transactionId: null, totalBytes: 0, completedBytes: 0, lastCheckedAt: null, recoverable: false, items: []
 };
 
 export class UpdateService {
   #state: UpdateState = {...INITIAL_STATE};
   #channel: ReleaseChannel;
   #release: GitHubRelease | null = null;
-  #window: BrowserWindow | null = null;
+  #listener: (state: UpdateState) => void = () => {};
   readonly #stagingRoot: string;
   readonly #currentVersion: string;
   readonly #preferencesPath: string;
@@ -40,9 +40,7 @@ export class UpdateService {
     this.#channel = this.#readChannel();
   }
 
-  attachWindow(window: BrowserWindow): void {
-    this.#window = window;
-  }
+  onState(listener: (state: UpdateState) => void): void { this.#listener = listener; }
 
   #readChannel(): ReleaseChannel {
     try {
@@ -55,12 +53,12 @@ export class UpdateService {
 
   #emit(state: UpdateState): UpdateState {
     this.#state = state;
-    this.#window?.webContents.send('desktop:update-changed', state);
+    this.#listener(state);
     return state;
   }
 
   state(): UpdateState {
-    return {...this.#state, packIds: [...this.#state.packIds] as PackId[]};
+    return {...this.#state, packIds: [...this.#state.packIds] as PackId[], items: this.#state.items.map((item) => ({...item}))};
   }
 
   channel(): ReleaseChannel {
@@ -91,9 +89,14 @@ export class UpdateService {
         .sort((left, right) => semver.rcompare(left.tag_name.slice(1), right.tag_name.slice(1)));
       this.#release = eligible[0] || null;
       if (!this.#release) return this.#emit({...INITIAL_STATE});
+      const version = this.#release.tag_name.slice(1);
+      const asset = this.#assetForCurrentPlatform();
+      const checkedAt = new Date().toISOString();
       return this.#emit({
         phase: 'available', progress: 0, message: `Set Conjurer ${this.#release.tag_name.slice(1)} is available`,
-        availableVersion: this.#release.tag_name.slice(1), includesApp: true, packIds: []
+        availableVersion: version, includesApp: true, packIds: [], transactionId: null,
+        totalBytes: asset?.size || 0, completedBytes: 0, lastCheckedAt: checkedAt, recoverable: false,
+        items: [{kind: 'app', id: 'app', displayName: 'Set Conjurer', currentVersion: this.#currentVersion, targetVersion: version, bytes: asset?.size || 0, phase: 'available', error: null}]
       });
     } catch (error) {
       return this.#emit({...INITIAL_STATE, phase: 'failed', message: error instanceof Error ? error.message : 'Update check failed.'});
@@ -153,11 +156,21 @@ export class UpdateService {
     }
   }
 
-  stagedInstaller(): string | null {
-    if (this.#state.phase !== 'staged' || !this.#release) return null;
-    const asset = this.#assetForCurrentPlatform();
-    if (!asset) return null;
-    const candidate = path.join(this.#stagingRoot, this.#release.tag_name.slice(1), asset.name);
-    return existsSync(candidate) ? candidate : null;
+  stagedInstaller(targetVersion?: string | null): string | null {
+    if (this.#release) {
+      const asset = this.#assetForCurrentPlatform();
+      if (asset) {
+        const candidate = path.join(this.#stagingRoot, this.#release.tag_name.slice(1), asset.name);
+        if (existsSync(candidate)) return candidate;
+      }
+    }
+    const roots = targetVersion ? [path.join(this.#stagingRoot, targetVersion)] : [];
+    for (const directory of roots) {
+      try {
+        const installer = readdirSync(directory).find((name) => /(?:Setup\.exe|\.dmg)$/i.test(name));
+        if (installer) return path.join(directory, installer);
+      } catch {}
+    }
+    return null;
   }
 }

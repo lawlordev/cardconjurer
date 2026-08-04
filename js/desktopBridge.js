@@ -72,9 +72,9 @@
 		var disabled = pack.required || !pack.available || pack.id === 'standard';
 		if (!selectable) return '<label class="checkbox-container input workspace-checkbox desktop-onboarding-pack"><span><strong>' + escapeHtml(pack.displayName) + '</strong><small>' + escapeHtml(pack.archiveBytes ? formatBytes(pack.archiveBytes) : 'Size unavailable') + '</small></span><input type="checkbox" data-pack-id="' + pack.id + '" ' + (checked ? 'checked ' : '') + (disabled ? 'disabled ' : '') + '><span class="checkmark"></span></label>';
 		var version = pack.installedVersion || pack.availableVersion || '';
-		var status = pack.installed ? 'Installed' + (version ? ' · ' + escapeHtml(version) : '') : pack.available ? 'Version ' + escapeHtml(version) : 'Not available in this build yet';
+		var status = pack.installed ? 'Installed' + (version ? ' · ' + escapeHtml(version) : '') + (pack.updateAvailable ? ' · Update available in the consolidated updater' : '') : pack.available ? 'Version ' + escapeHtml(version) : 'Not available in this build yet';
 		var action = pack.installed && pack.updateAvailable
-			? '<button type="button" class="creator-app-action desktop-pack-action sets-primary" data-install-pack="' + pack.id + '">Update</button>'
+			? '<button type="button" class="creator-app-action desktop-pack-action" disabled>Update available</button>'
 			: pack.installed
 			? required
 				? '<button type="button" class="creator-app-action desktop-pack-action" disabled>Installed</button>'
@@ -123,11 +123,11 @@
 		var packs = await api.packs.list(); openDrawer('Frame Packs', packDrawerContent(packs), trigger); bindPackActions(trigger);
 	}
 	async function openSettings(trigger) {
-		var info = await api.app.info(); var channel = await api.updates.channel(); var packs; try { packs = await api.packs.refresh(); } catch (error) { packs = await api.packs.list(); }
-		openDrawer('Settings', '<section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>Frame Packs</h3></div>' + packDrawerContent(packs) + '</section><section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>Updates</h3></div><label class="desktop-setting-row"><span><strong>Release channel</strong><small>Stable receives finished releases. Beta also receives preview builds.</small></span><select id="desktop-channel" class="input"><option value="stable" ' + (channel === 'stable' ? 'selected' : '') + '>Stable</option><option value="beta" ' + (channel === 'beta' ? 'selected' : '') + '>Beta</option></select></label><button id="desktop-check-update" class="input" type="button">Check for Updates</button></section><section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>About</h3></div><p class="desktop-about-product"><strong>Set Conjurer ' + escapeHtml(info.version) + '</strong><small>' + escapeHtml(info.platform + ' · ' + info.arch) + '</small></p><p class="desktop-about-copy">A local-first open-source desktop fork of Card Conjurer, originally created by Kyle Burton and maintained by its contributors. No account, cloud storage, or telemetry.</p><button id="desktop-report-issue" class="input" type="button">Report an Issue on GitHub</button></section>', trigger);
+		var info = await api.app.info(); var channel = await api.updates.channel(); var updateState = await api.updates.state(); var packs; try { packs = await api.packs.refresh(); } catch (error) { packs = await api.packs.list(); }
+		openDrawer('Settings', '<section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>Frame Packs</h3></div>' + packDrawerContent(packs) + '</section><section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>Updates</h3></div><label class="desktop-setting-row"><span><strong>Release channel</strong><small>Stable receives finished releases. Beta also receives preview builds.</small></span><select id="desktop-channel" class="input"><option value="stable" ' + (channel === 'stable' ? 'selected' : '') + '>Stable</option><option value="beta" ' + (channel === 'beta' ? 'selected' : '') + '>Beta</option></select></label><button id="desktop-check-update" class="input" type="button">Check for Updates</button><p id="desktop-update-status" class="desktop-inline-status" aria-live="polite"></p><div id="desktop-update-details"></div></section><section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>About</h3></div><p class="desktop-about-product"><strong>Set Conjurer ' + escapeHtml(info.version) + '</strong><small>' + escapeHtml(info.platform + ' · ' + info.arch) + '</small></p><p class="desktop-about-copy">A local-first open-source desktop fork of Card Conjurer, originally created by Kyle Burton and maintained by its contributors. No account, cloud storage, or telemetry.</p><button id="desktop-report-issue" class="input" type="button">Report an Issue on GitHub</button></section>', trigger);
 		bindPackActions(trigger);
 		var updateButton = document.querySelector('#desktop-check-update');
-		updateButton.insertAdjacentHTML('afterend', '<p id="desktop-update-status" class="desktop-inline-status" aria-live="polite"></p>');
+		updateSettingsStatus(updateState);
 		document.querySelector('#desktop-channel').addEventListener('change', async function(event) { await api.updates.setChannel(event.target.value); updateSettingsStatus(await api.updates.check()); });
 		updateButton.addEventListener('click', async function() { updateSettingsStatus(await api.updates.check()); });
 		document.querySelector('#desktop-report-issue').addEventListener('click', function() { void api.app.reportIssue(); });
@@ -158,10 +158,21 @@
 		try { await api.packs.install(selectedOnboardingIds()); await api.app.completeOnboarding(); location.reload(); }
 		catch (error) { progress.classList.add('is-error'); progress.querySelector('.desktop-pack-progress-label').textContent = error.message || String(error); button.disabled = false; }
 	}
-	function updateSettingsStatus(state) { var status = document.querySelector('#desktop-update-status'); if (status) status.textContent = state.message; }
+	function updateDetailsMarkup(state) {
+		if (!state.items || !state.items.length) return '';
+		return '<div class="desktop-pack-list desktop-update-item-list">' + state.items.map(function(item) {
+			var versions = (item.currentVersion ? escapeHtml(item.currentVersion) + ' → ' : '') + escapeHtml(item.targetVersion);
+			return '<article class="desktop-pack-row desktop-update-item"><span><strong>' + escapeHtml(item.displayName) + '</strong><small>' + versions + (item.bytes ? ' · ' + formatBytes(item.bytes) : '') + '</small></span><small>' + escapeHtml(item.phase) + '</small></article>';
+		}).join('') + '</div>';
+	}
+	function updateSettingsStatus(state) {
+		var status = document.querySelector('#desktop-update-status'); if (status) status.textContent = state.message;
+		var details = document.querySelector('#desktop-update-details'); if (details) details.innerHTML = updateDetailsMarkup(state);
+	}
 	function updateControl(state) {
 		var button = document.querySelector('#desktop-update'); if (!button) return;
-		button.hidden = !['available','downloading','verifying','staged'].includes(state.phase);
+		var actionableFailure = state.phase === 'failed' && state.transactionId;
+		button.hidden = !(['available','downloading','verifying','staged'].includes(state.phase) || actionableFailure);
 		button.className = 'creator-app-action desktop-update-action phase-' + state.phase;
 		button.disabled = ['downloading','verifying'].includes(state.phase);
 		button.style.setProperty('--update-progress', Math.round(state.progress || 0) * 3.6 + 'deg');
@@ -169,7 +180,7 @@
 		button.title = state.message;
 		updateSettingsStatus(state);
 	}
-	async function updateAction() { var state = await api.updates.state(); if (state.phase === 'staged') return api.app.restart(); if (state.phase === 'available') return api.updates.begin(); return api.updates.check(); }
+	async function updateAction() { var state = await api.updates.state(); if (state.phase === 'staged') return api.app.restart(); if (state.phase === 'available' || (state.phase === 'failed' && state.transactionId)) return api.updates.begin(); return api.updates.check(); }
 	async function ensureRequiredPacks(requirements) {
 		var ids = (requirements || []).map(function(item) { return typeof item === 'string' ? item : item.id; }).filter(Boolean);
 		if (!ids.length) return;

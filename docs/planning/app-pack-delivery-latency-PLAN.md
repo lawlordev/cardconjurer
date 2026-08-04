@@ -2,7 +2,7 @@
 
 ## Planning metadata
 
-- Status: amended after a read-only compatibility review of GitHub PR #7; implementation has not started and is blocked on the post-merge prerequisite below.
+- Status: implementation authorized on 2026-08-04 as an explicit exception to the original post-merge prerequisite after PR #7's Windows CI failed. The implementation branch is rebased onto reviewed PR #7 head `a51e28a`; PR #8 will supersede both bodies of work and must stop before merge.
 - Planning branch: `perf/decouple-app-and-pack-delivery`
 - Planning worktree: `C:\Users\Jake\.codex\worktrees\86fa\cardconjurer`
 - Remote default branch: `origin/master`
@@ -21,6 +21,12 @@ PR #7 is expected to merge before this work, but this plan does not claim that i
 3. Reinspect the merged files named in the compatibility section below, update stale line/file assumptions in this plan if the final PR differs from reviewed head `a51e28a`, and commit that final planning refresh only.
 4. Record CI/release latency baselines from the post-PR-#7 default branch. Pre-PR-#7 measurements are not comparable because PR #7 adds Windows package, packaged-app, and installer work.
 5. Joseph and the voice coordinator review the refreshed plan and explicitly authorize implementation. A prior approval of this pre-merge amendment is not implementation authorization.
+
+### Authorized exception after PR #7 failed
+
+The user explicitly replaced the prerequisite above on 2026-08-04: do not wait for PR #7 to merge or rerun its slow failing workflow. Instead, implement this plan directly on top of exact PR #7 head `a51e28afd7593d53d14d190ac18819b6e7c56a2e`, include the PR #7 correction, open the combined result as PR #8, monitor and repair its CI, and stop before merge. This exception authorizes feature-branch implementation and PR creation only; it does not authorize merging, deployment, release publication, tags, or production-setting changes.
+
+The observed PR #7 failure was Desktop CI run `30935637950`, Windows package job `92081846654`. Compilation, unit tests, Electron smoke, package verification, and Squirrel Setup creation all passed. The fresh-install script then looked for `AppData\\Local\\set_conjurer\\current\\set-conjurer.exe`; current Squirrel output exposes the stable root stub at `AppData\\Local\\set_conjurer\\set-conjurer.exe`, so the test failed on an obsolete `current` directory assumption. PR #8 must retain the installer lifecycle test and correct that assertion rather than skipping the gate.
 
 ## Structured product brief
 
@@ -641,11 +647,4 @@ The PR must state that app-only, pack-only, uninstalled optional exclusion, all 
 
 ## Approval checkpoint
 
-This pre-merge amended plan is not yet executable. The exact post-merge/pre-implementation checkpoint is:
-
-1. PR #7 is merged; its final merged SHA is recorded; and Windows/Desktop CI on that final SHA is passing.
-2. This existing `perf/decouple-app-and-pack-delivery` branch/worktree is rebased/refreshed onto that merged `origin/master` without implementation changes.
-3. The plan is revalidated against the final diff, updated if necessary, and committed with the actual new base metadata and post-PR-#7 baseline procedure.
-4. Joseph and the voice coordinator explicitly approve that refreshed committed plan.
-
-Only then should the next instruction invoke `standardized-feature` in this same branch and worktree. Approval authorizes plan execution only; it does not authorize deployment, release publication, production-setting changes, or a pull request beyond the later feature workflow's explicit scope.
+The former post-merge checkpoint above was superseded by the user's explicit 2026-08-04 authorization. `standardized-feature` may execute in this same branch/worktree on top of exact PR #7 head `a51e28a`, fix its failed Windows assertion, create PR #8 against `master`, and repair actionable PR #8 CI failures. The mandatory stopping point is a reviewable, unmerged PR #8 with CI results reported. Deployment, release publication, production-setting changes, tags, and merging remain unauthorized.
