@@ -27,5 +27,6 @@ test('frame-pack release archives are split and checked below GitHub limits', ()
   assert.match(builder, /fileMetadata/);
   assert.match(builder, /archives\.push/);
   assert.match(service, /interface CatalogPack .*archives: CatalogArchive\[\]/);
+  assert.match(service, /MAX_ARCHIVE_BYTES = 2 \* 1024 \* 1024 \* 1024/);
   assert.match(service, /archive\.archiveBytes > MAX_ARCHIVE_BYTES/);
 });

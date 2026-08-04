@@ -17,7 +17,9 @@ const PACK_DETAILS: Record<PackId, {displayName: string; description: string; re
 };
 const REQUIRED_PACK_IDS: PackId[] = ['set-symbols', 'standard'];
 const RELEASES_URL = 'https://api.github.com/repos/lawlordev/cardconjurer/releases?per_page=30';
-const MAX_ARCHIVE_BYTES = 512 * 1024 * 1024;
+// GitHub Releases accepts individual assets up to 2 GiB. Keep the client aligned
+// with that immutable-source boundary so legacy 1 GiB pack parts remain usable.
+const MAX_ARCHIVE_BYTES = 2 * 1024 * 1024 * 1024;
 const MAX_PACK_BYTES = 8 * 1024 * 1024 * 1024;
 const MAX_EXPANDED_BYTES = 8 * 1024 * 1024 * 1024;
 const MAX_PACK_FILES = 250_000;
