@@ -268,16 +268,8 @@
 								<div class='creator-action-dropdown-menu'>
 									<button type='button' onclick="this.closest('details').removeAttribute('open'); CardConjurerSets.exportCardImage('png');">PNG (best)</button>
 									<button type='button' onclick="this.closest('details').removeAttribute('open'); CardConjurerSets.exportCardImage('jpeg');">JPG</button>
-									<button type='button' onclick="this.closest('details').removeAttribute('open'); CardConjurerSets.exportCardImage('preview');">Open in new tab</button>
 									<button type='button' onclick="this.closest('details').removeAttribute('open'); CardConjurerSets.exportCard();">.cardconjurer-card file</button>
 									<button type='button' onclick="this.closest('details').removeAttribute('open'); SetConjurerDesktop.openPrint('card');">Print</button>
-								</div>
-							</details>
-							<details class='creator-action-dropdown creator-card-action-dropdown'>
-								<summary><span aria-hidden='true'>↑</span>Import Card <span class='card-specific-chevron' aria-hidden='true'></span></summary>
-								<div class='creator-action-dropdown-menu'>
-									<button type='button' onclick="this.closest('details').removeAttribute('open'); document.querySelector('#sets-card-import').click();">.cardconjurer-card file</button>
-									<button type='button' onclick="this.closest('details').removeAttribute('open'); CardConjurerSets.openCardSearch(this);">Card search</button>
 								</div>
 							</details>
 							<button type='button' class='danger' onclick='CardConjurerSets.deleteCard();'><span aria-hidden='true'>×</span>Delete Card</button>

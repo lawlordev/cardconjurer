@@ -14,14 +14,16 @@ export class FileService {
     const request = exportRequestSchema.parse(input);
     const extension = request.extension;
     const defaultName = safeName(request.suggestedName.endsWith(`.${extension}`) ? request.suggestedName : `${request.suggestedName}.${extension}`);
+    const filterName = extension === 'cardconjurer-card' ? 'Set Conjurer Card' : extension === 'cardconjurer-set' ? 'Set Conjurer Set' : extension === 'png' ? 'PNG Image' : extension === 'jpg' ? 'JPEG Image' : 'JSON';
     const result = await dialog.showSaveDialog({
       title: 'Export from Set Conjurer',
       defaultPath: defaultName,
-      filters: [{name: extension === 'cardconjurer-card' ? 'Set Conjurer Card' : extension === 'cardconjurer-set' ? 'Set Conjurer Set' : 'JSON', extensions: [extension]}]
+      filters: [{name: filterName, extensions: [extension]}]
     });
     if (result.canceled || !result.filePath) return {canceled: true, path: null};
     const temporary = `${result.filePath}.set-conjurer-partial`;
-    await writeFile(temporary, request.content, {encoding: 'utf8', mode: 0o600});
+    if (request.encoding === 'base64') await writeFile(temporary, Buffer.from(request.content, 'base64'), {mode: 0o600});
+    else await writeFile(temporary, request.content, {encoding: 'utf8', mode: 0o600});
     await rename(temporary, result.filePath);
     return {canceled: false, path: result.filePath};
   }

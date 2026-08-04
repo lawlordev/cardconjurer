@@ -1050,7 +1050,6 @@
 	function exportCardImage(format) {
 		if (typeof downloadCard !== 'function') return;
 		if (format === 'jpeg') downloadCard(false, true);
-		else if (format === 'preview') downloadCard(true);
 		else downloadCard();
 	}
 	function exportSetAction() { var set = activeSet(); if (set) return downloadJson(Files.createSetEnvelope(set, cardsFor(set.id)), safeFilename(set.name) + '.cardconjurer-set'); }

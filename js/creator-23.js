@@ -4406,6 +4406,18 @@ function downloadCard(alt = false, jpeg = false) {
 				newWindow.document.title = imageName;
 			}, 0);
 		} else {
+			if (window.setConjurerDesktop) {
+				void window.setConjurerDesktop.files.saveExport({
+					suggestedName: imageName,
+					extension: jpeg ? 'jpg' : 'png',
+					encoding: 'base64',
+					content: imageDataURL.slice(imageDataURL.indexOf(',') + 1)
+				}).catch(function(error) {
+					console.error(error);
+					notify('Set Conjurer could not export that image.', 5);
+				});
+				return;
+			}
 			const downloadElement = document.createElement('a');
 			downloadElement.download = imageName;
 			downloadElement.target = '_blank';

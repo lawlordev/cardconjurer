@@ -27,8 +27,8 @@
 | Scan card metadata | Three-line card rows with title, type line, rendered mana symbols, rarity, and collector number | `js/setWorkspace.js`, `css/style-9.css` |
 | Browse frame styles | Lazy-loaded `.frame-catalog` tiles try each pack's available neutral assets in colorless, Eldrazi, artifact, white, then first-frame order, skipping accessory layers and missing files | `js/frameSearch.js`, `css/style-9.css` |
 | Apply catalog frames | The automatic renderer uses color variants when available, then type-aware creature/noncreature, legendary/regular, neutral, and first-frame defaults for standalone packs | `js/autoFrame.js`, `js/frameSearch.js` |
-| Search and import a real card | Scryfall-backed `.card-search-drawer` that creates a new card before applying the selected printing | `creator/index.html`, `js/setWorkspace.js` |
 | Choose artwork | Immediate upload/drop and clipboard actions, explicit URL loading, or a Scryfall-backed `.art-search-drawer` | `creator/index.html`, `js/creator-23.js` |
+| Export the active card | The existing `.creator-action-dropdown` offers native-save PNG, JPG, and `.cardconjurer-card` exports plus Print; desktop image exports use the same validated `showSaveDialog` bridge as structured card exports | `creator/index.html`, `js/creator-23.js`, `desktop/services/file-service.ts` |
 | Adjust artwork placement | `.art-layout-drawer` with exact position, scale, rotation, auto-fit, and position-preservation controls | `creator/index.html`, `js/creator-23.js` |
 | Choose a watermark | Searchable horizontal preset catalog with live card-color previews, immediate upload/drop, or explicit URL and set-code loading in the Watermark tab | `creator/index.html`, `js/creator-23.js` |
 | Adjust watermark placement | `.watermark-layout-drawer` with exact position, scale, and reset controls | `creator/index.html`, `js/creator-23.js` |

@@ -24,9 +24,15 @@ export const channelSchema = z.enum(['stable', 'beta']);
 
 export const exportRequestSchema = z.object({
   suggestedName: z.string().min(1).max(180),
-  extension: z.enum(['cardconjurer-card', 'cardconjurer-set', 'json']),
+  extension: z.enum(['cardconjurer-card', 'cardconjurer-set', 'json', 'png', 'jpg']),
+  encoding: z.enum(['utf8', 'base64']).optional(),
   content: z.string().max(128 * 1024 * 1024)
-}).strict();
+}).strict().superRefine((request, context) => {
+  const image = request.extension === 'png' || request.extension === 'jpg';
+  if (image && request.encoding !== 'base64') context.addIssue({code: 'custom', path: ['encoding'], message: 'Image exports must use base64 encoding.'});
+  if (!image && request.encoding === 'base64') context.addIssue({code: 'custom', path: ['encoding'], message: 'Only image exports may use base64 encoding.'});
+  if (request.encoding === 'base64' && !/^[a-z0-9+/]*={0,2}$/i.test(request.content)) context.addIssue({code: 'custom', path: ['content'], message: 'Image export content is not valid base64.'});
+});
 
 export const printRequestSchema = z.object({
   paper: z.enum(['letter', 'a4']),
