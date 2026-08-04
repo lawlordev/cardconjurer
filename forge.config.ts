@@ -74,7 +74,13 @@ const config: ForgeConfig = {
     new MakerDMG({
       name: `Set-Conjurer-${process.arch}`,
       overwrite: true,
-      format: 'ULFO'
+      format: 'ULFO',
+      ...(signingIdentity !== '-' ? {additionalDMGOptions: {
+        'code-sign': {
+          'signing-identity': signingIdentity,
+          identifier: 'com.lawlordev.setconjurer'
+        }
+      }} : {})
     }),
     new MakerSquirrel({
       name: 'set_conjurer',
@@ -82,7 +88,9 @@ const config: ForgeConfig = {
       description: 'A local-first desktop fork of Card Conjurer for creating custom card sets.',
       setupExe: 'Set-Conjurer-Windows-x64-Setup.exe',
       noMsi: true,
-      ...(process.env.WINDOWS_CERTIFICATE_FILE && process.env.WINDOWS_CERTIFICATE_PASSWORD ? {certificateFile: process.env.WINDOWS_CERTIFICATE_FILE, certificatePassword: process.env.WINDOWS_CERTIFICATE_PASSWORD} : {})
+      // The release workflow signs Squirrel.exe before packaging. Rewriting its
+      // icon here would invalidate that Authenticode signature.
+      skipUpdateIcon: true
     })
   ],
   plugins: [
