@@ -32,10 +32,14 @@ test('desktop image exports use the validated native save bridge', () => {
 
 test('downloaded packs verify checksums and block unsafe archive paths', () => {
 	const service = fs.readFileSync(path.join(__dirname, '../../desktop/services/pack-service.ts'), 'utf8');
-	assert.match(service, /sha256/);
-	assert.match(service, /checkCRC32:\s*true/);
-	assert.match(service, /split\('\/'\)\.includes\('\.\.'\)/);
-	assert.match(service, /symbolic links are not allowed/);
+	const archive = fs.readFileSync(path.join(__dirname, '../../desktop/services/pack-archive.ts'), 'utf8');
+	assert.match(archive, /createWriteStream/);
+	assert.match(archive, /headers\.Range/);
+	assert.match(archive, /hashFile\(partial\)/);
+	assert.match(archive, /validateEntrySizes:\s*true/);
+	assert.match(archive, /split\('\/'\)\.includes\('\.\.'\)/);
+	assert.match(archive, /symbolic links are not allowed/);
+	assert.doesNotMatch(service, /Buffer\.concat|JSZip/);
 });
 
 test('unpublished optional frame packs cannot be selected in desktop UI', () => {

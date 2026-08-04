@@ -6,6 +6,11 @@ const path = require('node:path');
 test('frame-pack releases build from the requested immutable tag', () => {
   const workflow = fs.readFileSync(path.join(__dirname, '../../.github/workflows/release-frame-packs.yaml'), 'utf8');
   assert.match(workflow, /actions\/checkout@v5[\s\S]*?ref: \$\{\{ inputs\.tag \}\}/);
+  assert.match(workflow, /materialize-ci-pack-assets\.mjs/);
+  assert.match(workflow, /validate-frame-packs\.mjs[\s\S]*?--assets/);
+  assert.match(workflow, /test -n "\$PREVIOUS_V2"/);
+  assert.match(workflow, /test -n "\$PREVIOUS_V3"/);
+  assert.match(workflow, /default: false/);
 });
 
 test('frame-pack release archives are split and checked below GitHub limits', () => {
@@ -13,8 +18,14 @@ test('frame-pack release archives are split and checked below GitHub limits', ()
   const service = fs.readFileSync(path.join(__dirname, '../../desktop/services/pack-service.ts'), 'utf8');
   assert.match(builder, /GITHUB_RELEASE_ASSET_LIMIT_BYTES = 2 \* 1024 \* 1024 \* 1024/);
   assert.match(builder, /archiveBytes >= GITHUB_RELEASE_ASSET_LIMIT_BYTES/);
+  assert.match(builder, /ARCHIVE_SOURCE_TARGET_BYTES = 256 \* 1024 \* 1024/);
+  assert.match(builder, /frame-pack-ownership\.json/);
+  assert.match(builder, /ids\.length > 1/);
   assert.match(builder, /schemaVersion: 2, packs: \[\]/);
+  assert.match(builder, /schemaVersion: 3/);
+  assert.match(builder, /selectedPackIds/);
+  assert.match(builder, /fileMetadata/);
   assert.match(builder, /archives\.push/);
   assert.match(service, /interface CatalogPack .*archives: CatalogArchive\[\]/);
-  assert.match(service, /archive\.archiveBytes >= MAX_ARCHIVE_BYTES/);
+  assert.match(service, /archive\.archiveBytes > MAX_ARCHIVE_BYTES/);
 });

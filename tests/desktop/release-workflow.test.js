@@ -10,6 +10,9 @@ test('application releases validate an existing tag and default to non-publishin
   assert.match(workflow, /publish:[\s\S]*?type: boolean[\s\S]*?default: false/);
   assert.match(workflow, /actions\/checkout@v5[\s\S]*?ref: '\$\{\{ inputs\.tag \}\}'/);
   assert.match(workflow, /validate-release-request\.mjs/);
+  assert.match(workflow, /sparse-checkout-cone-mode: false/);
+  assert.match(workflow, /validate-app-pack-compatibility\.mjs/);
+  assert.doesNotMatch(workflow, /npm run packs:compile/);
 });
 
 test('release request validation locks the tag and channel to package metadata', () => {
@@ -19,6 +22,15 @@ test('release request validation locks the tag and channel to package metadata',
   const mismatched = spawnSync(process.execPath, [validator, 'v0.1.0-beta.2', 'beta'], {encoding: 'utf8'});
   assert.notEqual(mismatched.status, 0);
   assert.match(mismatched.stderr, /does not match package version/);
+});
+
+test('stable application releases require an immutable frame-pack catalog pin', () => {
+  const validator = path.join(__dirname, '../../scripts/validate-app-pack-compatibility.mjs');
+  const beta = spawnSync(process.execPath, [validator, 'beta'], {encoding: 'utf8'});
+  assert.equal(beta.status, 0, beta.stderr);
+  const stable = spawnSync(process.execPath, [validator, 'stable'], {encoding: 'utf8'});
+  assert.notEqual(stable.status, 0);
+  assert.match(stable.stderr, /require an immutable known-good frame-pack catalog pin/);
 });
 
 test('Windows previews fall back explicitly until Azure signing is available', () => {

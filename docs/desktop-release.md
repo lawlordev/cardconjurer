@@ -7,7 +7,7 @@ Public release is intentionally manual. Before publishing:
 1. Confirm the inherited GNU GPL v3.0 license and contributor credits remain present in the packaged release.
 2. Configure Apple Developer ID Application credentials and App Store Connect API notarization credentials.
 3. Configure Azure Artifact Signing when public-trust identity validation is available. Until then, Windows artifacts are explicitly labeled unsigned previews.
-4. Publish an immutable `packs-vX.Y.Z` asset-pack release containing at least Set Symbols and Standard.
+4. Publish an immutable `packs-vX.Y.Z` asset-pack release containing all catalog entries before publishing the application that consumes it. Archives target 256 MiB source parts, every payload file has one owner, and the catalog records measured compressed and installed sizes.
 5. Validate macOS arm64, best-effort macOS x64, and Windows x64 artifacts on real systems.
 
 ## GitHub secrets
@@ -45,8 +45,18 @@ For the current unsigned Windows preview lane, use `windows_signing: auto`. Afte
 
 Frame packs use the separate **Release Frame Packs** workflow and `packs-vX.Y.Z` namespace. They are prereleases and never become the repository's latest application release. Pack archives are immutable; new versions receive new URLs and SHA-256 values.
 
+The pack workflow defaults to a non-publishing rehearsal. Supply a version and either a comma-separated pack selection or `all`; selected releases materialize and validate only the chosen logical packs plus shared ownership metadata. Publishing compares against the prior catalog, refuses to replace an existing immutable asset, and emits schema-v3 catalog data with per-file integrity metadata. Use a full release when shared ownership inputs change.
+
+Application releases use the same sparse application checkout as pull-request packaging. They do not compile, download, or rebuild frame packs. `resources/pack-compatibility.json` records the catalog schemas and pack-version compatibility accepted by that app build; preflight validates it before any platform build starts. The nullable catalog pin is a migration-only state for the existing beta line. Set an immutable catalog version and SHA-256 before promoting a stable release.
+
+Inspect `frame-pack-ownership.json` before promotion: renderer-global base assets must not be present, every payload file must have exactly one owner, and no compressed archive may exceed the desktop safety limit. Complete onboarding with at least Standard plus two optional packs and verify that the single aggregate bar is monotonic, reaches exactly 100 percent, and resumes after interrupting one archive.
+
 ## Updates
 
-The app checks GitHub metadata but downloads nothing until **Update Now**. It creates a SQLite snapshot immediately before staging, verifies the published checksum, shows determinate circular progress, and changes the same control to **Restart** when ready. Stable is the default; beta is explicit opt-in.
+The app checks GitHub metadata after startup for the application and only the packs already installed. It never advertises uninstalled optional packs. If either kind of compatible update exists, one **Update Now** action stages all applicable items in the background. Pack archives remain inactive generations and the application installer remains unopened, so the running process is undisturbed. After every checksum, file digest, schema, and compatibility check succeeds, that action becomes **Restart** and activation occurs as one recorded transaction on restart.
+
+First-time onboarding, repair, and explicit manual pack installation retain their partial-success behavior; the staged update transaction does not replace those flows. A failed update keeps the active app and pack generations, exposes retry details in Settings, and cleans incomplete staging. Startup recovery uses the transaction journal and pre-stage SQLite snapshot to finish or roll back interrupted activation. Windows launches the staged Setup only after pack activation is committed, then exits the old process without relaunching into Squirrel's installation lock. Stable is the default; beta is explicit opt-in.
+
+Before release, install the Windows Setup and run the installed-artifact check. Also validate an N-1 upgrade using a disposable user profile and confirm that workspace data, active pack generations, Start-menu/Desktop shortcuts, Installed Apps registration, and the running version survive the upgrade. A damaged beta workspace must create a `repair-beta-card-layouts` snapshot before targeted card repair.
 
 No workflow releases automatically, and no website or S3 bucket is touched.

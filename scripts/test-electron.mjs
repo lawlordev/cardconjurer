@@ -1,27 +1,91 @@
-import {mkdtemp, mkdir, rm} from 'node:fs/promises';
+import {copyFile, mkdtemp, mkdir, readFile, rm, writeFile} from 'node:fs/promises';
+import {spawn} from 'node:child_process';
+import {createServer} from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import { _electron as electron } from 'playwright';
+import { _electron as electron, chromium } from 'playwright';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const userData = await mkdtemp(path.join(os.tmpdir(), 'set-conjurer-e2e-'));
+const packFixture = await mkdtemp(path.join(os.tmpdir(), 'set-conjurer-pack-fixture-'));
 const evidence = process.env.SET_CONJURER_EVIDENCE_DIR || path.join(os.tmpdir(), 'set-conjurer-evidence');
 await mkdir(evidence, {recursive: true});
 const errors = [];
 let application;
+const packagedExecutable = process.env.SET_CONJURER_TEST_EXECUTABLE || '';
+let packagedProcess;
+
+async function buildMinimalPackFixture() {
+  const source = await readFile(path.join(root, 'js', 'frames', 'packM15Regular-1.js'), 'utf8');
+  const assets = new Set([...source.matchAll(/['"`](\/img\/frames\/[^'"`$}]+)['"`]/g)].map((match) => match[1].replace(/^\//, '')));
+  assets.add('img/frames/m15/regular/m15FrameA.png');
+  const placeholder = path.join(root, 'img', 'frames', 'cornerCutout.png');
+  for (const asset of assets) {
+    const variants = asset.toLowerCase().endsWith('.png')
+      ? [asset, asset.replace(/\.png$/i, 'Thumb.png')]
+      : [asset];
+    for (const variant of variants) {
+      const destination = path.join(packFixture, variant);
+      await mkdir(path.dirname(destination), {recursive: true});
+      if (variant.toLowerCase().endsWith('.svg')) {
+        await writeFile(destination, '<svg xmlns="http://www.w3.org/2000/svg" width="1005" height="1407"><rect width="1005" height="1407" fill="#111827"/></svg>\n');
+      } else {
+        await copyFile(placeholder, destination);
+      }
+    }
+  }
+  const symbol = path.join(packFixture, 'img', 'setSymbols', 'custom', 'test-c.png');
+  await mkdir(path.dirname(symbol), {recursive: true});
+  await copyFile(placeholder, symbol);
+}
+
+await buildMinimalPackFixture();
+
+async function availablePort() {
+  const server = createServer();
+  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  const address = server.address();
+  await new Promise((resolve) => server.close(resolve));
+  return address.port;
+}
+
+async function launchPackaged() {
+  const port = await availablePort();
+  packagedProcess = spawn(packagedExecutable, [`--remote-debugging-port=${port}`], {
+    cwd: root,
+    env: {...process.env, SET_CONJURER_USER_DATA: userData, SET_CONJURER_TEST_PACK_ROOT: packFixture, ELECTRON_ENABLE_LOGGING: '1'},
+    detached: true,
+    windowsHide: true,
+    stdio: 'ignore'
+  });
+  packagedProcess.unref();
+  let browser;
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    try { browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`); break; }
+    catch (error) { await new Promise((resolve) => setTimeout(resolve, 125)); }
+  }
+  if (!browser) throw new Error('Packaged Electron did not open its local debugging endpoint.');
+  let page;
+  for (let attempt = 0; attempt < 80 && !page; attempt += 1) {
+    page = browser.contexts().flatMap((context) => context.pages()).find((candidate) => candidate.url().startsWith('set-conjurer://'));
+    if (!page) await new Promise((resolve) => setTimeout(resolve, 125));
+  }
+  if (!page) throw new Error('Packaged Electron did not create the Set Conjurer window.');
+  return {firstWindow: async () => page, close: async () => { await page.close().catch(() => {}); await browser.close(); }};
+}
 
 try {
-  application = await electron.launch({
-    args: [root],
-    cwd: root,
-    env: {...process.env, SET_CONJURER_USER_DATA: userData, SET_CONJURER_ALLOW_TEST_INSTANCE: '1', ELECTRON_ENABLE_LOGGING: '1'}
+  application = packagedExecutable ? await launchPackaged() : await electron.launch({
+    args: [root], cwd: root,
+    env: {...process.env, SET_CONJURER_USER_DATA: userData, SET_CONJURER_TEST_PACK_ROOT: packFixture, SET_CONJURER_ALLOW_TEST_INSTANCE: '1', ELECTRON_ENABLE_LOGGING: '1'}
   });
   const page = await application.firstWindow();
   page.on('console', (message) => { if (message.type() === 'error' && !message.text().includes('Failed to load resource')) errors.push(`console: ${message.text()}`); });
   page.on('pageerror', (error) => errors.push(`page: ${error.message}`));
   page.on('response', (response) => {
-    if (response.status() >= 400 && ['document','script','stylesheet'].includes(response.request().resourceType())) errors.push(`response ${response.status()}: ${response.url()}`);
+    const resourceType = response.request().resourceType();
+    if (response.status() >= 400 && (['document','script','stylesheet'].includes(resourceType) || (resourceType === 'image' && response.url().startsWith('set-conjurer://')))) errors.push(`response ${response.status()}: ${response.url()}`);
   });
   try {
     await page.waitForSelector('#desktop-onboarding[open]', {timeout: 20_000});
@@ -33,8 +97,23 @@ try {
   await page.screenshot({path: path.join(evidence, '01-onboarding.png'), fullPage: true});
   const standard = page.locator('#desktop-onboarding-packs [data-pack-id="standard"]');
   if (!(await standard.isChecked()) || !(await standard.isDisabled())) throw new Error('Standard pack is not required and locked on.');
+  if (await page.locator('#desktop-onboarding-packs .desktop-onboarding-pack small').count() !== 7) throw new Error('Onboarding does not show a size for every pack.');
+  if (!(await page.locator('#desktop-onboarding-total').innerText()).startsWith('Total download:')) throw new Error('Onboarding does not show the selected total.');
+  if (await page.locator('#desktop-onboarding-progress').count() !== 1) throw new Error('Onboarding does not have exactly one aggregate progress indicator.');
+  if (await page.locator('#desktop-onboarding-packs [data-pack-id="tokens"]').isDisabled()) throw new Error('Published optional packs are not selectable on first launch.');
   await page.click('#desktop-onboarding-start');
   await page.waitForSelector('.creator-workspace.is-ready', {timeout: 45_000});
+  await page.waitForFunction(() => {
+    const canvas = document.querySelector('#previewCanvas');
+    if (!canvas) return false;
+    const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+    for (let index = 3; index < pixels.length; index += 160) if (pixels[index] > 0) return true;
+    return false;
+  }, null, {timeout: 20_000});
+  await page.waitForTimeout(500);
+  errors.length = 0; // Pre-onboarding frame requests are expected before packs activate and the page reloads.
+  const requiredFrameAvailable = await page.evaluate(async () => (await fetch('/img/frames/m15/regular/m15FrameA.png')).ok);
+  if (!requiredFrameAvailable) throw new Error('The installed Standard pack does not resolve its default frame asset.');
   const sharedRadius = await page.locator('#desktop-settings').evaluate((element) => getComputedStyle(element).borderTopLeftRadius);
   for (const [selector, label] of [
     ['.creator-new-set', 'New Set'],
@@ -64,7 +143,7 @@ try {
     throw new Error(`nested component radii are not concentric: ${JSON.stringify({sharedRadius, ...concentricRadii})}`);
   }
   const updateButton = page.locator('#desktop-update');
-  if (!(await updateButton.evaluate((button) => button.hidden))) throw new Error('Update action is visible before an update is available.');
+  if (await updateButton.isVisible()) throw new Error('Update action is visible before an update is available.');
   const updatePlacement = await updateButton.evaluate((button) => ({
     insideSaveStatus: Boolean(button.closest('.creator-app-context')),
     statusArea: button.parentElement?.parentElement?.classList.contains('creator-app-status-area'),
@@ -212,5 +291,8 @@ try {
   console.log(`Electron smoke test passed. Evidence: ${evidence}`);
 } finally {
   if (application) await application.close();
-  await rm(userData, {recursive: true, force: true});
+  if (packagedProcess && !packagedProcess.killed) packagedProcess.kill();
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  await rm(userData, {recursive: true, force: true, maxRetries: 20, retryDelay: 100});
+  await rm(packFixture, {recursive: true, force: true, maxRetries: 20, retryDelay: 100});
 }

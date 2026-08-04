@@ -1399,6 +1399,7 @@ function textFieldFocusState() {
 }
 
 function loadTextOptions(textObject, replace=true) {
+	textObject = textObject && typeof textObject === 'object' && !Array.isArray(textObject) ? textObject : {};
 	var focusState = textFieldFocusState();
 	var oldCardText = card.text || {};
 	Object.entries(layoutOwnedTextDefaults).forEach(([key, ownedDefault]) => {

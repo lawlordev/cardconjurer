@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "packIds": [
+    "set-symbols",
+    "standard",
+    "booster-fun",
+    "tokens",
+    "basics",
+    "legacy",
+    "custom"
+  ],
+  "baseRuntimeAssets": [
+    "img/frames/cornerCutout.png",
+    "img/frames/maskRightHalf.png",
+    "img/frames/maskMiddleThird.png",
+    "img/frames/serial.png"
+  ],
+  "allPackContractPaths": [
+    "packs/",
+    "js/frameRegistry.js",
+    "js/frameSearch.js",
+    "scripts/build-frame-pack-release.mjs",
+    "scripts/compile-frame-packs.mjs",
+    "scripts/lib/pack-ownership.mjs",
+    "scripts/validate-frame-packs.mjs",
+    ".github/workflows/release-frame-packs.yaml"
+  ],
+  "dynamicAssetPrefixes": {
+    "set-symbols": ["img/setSymbols/"],
+    "standard": [],
+    "booster-fun": [],
+    "tokens": [],
+    "basics": [],
+    "legacy": [],
+    "custom": []
+  }
+}

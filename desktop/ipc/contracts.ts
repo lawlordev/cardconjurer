@@ -46,20 +46,44 @@ export interface PackStatus {
   required: boolean;
   installed: boolean;
   installedVersion: string | null;
-  availableVersion: string;
+  availableVersion: string | null;
   archiveBytes: number;
   installedBytes: number;
   available: boolean;
+  updateAvailable: boolean;
   source: 'development' | 'bundled-seed' | 'github' | 'unavailable';
 }
 
+export interface PackProgress {
+  phase: 'preparing' | 'downloading' | 'extracting' | 'activating';
+  percent: number;
+  message: string;
+  receivedBytes: number;
+  totalBytes: number;
+}
+
 export interface UpdateState {
-  phase: 'idle' | 'checking' | 'available' | 'downloading' | 'verifying' | 'staged' | 'failed';
+  phase: 'idle' | 'checking' | 'available' | 'downloading' | 'verifying' | 'staged' | 'failed' | 'compatibility-blocked' | 'recovery-required';
   progress: number;
   message: string;
   availableVersion: string | null;
   includesApp: boolean;
   packIds: PackId[];
+  transactionId: string | null;
+  totalBytes: number;
+  completedBytes: number;
+  lastCheckedAt: string | null;
+  recoverable: boolean;
+  items: Array<{
+    kind: 'app' | 'pack';
+    id: string;
+    displayName: string;
+    currentVersion: string | null;
+    targetVersion: string;
+    bytes: number;
+    phase: 'available' | 'downloading' | 'verifying' | 'staged' | 'failed';
+    error: string | null;
+  }>;
 }
 
 export interface DesktopAPI {
@@ -84,9 +108,10 @@ export interface DesktopAPI {
   };
   packs: {
     list(): Promise<PackStatus[]>;
+    refresh(): Promise<PackStatus[]>;
     install(ids: PackId[]): Promise<PackStatus[]>;
     remove(id: PackId): Promise<PackStatus[]>;
-    onProgress(listener: (progress: {id: PackId; percent: number; message: string}) => void): () => void;
+    onProgress(listener: (progress: PackProgress) => void): () => void;
   };
   updates: {
     state(): Promise<UpdateState>;
@@ -118,6 +143,7 @@ export const IPC = Object.freeze({
   importChoose: 'desktop:import-choose',
   associatedFile: 'desktop:associated-file',
   packsList: 'desktop:packs-list',
+  packsRefresh: 'desktop:packs-refresh',
   packsInstall: 'desktop:packs-install',
   packsRemove: 'desktop:packs-remove',
   packsProgress: 'desktop:packs-progress',

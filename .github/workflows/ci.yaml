@@ -4,29 +4,106 @@ on:
   pull_request:
   push:
     branches: [master]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: desktop-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  APP_SPARSE_PATHS: |
+    /*
+    !/about/
+    !/askurza/
+    !/converter/
+    !/data/images/
+    !/gallery/
+    !/img/frames/*
+    !/img/setSymbols/
+    !/legal/
+    !/phyrexian/
+    !/theme/
+    !/tutorial/
+    !/launcher*
+    /img/frames/cornerCutout.png
+    /img/frames/maskRightHalf.png
+    /img/frames/maskMiddleThird.png
+    /img/frames/serial.png
+
 jobs:
+  classify:
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.changes.outputs.app }}
+      package: ${{ steps.changes.outputs.package }}
+      pack_contract: ${{ steps.changes.outputs.pack_contract }}
+      materialize_pack_assets: ${{ steps.changes.outputs.materialize_pack_assets }}
+      packs: ${{ steps.changes.outputs.packs }}
+      unknown_pack_path: ${{ steps.changes.outputs.unknown_pack_path }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          filter: blob:none
+          # A PR merge ref contains its exact base/head trees as direct parents.
+          # Default-branch pushes retain full history because `before` may span several commits.
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 0 }}
+          sparse-checkout-cone-mode: false
+          sparse-checkout: ${{ env.APP_SPARSE_PATHS }}
+      - uses: actions/setup-node@v5
+        with: {node-version: 24}
+      - id: changes
+        name: Classify changed surfaces
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/classify-ci-changes.mjs --base "$BASE_SHA" --head "$HEAD_SHA"
+      - run: node scripts/report-checkout-surface.mjs --expect-sparse
+
   verify:
+    needs: classify
+    if: needs.classify.outputs.app == 'true' || needs.classify.outputs.pack_contract == 'true' || needs.classify.outputs.packs != ''
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
         with:
-          node-version: 24
-          cache: npm
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: ${{ env.APP_SPARSE_PATHS }}
+      - uses: actions/setup-node@v5
+        with: {node-version: 24, cache: npm}
+      - run: node scripts/report-checkout-surface.mjs --expect-sparse
       - run: npm ci
       - run: npm run packs:compile
+      - run: git diff --exit-code -- generated/frame-definitions
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
-      - run: npm run build:desktop
       - run: npm run test:electron
 
+  packs:
+    needs: classify
+    if: needs.classify.outputs.packs != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: ${{ env.APP_SPARSE_PATHS }}
+      - uses: actions/setup-node@v5
+        with: {node-version: 24, cache: npm}
+      - if: needs.classify.outputs.materialize_pack_assets == 'true'
+        run: node scripts/materialize-ci-pack-assets.mjs "${{ needs.classify.outputs.packs }}"
+      - run: npm ci
+      - run: npm run test:packs
+      - run: node scripts/validate-frame-packs.mjs --packs "${{ needs.classify.outputs.packs }}" ${{ needs.classify.outputs.materialize_pack_assets == 'true' && '--assets' || '' }}
+
   package:
-    needs: verify
+    needs: classify
+    if: needs.classify.outputs.package == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -40,17 +117,55 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: ${{ env.APP_SPARSE_PATHS }}
       - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: npm
+        with: {node-version: 24, cache: npm}
+      - run: node scripts/report-checkout-surface.mjs --expect-sparse
       - run: npm ci
-      - run: npm run packs:compile
-      - run: npm run build:desktop
-      - run: npx electron-forge package --arch=${{ matrix.arch }}
+      - if: runner.os == 'Windows'
+        run: npm test
+      - run: npm run package -- --arch=${{ matrix.arch }}
       - run: npm run package:verify
-      - uses: actions/upload-artifact@v4
+      - if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:SET_CONJURER_TEST_EXECUTABLE = (Resolve-Path 'out/Set Conjurer-win32-x64/set-conjurer.exe').Path
+          npm run test:electron
+      - if: runner.os == 'Windows'
+        run: npm run make -- --arch=${{ matrix.arch }} --skip-package
+      - if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path out -Recurse -Filter 'Set-Conjurer-Windows-x64-Setup.exe' | Select-Object -First 1
+          if (!$installer) { throw 'Windows Setup executable was not produced.' }
+          ./scripts/test-windows-installer.ps1 -Installer $installer.FullName
+      - if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
         with:
-          name: unsigned-${{ runner.os }}-${{ matrix.arch }}
-          path: out/**
+          name: unsigned-Windows-x64
+          path: out/make/squirrel.windows/x64/**
           retention-days: 7
+
+  required:
+    name: required
+    if: always()
+    needs: [classify, verify, packs, package]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every selected lane
+        env:
+          CLASSIFY: ${{ needs.classify.result }}
+          VERIFY: ${{ needs.verify.result }}
+          PACKS: ${{ needs.packs.result }}
+          PACKAGE: ${{ needs.package.result }}
+          WANT_VERIFY: ${{ needs.classify.outputs.app == 'true' || needs.classify.outputs.pack_contract == 'true' || needs.classify.outputs.packs != '' }}
+          WANT_PACKS: ${{ needs.classify.outputs.packs != '' }}
+          WANT_PACKAGE: ${{ needs.classify.outputs.package == 'true' }}
+        run: |
+          test "$CLASSIFY" = success
+          if [ "$WANT_VERIFY" = true ]; then test "$VERIFY" = success; fi
+          if [ "$WANT_PACKS" = true ]; then test "$PACKS" = success; fi
+          if [ "$WANT_PACKAGE" = true ]; then test "$PACKAGE" = success; fi

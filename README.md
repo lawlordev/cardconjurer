@@ -16,6 +16,10 @@ Not sure which Mac you have? Open the Apple menu, choose **About This Mac**, and
 
 [View all releases, including beta versions](https://github.com/lawlordev/cardconjurer/releases).
 
+On Windows, run the downloaded Setup file once. After installation, launch **Set Conjurer** from the Start menu or desktop shortcut; you do not need to reopen the copy in Downloads. Windows Installed Apps is also the normal place to uninstall it.
+
+First launch shows the download size of every frame pack and the combined size of your selection before downloading. Set Symbols and Standard are required; the other packs are optional. Downloads are written directly to disk, resume after a connection interruption or restart, and use one overall progress indicator. Keep enough free space for both the shown download and the installed files. Application data and packs remain under your Windows user profile when the app is upgraded.
+
 ## Developer setup
 
 Install [Node.js 24](https://nodejs.org/), then run:

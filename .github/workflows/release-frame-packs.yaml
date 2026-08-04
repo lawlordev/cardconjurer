@@ -6,9 +6,27 @@ on:
       tag:
         description: Immutable packs-vX.Y.Z tag
         required: true
+      packs:
+        description: Comma-separated logical packs, or all
+        required: true
+        default: all
+      previous_catalog_url:
+        description: Required prior schema-2 catalog URL for a selective release
+        required: false
+      previous_catalog_v3_url:
+        description: Required prior schema-3 catalog URL for a selective release
+        required: false
+      publish:
+        description: Publish immutable assets after validation
+        type: boolean
+        default: false
 
 permissions:
   contents: write
+
+concurrency:
+  group: frame-packs-${{ inputs.tag }}
+  cancel-in-progress: false
 
 jobs:
   packs:
@@ -17,14 +35,69 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.tag }}
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/about/
+            !/askurza/
+            !/converter/
+            !/data/images/
+            !/gallery/
+            !/img/frames/*
+            !/img/setSymbols/
+            !/legal/
+            !/phyrexian/
+            !/theme/
+            !/tutorial/
+            !/launcher*
+            /img/frames/cornerCutout.png
+            /img/frames/maskRightHalf.png
+            /img/frames/maskMiddleThird.png
+            /img/frames/serial.png
       - uses: actions/setup-node@v5
         with: {node-version: 24, cache: npm}
+      - name: Resolve selected logical packs
+        id: selection
+        shell: bash
+        env:
+          REQUESTED_PACKS: ${{ inputs.packs }}
+          PREVIOUS_V2: ${{ inputs.previous_catalog_url }}
+          PREVIOUS_V3: ${{ inputs.previous_catalog_v3_url }}
+        run: |
+          if [ "$REQUESTED_PACKS" = all ]; then
+            echo 'packs=set-symbols,standard,booster-fun,tokens,basics,legacy,custom' >> "$GITHUB_OUTPUT"
+          else
+            test -n "$PREVIOUS_V2"
+            test -n "$PREVIOUS_V3"
+            echo "packs=$REQUESTED_PACKS" >> "$GITHUB_OUTPUT"
+          fi
+      - run: node scripts/materialize-ci-pack-assets.mjs "${{ steps.selection.outputs.packs }}"
       - run: npm ci
-      - run: npm run packs:compile
-      - run: node scripts/build-frame-pack-release.mjs "${{ inputs.tag }}"
-      - uses: softprops/action-gh-release@v2
+      - run: node scripts/validate-frame-packs.mjs --packs "${{ steps.selection.outputs.packs }}" --assets
+      - if: inputs.previous_catalog_url != ''
+        env: {PREVIOUS_CATALOG_URL: '${{ inputs.previous_catalog_url }}'}
+        run: mkdir -p build && curl --fail --location --proto '=https' --output build/previous-frame-packs.json "$PREVIOUS_CATALOG_URL"
+      - if: inputs.previous_catalog_v3_url != ''
+        env: {PREVIOUS_CATALOG_V3_URL: '${{ inputs.previous_catalog_v3_url }}'}
+        run: mkdir -p build && curl --fail --location --proto '=https' --output build/previous-frame-pack-catalog-v3.json "$PREVIOUS_CATALOG_V3_URL"
+      - name: Build selected immutable packs
+        shell: bash
+        run: |
+          args=("${{ inputs.tag }}" --packs "${{ steps.selection.outputs.packs }}")
+          if [ -f build/previous-frame-packs.json ]; then args+=(--previous-catalog build/previous-frame-packs.json); fi
+          if [ -f build/previous-frame-pack-catalog-v3.json ]; then args+=(--previous-catalog-v3 build/previous-frame-pack-catalog-v3.json); fi
+          node scripts/build-frame-pack-release.mjs "${args[@]}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frame-pack-rehearsal-${{ inputs.tag }}
+          path: build/frame-pack-release/**
+          retention-days: 7
+      - if: inputs.publish
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag }}
           prerelease: true
           make_latest: false
+          fail_on_unmatched_files: true
           files: build/frame-pack-release/**
