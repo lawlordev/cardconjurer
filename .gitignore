@@ -15,7 +15,13 @@ dev/*
 # production
 /build
 /dist
+/out
 /.idea
+
+# Electron packaging and local frame-pack seeds
+/.webpack
+/.vite
+/resources/icons/*.iconset
 
 # misc
 .DS_Store

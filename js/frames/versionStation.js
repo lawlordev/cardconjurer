@@ -751,7 +751,19 @@ function stationEdited() {
 			card.station.squares[1].x = value + borderlessOffset; // Add offset back to internal value
 			card.station.squares[2].x = value + borderlessOffset; // Add offset back to internal value
 		} else {
-			eval(`${target} = value`);
+			const setters = {
+				'card.station.badgeValues[1]': () => { card.station.badgeValues[1] = value; },
+				'card.station.badgeValues[2]': () => { card.station.badgeValues[2] = value; },
+				'card.station.disableFirstAbility': () => { card.station.disableFirstAbility = value; },
+				'card.station.ptSettings.x': () => { card.station.ptSettings.x = value; },
+				'card.station.ptSettings.y': () => { card.station.ptSettings.y = value; },
+				'card.station.squares[1].height': () => { card.station.squares[1].height = value; },
+				'card.station.squares[2].height': () => { card.station.squares[2].height = value; },
+				'card.station.squares[1].y': () => { card.station.squares[1].y = value; },
+				'card.station.squares[1].opacity': () => { card.station.squares[1].opacity = value; },
+				'card.station.squares[2].opacity': () => { card.station.squares[2].opacity = value; }
+			};
+			setters[target]?.();
 		}
 	});
 	

@@ -1,0 +1,235 @@
+{
+  "pack": "ClassicshiftedTransform",
+  "frames": [
+    {
+      "name": "Transform Icon",
+      "src": "/img/frames/custom/classicshifted/transform/transformIcon.png",
+      "bounds": {
+        "x": 0.064,
+        "y": 0.0367,
+        "width": 0.068,
+        "height": 0.0486
+      }
+    },
+    {
+      "name": "White Transform Indicator",
+      "src": "/img/frames/custom/classicshifted/transform/w.png",
+      "bounds": {
+        "x": 0.9207,
+        "y": 0.8405,
+        "width": 0.0374,
+        "height": 0.0429
+      }
+    },
+    {
+      "name": "Blue Transform Indicator",
+      "src": "/img/frames/custom/classicshifted/transform/u.png",
+      "bounds": {
+        "x": 0.9207,
+        "y": 0.8405,
+        "width": 0.0374,
+        "height": 0.0429
+      }
+    },
+    {
+      "name": "Black Transform Indicator",
+      "src": "/img/frames/custom/classicshifted/transform/b.png",
+      "bounds": {
+        "x": 0.9207,
+        "y": 0.8405,
+        "width": 0.0374,
+        "height": 0.0429
+      }
+    },
+    {
+      "name": "Red Transform Indicator",
+      "src": "/img/frames/custom/classicshifted/transform/r.png",
+      "bounds": {
+        "x": 0.9207,
+        "y": 0.8405,
+        "width": 0.0374,
+        "height": 0.0429
+      }
+    },
+    {
+      "name": "Green Transform Indicator",
+      "src": "/img/frames/custom/classicshifted/transform/g.png",
+      "bounds": {
+        "x": 0.9207,
+        "y": 0.8405,
+        "width": 0.0374,
+        "height": 0.0429
+      }
+    },
+    {
+      "name": "Multicolored Transform Indicator",
+      "src": "/img/frames/custom/classicshifted/transform/m.png",
+      "bounds": {
+        "x": 0.9207,
+        "y": 0.8405,
+        "width": 0.0374,
+        "height": 0.0429
+      }
+    },
+    {
+      "name": "Artifact Transform Indicator",
+      "src": "/img/frames/custom/classicshifted/transform/a.png",
+      "bounds": {
+        "x": 0.9207,
+        "y": 0.8405,
+        "width": 0.0374,
+        "height": 0.0429
+      }
+    },
+    {
+      "name": "Colorless Transform Indicator",
+      "src": "/img/frames/custom/classicshifted/transform/c.png",
+      "bounds": {
+        "x": 0.9207,
+        "y": 0.8405,
+        "width": 0.0374,
+        "height": 0.0429
+      }
+    },
+    {
+      "name": "Up Arrow",
+      "src": "/img/frames/m15/transform/icons/default.png",
+      "bounds": {
+        "x": 0.072,
+        "y": 0.0424,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Down Arrow",
+      "src": "/img/frames/m15/transform/icons/downArrow.png",
+      "bounds": {
+        "x": 0.072,
+        "y": 0.0424,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Sun",
+      "src": "/img/frames/m15/transform/icons/sun.svg",
+      "bounds": {
+        "x": 0.072,
+        "y": 0.0424,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Crescent Moon",
+      "src": "/img/frames/m15/transform/icons/moon.svg",
+      "bounds": {
+        "x": 0.072,
+        "y": 0.0424,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Full Moon",
+      "src": "/img/frames/m15/transform/icons/fullmoon.svg",
+      "bounds": {
+        "x": 0.072,
+        "y": 0.0424,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Emrakul",
+      "src": "/img/frames/m15/transform/icons/emrakul.svg",
+      "bounds": {
+        "x": 0.072,
+        "y": 0.0424,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Compass",
+      "src": "/img/frames/m15/transform/icons/compass.svg",
+      "bounds": {
+        "x": 0.072,
+        "y": 0.0424,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Land",
+      "src": "/img/frames/m15/transform/icons/land.svg",
+      "bounds": {
+        "x": 0.072,
+        "y": 0.0424,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Planeswalker Ember",
+      "src": "/img/frames/m15/transform/icons/spark.svg",
+      "bounds": {
+        "x": 0.072,
+        "y": 0.0424,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Planeswalker Spark",
+      "src": "/img/frames/m15/transform/icons/planeswalker.svg",
+      "bounds": {
+        "x": 0.072,
+        "y": 0.0424,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Lesson",
+      "src": "/img/frames/m15/transform/icons/lesson.svg",
+      "bounds": {
+        "x": 0.072,
+        "y": 0.0424,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Closed Fan",
+      "src": "/img/frames/m15/transform/icons/fanClosed.svg",
+      "bounds": {
+        "x": 0.072,
+        "y": 0.0424,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Open Fan",
+      "src": "/img/frames/m15/transform/icons/fanOpen.svg",
+      "bounds": {
+        "x": 0.072,
+        "y": 0.0424,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Hammer",
+      "src": "/img/frames/m15/transform/icons/hammer.png",
+      "bounds": {
+        "x": 0.072,
+        "y": 0.0424,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    }
+  ]
+}

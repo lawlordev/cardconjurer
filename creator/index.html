@@ -65,7 +65,7 @@
 			<div>
 				<h5 class='input-description'>Select and remove masks</h5>
 				<select id='frame-editor-masks' class='input margin-bottom' aria-label='Frame editor masks'></select>
-				<button onclick='frameElementMaskRemoved();' class='input'>Remove mask</button>
+				<button onclick='frameElementMaskRemoved();' class='input danger'>Remove mask</button>
 			</div>
 			<div class='drop-area'>
 	            <h5 class='margin-bottom padding input-description'>Drag and drop masks to add</h5>
@@ -240,10 +240,12 @@
 					<button id='sets-undo-app' type='button' class='creator-app-action creator-history-action' onclick='CardConjurerSets.undo();' aria-label='Undo' title='Undo (Ctrl or Command Z)'><svg aria-hidden='true' viewBox='0 0 24 24'><path d='M9 7 4 12l5 5'/><path d='M5 12h8a6 6 0 0 1 6 6'/></svg></button>
 					<button id='sets-redo-app' type='button' class='creator-app-action creator-history-action' onclick='CardConjurerSets.redo();' aria-label='Redo' title='Redo (Ctrl or Command Shift Z)'><svg aria-hidden='true' viewBox='0 0 24 24'><path d='m15 7 5 5-5 5'/><path d='M19 12h-8a6 6 0 0 0-6 6'/></svg></button>
 				</div>
-				<div class='creator-app-context' aria-label='Workspace status'>
-					<span class='creator-status-dot' aria-hidden='true'></span>
-					<span id='sets-global-status'>Local workspace</span>
-					<label id='sets-drawer-open' class='creator-app-action sets-drawer-open' for='sets-drawer-toggle' role='button' tabindex='0' aria-controls='sets-workspace' aria-expanded='false'>Sets</label>
+				<div class='creator-app-status-area'>
+					<div class='creator-app-context' data-kind='saved' role='status' aria-live='polite' aria-atomic='true' aria-label='Workspace save status'>
+						<span class='creator-status-dot' data-kind='saved' aria-hidden='true'></span>
+						<span id='sets-global-status'>Saved successfully</span>
+						<label id='sets-drawer-open' class='creator-app-action sets-drawer-open' for='sets-drawer-toggle' role='button' tabindex='0' aria-controls='sets-workspace' aria-expanded='false'>Sets</label>
+					</div>
 				</div>
 			</div>
 			<input id='sets-drawer-toggle' class='sets-drawer-toggle' type='checkbox' hidden aria-hidden='true'>
@@ -262,21 +264,20 @@
 							<button id='card-editor-duplicate' type='button' onclick='CardConjurerSets.duplicateCard();' title='Duplicate this card'><span aria-hidden='true'>⧉</span>Duplicate</button>
 							<button id='card-editor-add-variant' type='button' onclick="CardConjurerSets.addVariant('art');" title='Add an art variant of this card'><span aria-hidden='true'>◫</span>Add Variant</button>
 							<button type='button' onclick="CardConjurerSets.moveOrCopy('move');"><span aria-hidden='true'>↗</span>Move to Set...</button>
-							<button type='button' onclick="CardConjurerSets.moveOrCopy('copy');"><span aria-hidden='true'>□</span>Copy Card</button>
 							<details class='creator-action-dropdown creator-card-action-dropdown'>
 								<summary><span aria-hidden='true'>↓</span>Export Card <span class='card-specific-chevron' aria-hidden='true'></span></summary>
 								<div class='creator-action-dropdown-menu'>
 									<button type='button' onclick="this.closest('details').removeAttribute('open'); CardConjurerSets.exportCardImage('png');">PNG (best)</button>
 									<button type='button' onclick="this.closest('details').removeAttribute('open'); CardConjurerSets.exportCardImage('jpeg');">JPG</button>
-									<button type='button' onclick="this.closest('details').removeAttribute('open'); CardConjurerSets.exportCardImage('preview');">Open in new tab</button>
 									<button type='button' onclick="this.closest('details').removeAttribute('open'); CardConjurerSets.exportCard();">.cardconjurer-card file</button>
+									<button type='button' onclick="this.closest('details').removeAttribute('open'); SetConjurerDesktop.openPrint('card');">Print</button>
 								</div>
 							</details>
 							<details class='creator-action-dropdown creator-card-action-dropdown'>
 								<summary><span aria-hidden='true'>↑</span>Import Card <span class='card-specific-chevron' aria-hidden='true'></span></summary>
 								<div class='creator-action-dropdown-menu'>
-									<button type='button' onclick="this.closest('details').removeAttribute('open'); document.querySelector('#sets-card-import').click();">.cardconjurer-card file</button>
-									<button type='button' onclick="this.closest('details').removeAttribute('open'); CardConjurerSets.openCardSearch(this);">Card search</button>
+									<button type='button' data-card-import-action='file'>.cardconjurer-card file</button>
+									<button type='button' data-card-import-action='search'>Card search</button>
 								</div>
 							</details>
 							<button type='button' class='danger' onclick='CardConjurerSets.deleteCard();'><span aria-hidden='true'>×</span>Delete Card</button>
@@ -290,11 +291,13 @@
 				<div class='workspace-resizer workspace-resizer-right' role='separator' aria-orientation='vertical' aria-label='Resize preview and editor panels' tabindex='0'></div>
 			<div class='creator-menu box-shadow'>
 				<div id='creator-menu-tabs' class='creator-menu-tabs'>
-					<h3 class='selectable readable-background selected' onclick='toggleCreatorTabs(event, "frame")'>Frame</h3>
-					<h3 class='selectable readable-background' onclick='toggleCreatorTabs(event, "text")'>Text</h3>
-					<h3 class='selectable readable-background' onclick='toggleCreatorTabs(event, "art")'>Art</h3>
-					<h3 class='selectable readable-background' onclick='toggleCreatorTabs(event, "watermark")'>Watermark</h3>
-					<h3 class='selectable readable-background' onclick='toggleCreatorTabs(event, "cardDetails")'>Card Details</h3>
+					<div class='segmented-tab-track creator-menu-tab-track'>
+						<h3 class='selectable selected' onclick='toggleCreatorTabs(event, "frame")'>Frame</h3>
+						<h3 class='selectable' onclick='toggleCreatorTabs(event, "text")'>Text</h3>
+						<h3 class='selectable' onclick='toggleCreatorTabs(event, "art")'>Art</h3>
+						<h3 class='selectable' onclick='toggleCreatorTabs(event, "watermark")'>Watermark</h3>
+						<h3 class='selectable' onclick='toggleCreatorTabs(event, "cardDetails")'>Card Details</h3>
+					</div>
 				</div>
 				<div id='creator-menu-sections' class='margin-bottom'>
 					<div id='creator-menu-frame'>
@@ -504,7 +507,7 @@
 								<h4>Artwork</h4>
 								<div class='art-heading-actions'>
 									<button type='button' class='text-field-layout-button' aria-controls='art-layout-drawer' onclick='openArtLayoutDrawer(this);'>Layout</button>
-									<button type='button' class='text-field-layout-button art-remove-action' onclick='uploadArt(blank.src);'>Remove Art</button>
+									<button type='button' class='text-field-layout-button art-remove-action danger' onclick='uploadArt(blank.src);'>Remove Art</button>
 								</div>
 							</div>
 							<div class='art-source-actions'>
@@ -593,7 +596,7 @@
 						</div>
 						<div class='readable-background padding margin-bottom'>
 							<h5 class='padding margin-bottom input-description'>Clears the Set Symbol, making it blank</h5>
-							<button class='input margin-bottom' onclick='uploadSetSymbol(blank.src);'>Remove Set Symbol</button>
+							<button class='input margin-bottom danger' onclick='uploadSetSymbol(blank.src);'>Remove Set Symbol</button>
 						</div>
 						<div class='readable-background padding margin-bottom'>
 							<h5 class='input-description margin-bottom'>Click and drag to move the set symbol instead of art (hold Shift to zoom or Ctrl to rotate)</h5>
@@ -621,7 +624,7 @@
 								<h4>Watermark</h4>
 								<div class='art-heading-actions'>
 									<button type='button' class='text-field-layout-button' aria-controls='watermark-layout-drawer' onclick='openWatermarkLayoutDrawer(this);'>Layout</button>
-									<button type='button' class='text-field-layout-button watermark-remove-action' onclick='uploadWatermark(blank.src);'>Remove Watermark</button>
+									<button type='button' class='text-field-layout-button watermark-remove-action danger' onclick='uploadWatermark(blank.src);'>Remove Watermark</button>
 								</div>
 							</div>
 							<label class='sets-search watermark-search-wrap'>
@@ -1063,5 +1066,5 @@
 	-->
 
 	</div>
-	<div id='creator-script-manifest' hidden data-scripts='/js/frameRegistry.js?v=20260803-sets-7,/js/setModel.js?v=20260803-sets-7,/js/setStorage.js?v=20260803-sets-7,/js/setFiles.js?v=20260803-sets-7,/js/autoFrame.js?v=20260803-sets-7,/js/creator-23.js?v=20260803-sets-7,/js/frameSearch.js?v=20260803-sets-7,/js/setWorkspace.js?v=20260803-sets-7'></div>
+	<div id='creator-script-manifest' hidden data-scripts='/js/frameRegistry.js?v=20260803-sets-7,/js/setModel.js?v=20260803-sets-7,/js/setStorage.js?v=20260803-sets-7,/js/setFiles.js?v=20260803-sets-7,/js/printModel.js?v=20260803-desktop-1,/js/autoFrame.js?v=20260803-sets-7,/js/creator-23.js?v=20260803-sets-7,/js/frameSearch.js?v=20260803-sets-7,/js/setWorkspace.js?v=20260803-desktop-1'></div>
 <!-- END OF CONTENT -->

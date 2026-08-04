@@ -1,0 +1,85 @@
+{
+  "pack": "M15Miracle",
+  "frames": [
+    {
+      "name": "White Miracle Frame",
+      "src": "/img/frames/m15/miracle/w.png",
+      "bounds": {
+        "x": 0.04,
+        "y": 0.0286,
+        "width": 0.92,
+        "height": 0.5324
+      }
+    },
+    {
+      "name": "Blue Miracle Frame",
+      "src": "/img/frames/m15/miracle/u.png",
+      "bounds": {
+        "x": 0.04,
+        "y": 0.0286,
+        "width": 0.92,
+        "height": 0.5324
+      }
+    },
+    {
+      "name": "Black Miracle Frame",
+      "src": "/img/frames/m15/miracle/b.png",
+      "bounds": {
+        "x": 0.04,
+        "y": 0.0286,
+        "width": 0.92,
+        "height": 0.5324
+      }
+    },
+    {
+      "name": "Red Miracle Frame",
+      "src": "/img/frames/m15/miracle/r.png",
+      "bounds": {
+        "x": 0.04,
+        "y": 0.0286,
+        "width": 0.92,
+        "height": 0.5324
+      }
+    },
+    {
+      "name": "Green Miracle Frame",
+      "src": "/img/frames/m15/miracle/g.png",
+      "bounds": {
+        "x": 0.04,
+        "y": 0.0286,
+        "width": 0.92,
+        "height": 0.5324
+      }
+    },
+    {
+      "name": "Multicolored Miracle Frame",
+      "src": "/img/frames/m15/miracle/m.png",
+      "bounds": {
+        "x": 0.04,
+        "y": 0.0286,
+        "width": 0.92,
+        "height": 0.5324
+      }
+    },
+    {
+      "name": "Artifact Miracle Frame",
+      "src": "/img/frames/m15/miracle/a.png",
+      "bounds": {
+        "x": 0.04,
+        "y": 0.0286,
+        "width": 0.92,
+        "height": 0.5324
+      }
+    },
+    {
+      "name": "Land Miracle Frame",
+      "src": "/img/frames/m15/miracle/l.png",
+      "bounds": {
+        "x": 0.04,
+        "y": 0.0286,
+        "width": 0.92,
+        "height": 0.5324
+      }
+    }
+  ]
+}

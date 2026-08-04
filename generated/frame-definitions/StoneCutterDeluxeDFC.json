@@ -1,0 +1,285 @@
+{
+  "pack": "StoneCutterDeluxeDFC",
+  "frames": [
+    {
+      "name": "White MDFC Flipside",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/w.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Blue MDFC Flipside",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/u.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Black MDFC Flipside",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/b.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Red MDFC Flipside",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/r.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Green MDFC Flipside",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/g.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Multicolored MDFC Flipside",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/m.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Colorless MDFC Flipside",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/c.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Land MDFC Flipside",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/L.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "White Saga MDFC Flipside",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/saga/w.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Blue Saga MDFC Flipside",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/saga/u.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Black Saga MDFC Flipside",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/saga/b.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Red Saga MDFC Flipside",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/saga/r.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Green Saga MDFC Flipside",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/saga/g.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Multicolored Saga MDFC Flipside",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/saga/m.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Colorless Saga MDFC Flipside",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/saga/c.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Land Saga MDFC Flipside",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/saga/L.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Front Face",
+      "src": "/img/frames/custom/classicshifted/mdfc/mdfcFront.png",
+      "bounds": {
+        "x": 0.048,
+        "y": 0.0367,
+        "width": 0.0834,
+        "height": 0.8805
+      }
+    },
+    {
+      "name": "Back Face",
+      "src": "/img/frames/custom/classicshifted/mdfc/mdfcBack.png",
+      "bounds": {
+        "x": 0.048,
+        "y": 0.0367,
+        "width": 0.0834,
+        "height": 0.8805
+      }
+    },
+    {
+      "name": "Retro Arrow Up",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/retroUp.png",
+      "bounds": {
+        "x": 0.0649,
+        "y": 0.0532,
+        "width": 0.0349,
+        "height": 0.0185
+      }
+    },
+    {
+      "name": "Retro Arrow Down",
+      "src": "/img/frames/custom/stoneCutter/stoneCutterDeluxe/mdfc/retroDown.png",
+      "bounds": {
+        "x": 0.0649,
+        "y": 0.0532,
+        "width": 0.0349,
+        "height": 0.0185
+      }
+    },
+    {
+      "name": "Transform Icon",
+      "src": "/img/frames/custom/classicshifted/transform/transformIcon.png",
+      "bounds": {
+        "x": 0.06417910447761194,
+        "y": 0.03695806680881308,
+        "width": 0.0681592039800995,
+        "height": 0.04868514570007108
+      }
+    },
+    {
+      "name": "Up Arrow",
+      "src": "/img/frames/m15/transform/icons/default.png",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04299928926794598,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Down Arrow",
+      "src": "/img/frames/m15/transform/icons/downArrow.png",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04299928926794598,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Legend Crown Front Face",
+      "src": "/img/frames/custom/classicshifted/mdfc/mdfcFront.png",
+      "bounds": {
+        "x": 0.048,
+        "y": 0.0432,
+        "width": 0.0834,
+        "height": 0.8805
+      }
+    },
+    {
+      "name": "Legend Crown Back Face",
+      "src": "/img/frames/custom/classicshifted/mdfc/mdfcBack.png",
+      "bounds": {
+        "x": 0.048,
+        "y": 0.0432,
+        "width": 0.0834,
+        "height": 0.8805
+      }
+    },
+    {
+      "name": "Legend Crown Transform Icon",
+      "src": "/img/frames/custom/classicshifted/transform/transformIcon.png",
+      "bounds": {
+        "x": 0.06417910447761194,
+        "y": 0.042643923240938165,
+        "width": 0.0681592039800995,
+        "height": 0.04868514570007108
+      }
+    },
+    {
+      "name": "Legend Crown Up Arrow",
+      "src": "/img/frames/m15/transform/icons/default.png",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04868514570007108,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    },
+    {
+      "name": "Legend Crown Down Arrow",
+      "src": "/img/frames/m15/transform/icons/downArrow.png",
+      "bounds": {
+        "x": 0.07213930348258707,
+        "y": 0.04868514570007108,
+        "width": 0.051741293532338306,
+        "height": 0.03695806680881308
+      }
+    }
+  ]
+}

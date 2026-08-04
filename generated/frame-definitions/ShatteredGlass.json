@@ -1,0 +1,51 @@
+{
+  "pack": "ShatteredGlass",
+  "frames": [
+    {
+      "name": "Shattered Legendary Title",
+      "src": "/img/frames/shatteredGlass/ShatteredLegendaryTitle.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Shattered Title",
+      "src": "/img/frames/shatteredGlass/ShatteredTitle.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    },
+    {
+      "name": "Shattered Rules",
+      "src": "/img/frames/shatteredGlass/ShatteredRules.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      "masks": [
+        {
+          "src": "/img/frames/shatteredGlass/masks/maskShatteredRules.png",
+          "name": "No Border"
+        }
+      ]
+    },
+    {
+      "name": "Shattered PT Box",
+      "src": "/img/frames/shatteredGlass/ShatteredPTBox.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      }
+    }
+  ]
+}

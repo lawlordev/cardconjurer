@@ -1,0 +1,30 @@
+name: Release Frame Packs
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Immutable packs-vX.Y.Z tag
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  packs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag }}
+      - uses: actions/setup-node@v5
+        with: {node-version: 24, cache: npm}
+      - run: npm ci
+      - run: npm run packs:compile
+      - run: node scripts/build-frame-pack-release.mjs "${{ inputs.tag }}"
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag }}
+          prerelease: true
+          make_latest: false
+          files: build/frame-pack-release/**

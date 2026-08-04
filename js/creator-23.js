@@ -15,6 +15,15 @@ function fixUri(input) {
 	} else {
 		return prefix + input; //input.replace('/img/frames', prefix + '/img/frames');
 	} */
+	if (typeof input !== 'string') return input;
+	if (window.location.protocol === 'set-conjurer:') {
+		try {
+			var source = new URL(input, window.location.href);
+			if (['localhost', '127.0.0.1', '::1'].includes(source.hostname)) {
+				return source.pathname + source.search + source.hash;
+			}
+		} catch (error) {}
+	}
 	return input;
 }
 function setImageUrl(image, source) {
@@ -3486,6 +3495,7 @@ function artStopDrag(e) {
 }
 //SET SYMBOL TAB
 function uploadSetSymbol(imageSource, otherParams) {
+	imageSource = fixUri(imageSource || '/img/blank.png');
 	ImageLoadTracker.track(imageSource);
 	if (otherParams && otherParams == 'resetSetSymbol') {
 		setSymbol.onload = function() {
@@ -3974,6 +3984,7 @@ function drawCollectorCopyright() {
 	var secondLineMetrics = hasSecondLine ? measureCollectorCopyrightLine(lines[1], layout) : null;
 	var blockWidth = hasSecondLine ? Math.min(layout.width, secondLineMetrics.width) : layout.width;
 	var blockX = layout.x + layout.width - blockWidth;
+	var firstLineY = hasSecondLine || !hasStatBox ? layout.firstY : layout.secondY;
 	var common = {
 		x: blockX,
 		width: blockWidth,
@@ -3988,7 +3999,7 @@ function drawCollectorCopyright() {
 	var firstLine = Object.assign({}, common, {
 		name: 'copyrightLine1',
 		text: lines[0],
-		y: hasSecondLine ? layout.firstY : layout.secondY,
+		y: firstLineY,
 		align: hasStatBox && hasSecondLine ? 'left' : 'right',
 		font: firstLineLayout.font,
 		size: firstLineLayout.size,
@@ -4257,7 +4268,7 @@ function drawCard() {
 	if (document.querySelector('#grayscale-art').checked) {
 		cardContext.filter='grayscale(1)';
 	}
-	cardContext.drawImage(art, 0, 0, art.width * card.artZoom, art.height * card.artZoom);
+	if (isDrawableImage(art)) cardContext.drawImage(art, 0, 0, art.width * card.artZoom, art.height * card.artZoom);
 	cardContext.restore();
 	// frame elements
 	if (card.version.includes('planeswalker') && typeof planeswalkerPreFrameCanvas !== "undefined") {
@@ -4396,6 +4407,18 @@ function downloadCard(alt = false, jpeg = false) {
 				newWindow.document.title = imageName;
 			}, 0);
 		} else {
+			if (window.setConjurerDesktop) {
+				void window.setConjurerDesktop.files.saveExport({
+					suggestedName: imageName,
+					extension: jpeg ? 'jpg' : 'png',
+					encoding: 'base64',
+					content: imageDataURL.slice(imageDataURL.indexOf(',') + 1)
+				}).catch(function(error) {
+					console.error(error);
+					notify('Set Conjurer could not export that image.', 5);
+				});
+				return;
+			}
 			const downloadElement = document.createElement('a');
 			downloadElement.download = imageName;
 			downloadElement.target = '_blank';
@@ -6530,6 +6553,6 @@ updateWatermarkColorControls();
 syncAutomaticWatermarkColors();
 
 // Load / init whatever
-loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+loadScript('/node_modules/jszip/dist/jszip.min.js');
 initDraggableArt();
 window.dispatchEvent(new CustomEvent('cardconjurer:creator-ready'));

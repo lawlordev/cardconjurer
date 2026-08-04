@@ -1,0 +1,215 @@
+{
+  "pack": "M15InnerCrowns",
+  "frames": [
+    {
+      "name": "White Inner Crown (Nyx)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownWNyx.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "Blue Inner Crown (Nyx)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownUNyx.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "Black Inner Crown (Nyx)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownBNyx.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "Red Inner Crown (Nyx)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownRNyx.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "Green Inner Crown (Nyx)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownGNyx.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "Multicolored Inner Crown (Nyx)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownMNyx.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "Artifact Inner Crown (Nyx)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownANyx.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "White Inner Crown (Nyx Universes Beyond)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownWNyxUB.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "Blue Inner Crown (Nyx Universes Beyond)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownUNyxUB.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "Black Inner Crown (Nyx Universes Beyond)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownBNyxUB.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "Red Inner Crown (Nyx Universes Beyond)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownRNyxUB.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "Green Inner Crown (Nyx Universes Beyond)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownGNyxUB.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "Multicolored Inner Crown (Nyx Universes Beyond)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownMNyxUB.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "Artifact Inner Crown (Nyx Universes Beyond)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownANyxUB.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "White Inner Crown (Companion)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownWCompanion.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "Blue Inner Crown (Companion)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownUCompanion.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "Black Inner Crown (Companion)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownBCompanion.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "Red Inner Crown (Companion)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownRCompanion.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "Green Inner Crown (Companion)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownGCompanion.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "Multicolored Inner Crown (Companion)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownMCompanion.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    },
+    {
+      "name": "Artifact Inner Crown (Companion)",
+      "src": "/img/frames/m15/innerCrowns/m15InnerCrownACompanion.png",
+      "bounds": {
+        "x": 0.164,
+        "y": 0.0239,
+        "width": 0.672,
+        "height": 0.0239
+      }
+    }
+  ]
+}

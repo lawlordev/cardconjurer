@@ -1,0 +1,207 @@
+{
+  "pack": "ClassicshiftedPlaneswalkerTransform",
+  "frames": [
+    {
+      "name": "Transform Icon",
+      "src": "/img/frames/custom/classicshifted/planeswalker/transform/transformIcon.png",
+      "bounds": {
+        "x": 0.0574,
+        "y": 0.041,
+        "width": 0.068,
+        "height": 0.0486
+      }
+    },
+    {
+      "name": "White Transform Indicator",
+      "src": "/img/frames/custom/classicshifted/planeswalker/transform/w.png",
+      "bounds": {
+        "x": 0.9227,
+        "y": 0.8396,
+        "width": 0.036,
+        "height": 0.0505
+      },
+      "complementary": 8
+    },
+    {
+      "name": "Blue Transform Indicator",
+      "src": "/img/frames/custom/classicshifted/planeswalker/transform/u.png",
+      "bounds": {
+        "x": 0.9227,
+        "y": 0.8396,
+        "width": 0.036,
+        "height": 0.0505
+      },
+      "complementary": 8
+    },
+    {
+      "name": "Black Transform Indicator",
+      "src": "/img/frames/custom/classicshifted/planeswalker/transform/b.png",
+      "bounds": {
+        "x": 0.9227,
+        "y": 0.8396,
+        "width": 0.036,
+        "height": 0.0505
+      },
+      "complementary": 8
+    },
+    {
+      "name": "Red Transform Indicator",
+      "src": "/img/frames/custom/classicshifted/planeswalker/transform/r.png",
+      "bounds": {
+        "x": 0.9227,
+        "y": 0.8396,
+        "width": 0.036,
+        "height": 0.0505
+      },
+      "complementary": 8
+    },
+    {
+      "name": "Green Transform Indicator",
+      "src": "/img/frames/custom/classicshifted/planeswalker/transform/g.png",
+      "bounds": {
+        "x": 0.9227,
+        "y": 0.8396,
+        "width": 0.036,
+        "height": 0.0505
+      },
+      "complementary": 8
+    },
+    {
+      "name": "Multicolored Transform Indicator",
+      "src": "/img/frames/custom/classicshifted/planeswalker/transform/m.png",
+      "bounds": {
+        "x": 0.9227,
+        "y": 0.8396,
+        "width": 0.036,
+        "height": 0.0505
+      },
+      "complementary": 8
+    },
+    {
+      "name": "Artifact Transform Indicator",
+      "src": "/img/frames/custom/classicshifted/planeswalker/transform/a.png",
+      "bounds": {
+        "x": 0.9227,
+        "y": 0.8396,
+        "width": 0.036,
+        "height": 0.0505
+      },
+      "complementary": 8
+    },
+    {
+      "name": "Frame Cutout",
+      "src": "/img/frames/custom/classicshifted/planeswalker/transform/cutout.svg",
+      "erase": true
+    },
+    {
+      "name": "Sun",
+      "src": "/img/frames/m15/transform/icons/sun.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Crescent Moon",
+      "src": "/img/frames/m15/transform/icons/moon.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Full Moon",
+      "src": "/img/frames/m15/transform/icons/fullmoon.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Emrakul",
+      "src": "/img/frames/m15/transform/icons/emrakul.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Compass",
+      "src": "/img/frames/m15/transform/icons/compass.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Land",
+      "src": "/img/frames/m15/transform/icons/land.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Planeswalker Ember",
+      "src": "/img/frames/m15/transform/icons/spark.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Planeswalker Spark",
+      "src": "/img/frames/m15/transform/icons/planeswalker.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Lesson",
+      "src": "/img/frames/m15/transform/icons/lesson.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Closed Fan",
+      "src": "/img/frames/m15/transform/icons/fanClosed.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    },
+    {
+      "name": "Open Fan",
+      "src": "/img/frames/m15/transform/icons/fanOpen.svg",
+      "bounds": {
+        "x": 0.0654,
+        "y": 0.0467,
+        "width": 0.052,
+        "height": 0.0372
+      }
+    }
+  ]
+}

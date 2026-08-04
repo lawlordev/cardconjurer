@@ -1,0 +1,145 @@
+{
+  "pack": "M15TransformTypesBack",
+  "frames": [
+    {
+      "name": "Up Arrow",
+      "src": "/img/frames/m15/transform/icons/default.png",
+      "bounds": {
+        "x": 0.8671641791044776,
+        "y": 0.0511727078891258,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Down Arrow",
+      "src": "/img/frames/m15/transform/icons/downArrow.png",
+      "bounds": {
+        "x": 0.8671641791044776,
+        "y": 0.0511727078891258,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Sun",
+      "src": "/img/frames/m15/transform/icons/sun.svg",
+      "bounds": {
+        "x": 0.8671641791044776,
+        "y": 0.0511727078891258,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Crescent Moon",
+      "src": "/img/frames/m15/transform/icons/moon.svg",
+      "bounds": {
+        "x": 0.8671641791044776,
+        "y": 0.0511727078891258,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Full Moon",
+      "src": "/img/frames/m15/transform/icons/fullmoon.svg",
+      "bounds": {
+        "x": 0.8671641791044776,
+        "y": 0.0511727078891258,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Emrakul",
+      "src": "/img/frames/m15/transform/icons/emrakul.svg",
+      "bounds": {
+        "x": 0.8671641791044776,
+        "y": 0.0511727078891258,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Compass",
+      "src": "/img/frames/m15/transform/icons/compass.svg",
+      "bounds": {
+        "x": 0.8671641791044776,
+        "y": 0.0511727078891258,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Land",
+      "src": "/img/frames/m15/transform/icons/land.svg",
+      "bounds": {
+        "x": 0.8671641791044776,
+        "y": 0.0511727078891258,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Planeswalker Ember",
+      "src": "/img/frames/m15/transform/icons/spark.svg",
+      "bounds": {
+        "x": 0.8671641791044776,
+        "y": 0.0511727078891258,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Planeswalker Spark",
+      "src": "/img/frames/m15/transform/icons/planeswalker.svg",
+      "bounds": {
+        "x": 0.8671641791044776,
+        "y": 0.0511727078891258,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Lesson",
+      "src": "/img/frames/m15/transform/icons/lesson.svg",
+      "bounds": {
+        "x": 0.8671641791044776,
+        "y": 0.0511727078891258,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Closed Fan",
+      "src": "/img/frames/m15/transform/icons/fanClosed.svg",
+      "bounds": {
+        "x": 0.8671641791044776,
+        "y": 0.0511727078891258,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Open Fan",
+      "src": "/img/frames/m15/transform/icons/fanOpen.svg",
+      "bounds": {
+        "x": 0.8671641791044776,
+        "y": 0.0511727078891258,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    },
+    {
+      "name": "Meld",
+      "src": "/img/frames/m15/transform/icons/hammer.png",
+      "bounds": {
+        "x": 0.8671641791044776,
+        "y": 0.0511727078891258,
+        "width": 0.0734,
+        "height": 0.0524
+      }
+    }
+  ]
+}

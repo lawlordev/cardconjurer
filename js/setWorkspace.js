@@ -24,7 +24,7 @@
 	var WORKSPACE_LAYOUT_KEY = 'card-conjurer-workspace-layout-v1';
 	var workspaceLayout = {leftWidth: null, rightWidth: null, collapsed: false};
 	var DEFAULT_SET_SYMBOL_BOUNDS = {x: 0.9213, y: 0.5910, width: 0.12, height: 0.0410, vertical: 'center', horizontal: 'right'};
-	var channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('card-conjurer-sets') : null;
+	var channel = !root.setConjurerDesktop && typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('card-conjurer-sets') : null;
 
 	function clone(value) { return Model.clone(value); }
 	function clamp(value, minimum, maximum) { return Math.min(Math.max(value, minimum), maximum); }
@@ -53,6 +53,7 @@
 				requestAnimationFrame(function() {
 					var workspace = document.querySelector('.creator-workspace');
 					if (workspace) workspace.classList.add('is-ready');
+					if (root.SetConjurerBoot) root.SetConjurerBoot.finish();
 					resolve();
 				});
 			});
@@ -176,14 +177,13 @@
 		clearTimeout(persistTimer);
 		var save = async function() {
 			state.revision = Date.now();
-			setStatus('Saving…', 'saving');
 			try {
 				await Storage.saveState(state);
-				setStatus('Saved locally', 'saved');
+				setStatus('Saved successfully', 'saved');
 				if (channel) channel.postMessage({revision: state.revision, source: root.name || 'tab'});
 			} catch (error) {
 				console.error(error);
-				setStatus('Autosave failed — export a backup', 'error');
+				setStatus('Issue saving', 'error');
 				showWorkspaceError(error.message || 'Autosave failed.');
 			}
 		};
@@ -208,13 +208,21 @@
 		if (!options || options.render !== false) renderWorkspace();
 	}
 
-	function setStatus(message, kind) {
+	function applyStatus(message, kind) {
 		var globalStatus = document.querySelector('#sets-global-status');
 		var localStatus = document.querySelector('#sets-status');
-		if (globalStatus) globalStatus.textContent = message;
+		var globalMessage = kind === 'error' ? 'Issue saving' : 'Saved successfully';
+		if (globalStatus) globalStatus.textContent = globalMessage;
 		if (localStatus) { localStatus.textContent = message; localStatus.dataset.kind = kind || ''; }
 		var dot = document.querySelector('.creator-status-dot');
 		if (dot) dot.dataset.kind = kind || '';
+		var context = document.querySelector('.creator-app-context');
+		if (context) context.dataset.kind = kind || '';
+	}
+
+	function setStatus(message, kind) {
+		kind = kind === 'error' ? 'error' : 'saved';
+		applyStatus(message, kind);
 	}
 
 	function showWorkspaceError(message) {
@@ -283,7 +291,7 @@
 	}
 
 	function tabButton(key, label, active) {
-		return '<button type="button" role="tab" class="sets-tab' + (active ? ' selected' : '') + '" aria-selected="' + (active ? 'true' : 'false') + '" onclick="CardConjurerSets.selectTab(\'' + key + '\')">' + label + '</button>';
+		return '<button type="button" role="tab" class="sets-tab' + (active ? ' selected' : '') + '" aria-selected="' + (active ? 'true' : 'false') + '" data-set-tab="' + key + '">' + label + '</button>';
 	}
 
 	function selectOptions(values, selected, labels) {
@@ -337,6 +345,75 @@
 		var host = document.querySelector('#sets-workspace-content');
 		var set = activeSet();
 		if (!host || !set) return;
+		if (!host.dataset.cardSelectionBound) {
+			host.addEventListener('click', function(event) {
+				var tab = event.target.closest('[data-set-tab]');
+				if (tab && host.contains(tab)) { void selectTab(tab.dataset.setTab); return; }
+				var action = event.target.closest('[data-set-action]');
+				if (action && host.contains(action)) {
+					var details = action.closest('details');
+					if (details) details.removeAttribute('open');
+					switch (action.dataset.setAction) {
+						case 'export-set': void exportSetAction(); break;
+						case 'download-set-images': void downloadSetImages(); break;
+						case 'print-set': if (root.SetConjurerDesktop) root.SetConjurerDesktop.openPrint('set'); break;
+						case 'duplicate-set': void duplicateSet(); break;
+						case 'delete-set': void deleteSetAction(); break;
+						case 'collapse-panel': toggleSetsPanel(true); break;
+						case 'expand-panel': toggleSetsPanel(false); break;
+						case 'confirm-transfer': void confirmMoveOrCopy(); break;
+						case 'cancel-set-import': cancelSetImport(); break;
+						case 'merge-set-import': void resolveSetImport('merge'); break;
+						case 'replace-set-import': void resolveSetImport('replace'); break;
+						case 'clear-card-search':
+							var search = action.parentElement.querySelector('[data-card-search]');
+							if (search) { search.value = ''; search.dispatchEvent(new Event('input', {bubbles:true})); search.focus(); }
+							break;
+						case 'cancel-zip': cancelZip(); break;
+						case 'open-markdown-help':
+							var markdownHelp = document.querySelector('#markdown-help-drawer');
+							if (markdownHelp) markdownHelp.classList.add('opened');
+							break;
+						case 'move-collector-group': void moveGroup(Number(action.dataset.groupIndex), Number(action.dataset.groupDelta)); break;
+						case 'retry-workspace': location.reload(); break;
+					}
+					return;
+				}
+				var loadSymbols = event.target.closest('[data-symbol-load-all]');
+				if (loadSymbols && host.contains(loadSymbols)) { void loadSymbolsByCode(host.querySelector('[data-symbol-code]')); return; }
+				var uploadSymbolButton = event.target.closest('[data-symbol-upload]');
+				if (uploadSymbolButton && host.contains(uploadSymbolButton)) { uploadSymbolButton.closest('.sets-symbol-card').querySelector('[data-symbol-file]').click(); return; }
+				var clearSymbolButton = event.target.closest('[data-symbol-clear]');
+				if (clearSymbolButton && host.contains(clearSymbolButton)) { void clearSymbols(); return; }
+				var button = event.target.closest('[data-card-id]');
+				if (button && host.contains(button)) selectCard(button.dataset.cardId);
+			});
+			host.addEventListener('input', function(event) {
+				if (event.target.matches('[data-symbol-code]')) event.target.value = Model.normalizeSymbolCode(event.target.value);
+				else if (event.target.matches('[data-card-search]')) void updateListState('search', event.target.value);
+				else if (event.target.matches('[data-set-field]')) previewSetField(event.target.dataset.setField, event.target);
+				else if (event.target.matches('[data-set-text]')) {
+					void updateSetText(event.target.dataset.setText, event.target.value);
+					if (event.target.dataset.setText === 'story') previewStory(event.target.value);
+				}
+			});
+			host.addEventListener('focusout', function(event) {
+				if (event.target.matches('[data-set-field]')) void commitSetField(event.target.dataset.setField, event.target);
+			});
+			host.addEventListener('keydown', function(event) {
+				if (event.key === 'Enter' && event.target.matches('[data-symbol-code]')) { event.preventDefault(); void loadSymbolsByCode(event.target); }
+			});
+			host.addEventListener('change', function(event) {
+				if (event.target.matches('[data-symbol-source]')) void updateSymbol(event.target.dataset.symbolSource, event.target.value);
+				else if (event.target.matches('[data-symbol-file]')) uploadSymbol(event.target.dataset.symbolFile, event);
+				else if (event.target.matches('[data-card-import]')) void importCardFile(event);
+				else if (event.target.matches('[data-set-import]')) void importSetFile(event);
+				else if (event.target.matches('[data-copyright-note-style]')) void updateCopyrightNoteStyle(event.target.checked);
+				else if (event.target.matches('[data-collector-style]')) void updateCollectorStyle(event.target.value);
+				else if (event.target.matches('[data-card-detail]')) void updateCardDetail(event.target.dataset.cardDetail, event.target.value);
+			});
+			host.dataset.cardSelectionBound = 'true';
+		}
 		var topSwitcher = document.querySelector('#sets-switcher');
 		if (topSwitcher) topSwitcher.innerHTML = state.sets.map(function(item) { return '<option value="' + item.id + '"' + (item.id === set.id ? ' selected' : '') + '>' + escapeHtml(item.name) + ' · ' + escapeHtml(item.code) + '</option>'; }).join('');
 		host.setAttribute('aria-busy', 'false');
@@ -345,16 +422,16 @@
 		host.innerHTML = '<div class="sets-header">' +
 			'<label class="sets-drawer-close" for="sets-drawer-toggle" role="button" tabindex="0" aria-label="Close sets drawer">×</label>' +
 			'<div><span class="creator-eyebrow">' + cardCount + ' card' + (cardCount === 1 ? '' : 's') + ' in set</span></div>' +
-			'<div class="sets-header-controls"><details class="creator-action-dropdown sets-options-dropdown"><summary class="input">Set Options <span class="card-specific-chevron" aria-hidden="true"></span></summary><div class="creator-action-dropdown-menu"><button type="button" onclick="this.closest(\'details\').removeAttribute(\'open\'); CardConjurerSets.exportSet()">Export Set</button><button type="button" onclick="this.closest(\'details\').removeAttribute(\'open\'); CardConjurerSets.downloadSetImages()">Download Images</button><button type="button" onclick="this.closest(\'details\').removeAttribute(\'open\'); CardConjurerSets.duplicateSet()">Duplicate Set</button><button type="button" class="danger" onclick="this.closest(\'details\').removeAttribute(\'open\'); CardConjurerSets.deleteSet()">Delete Set</button></div></details>' +
-			'<button type="button" class="sets-panel-toggle sets-panel-collapse" onclick="CardConjurerSets.toggleSetsPanel()" aria-label="Collapse set panel" title="Collapse set panel"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4v16M18 7l-5 5 5 5"/></svg></button></div></div>' +
+			'<div class="sets-header-controls"><details class="creator-action-dropdown sets-options-dropdown"><summary class="input">Set Options <span class="card-specific-chevron" aria-hidden="true"></span></summary><div class="creator-action-dropdown-menu"><button type="button" data-set-action="export-set">Export Set</button><button type="button" data-set-action="download-set-images">Download Images</button><button type="button" data-set-action="print-set">Print Set</button><button type="button" data-set-action="duplicate-set">Duplicate Set</button><button type="button" class="danger" data-set-action="delete-set">Delete Set</button></div></details>' +
+			'<button type="button" class="sets-panel-toggle sets-panel-collapse" data-set-action="collapse-panel" aria-label="Collapse set panel" title="Collapse set panel"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4v16M18 7l-5 5 5 5"/></svg></button></div></div>' +
 			'<div id="sets-error" class="sets-error" role="alert" hidden></div>' +
-			'<div class="sets-tabs" role="tablist">' + tabButton('cards', 'Cards', set.activeTab === 'cards') + tabButton('details', 'Set Details', set.activeTab === 'details') + tabButton('symbol', 'Set Symbol', set.activeTab === 'symbol') + tabButton('collector', 'Collector', set.activeTab === 'collector') + '</div>' +
+			'<div class="sets-tabs"><div class="segmented-tab-track sets-tab-track" role="tablist">' + tabButton('cards', 'Cards', set.activeTab === 'cards') + tabButton('details', 'Set Details', set.activeTab === 'details') + tabButton('symbol', 'Set Symbol', set.activeTab === 'symbol') + tabButton('collector', 'Collector', set.activeTab === 'collector') + '</div></div>' +
 			'<div id="sets-tab-panel" class="sets-tab-panel" role="tabpanel"></div>' +
-			'<input id="sets-card-import" type="file" accept=".cardconjurer-card,application/json" hidden onchange="CardConjurerSets.importCardFile(event)">' +
-			'<input id="sets-set-import" type="file" accept=".cardconjurer-set,application/json" hidden onchange="CardConjurerSets.importSetFile(event)">' +
-			'<dialog id="sets-transfer-dialog" class="sets-dialog"><form method="dialog"><div><span class="creator-eyebrow">Card action</span><h3 id="sets-transfer-title">Move card</h3></div><label>Destination set<select id="sets-transfer-target" class="input"></select></label><div class="sets-dialog-actions"><button value="cancel">Cancel</button><button id="sets-transfer-confirm" type="button" class="sets-confirm" onclick="CardConjurerSets.confirmMoveOrCopy()">Move card</button></div></form></dialog>' +
-			'<dialog id="sets-import-dialog" class="sets-dialog"><form method="dialog"><div><span class="creator-eyebrow">Set import</span><h3>Matching set found</h3><p id="sets-import-message">Choose how to import this set.</p></div><div class="sets-dialog-actions"><button value="cancel" onclick="CardConjurerSets.cancelSetImport()">Cancel</button><button type="button" onclick="CardConjurerSets.resolveSetImport(\'merge\')">Merge</button><button type="button" class="sets-confirm" onclick="CardConjurerSets.resolveSetImport(\'replace\')">Replace</button></div></form></dialog>' +
-			'<div class="sets-collapsed-rail"><button type="button" class="sets-panel-toggle sets-panel-expand" onclick="CardConjurerSets.toggleSetsPanel(false)" aria-label="Expand set panel" title="Expand set panel"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4v16M11 7l5 5-5 5"/></svg></button><div class="sets-rail-cards" role="listbox" aria-label="Cards in ' + escapeHtml(set.name) + '">' + railCards.map(function(card) { var title = card.derived.title || 'Untitled Card'; var thumbnail = card.thumbnail ? '<img src="' + card.thumbnail + '" alt="">' : '<span class="sets-rail-placeholder" aria-hidden="true"></span>'; return '<button type="button" class="sets-rail-card' + (card.id === set.activeCardId ? ' selected' : '') + '" data-card-id="' + escapeHtml(card.id) + '" onclick="CardConjurerSets.selectCard(\'' + card.id + '\')" title="' + escapeHtml(card.collectorNumber + ' · ' + title) + '">' + thumbnail + '</button>'; }).join('') + '</div></div>';
+			'<input id="sets-card-import" type="file" accept=".cardconjurer-card,application/json" hidden data-card-import>' +
+			'<input id="sets-set-import" type="file" accept=".cardconjurer-set,application/json" hidden data-set-import>' +
+			'<dialog id="sets-transfer-dialog" class="sets-dialog"><form method="dialog"><div><span class="creator-eyebrow">Card action</span><h3 id="sets-transfer-title">Move card</h3></div><label>Destination set<select id="sets-transfer-target" class="input"></select></label><div class="sets-dialog-actions"><button value="cancel">Cancel</button><button id="sets-transfer-confirm" type="button" class="sets-confirm" data-set-action="confirm-transfer">Move card</button></div></form></dialog>' +
+			'<dialog id="sets-import-dialog" class="sets-dialog"><form method="dialog"><div><span class="creator-eyebrow">Set import</span><h3>Matching set found</h3><p id="sets-import-message">Choose how to import this set.</p></div><div class="sets-dialog-actions"><button value="cancel" data-set-action="cancel-set-import">Cancel</button><button type="button" data-set-action="merge-set-import">Merge</button><button type="button" class="sets-confirm" data-set-action="replace-set-import">Replace</button></div></form></dialog>' +
+			'<div class="sets-collapsed-rail"><button type="button" class="sets-panel-toggle sets-panel-expand" data-set-action="expand-panel" aria-label="Expand set panel" title="Expand set panel"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4v16M11 7l5 5-5 5"/></svg></button><div class="sets-rail-cards" role="listbox" aria-label="Cards in ' + escapeHtml(set.name) + '">' + railCards.map(function(card) { var title = card.derived.title || 'Untitled Card'; var thumbnail = card.thumbnail ? '<img src="' + card.thumbnail + '" alt="">' : '<span class="sets-rail-placeholder" aria-hidden="true"></span>'; return '<button type="button" class="sets-rail-card' + (card.id === set.activeCardId ? ' selected' : '') + '" data-card-id="' + escapeHtml(card.id) + '" title="' + escapeHtml(card.collectorNumber + ' · ' + title) + '">' + thumbnail + '</button>'; }).join('') + '</div></div>';
 		renderActiveTab();
 		updateUndoButtons();
 		updateCardEditorActions();
@@ -373,9 +450,9 @@
 
 	function renderCardsTab(panel, set) {
 		var view = Object.assign({}, Model.DEFAULT_LIST_STATE, set.listState || {});
-		panel.innerHTML = '<label class="sets-search"><span class="sr-only">Search cards</span><svg class="sets-search-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg><input type="search" class="input" value="' + escapeHtml(view.search) + '" placeholder="Search title, type, rules, artist…" oninput="CardConjurerSets.updateListState(\'search\', this.value)"><button type="button" class="sets-search-clear" aria-label="Clear search" onclick="var input=this.parentElement.querySelector(\'input\'); input.value=\'\'; input.dispatchEvent(new Event(\'input\',{bubbles:true})); input.focus();"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"></path></svg></button></label>' +
+		panel.innerHTML = '<label class="sets-search"><span class="sr-only">Search cards</span><svg class="sets-search-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg><input type="search" class="input" value="' + escapeHtml(view.search) + '" placeholder="Search title, type, rules, artist…" data-card-search><button type="button" class="sets-search-clear" aria-label="Clear search" data-set-action="clear-card-search"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"></path></svg></button></label>' +
 			'<div class="sets-card-scroll"><div id="sets-card-list" class="sets-card-list" role="listbox" aria-label="Cards in ' + escapeHtml(set.name) + '"></div>' +
-			'<div id="sets-zip-progress" class="sets-zip-progress" hidden><span></span><button type="button" onclick="CardConjurerSets.cancelZip()">Cancel</button></div></div>';
+			'<div id="sets-zip-progress" class="sets-zip-progress" hidden><span></span><button type="button" data-set-action="cancel-zip">Cancel</button></div></div>';
 		renderCardList();
 	}
 
@@ -391,37 +468,37 @@
 			var thumbnail = card.thumbnail ? '<img src="' + card.thumbnail + '" alt="">' : '<span class="sets-thumbnail-placeholder" aria-hidden="true"></span>';
 			var typeLine = card.derived.typeLine || 'No type line';
 			var rarity = card.rarity === 'mythic' ? 'Mythic Rare' : card.rarity[0].toUpperCase() + card.rarity.slice(1);
-			return '<button type="button" class="sets-card-row' + (card.id === selected ? ' selected' : '') + '" role="option" aria-selected="' + (card.id === selected ? 'true' : 'false') + '" data-card-id="' + escapeHtml(card.id) + '" onclick="CardConjurerSets.selectCard(\'' + card.id + '\')">' + thumbnail + '<span class="sets-card-row-copy"><strong>' + escapeHtml(title) + '</strong><span class="sets-card-type">' + escapeHtml(typeLine) + '</span><span class="sets-card-meta">' + renderCardListManaCosts(card) + '<span class="sets-card-meta-divider" aria-hidden="true">·</span><span class="sets-card-rarity">' + escapeHtml(rarity) + '</span></span></span><b>' + escapeHtml(card.collectorNumber) + '</b></button>';
+			return '<button type="button" class="sets-card-row' + (card.id === selected ? ' selected' : '') + '" role="option" aria-selected="' + (card.id === selected ? 'true' : 'false') + '" data-card-id="' + escapeHtml(card.id) + '">' + thumbnail + '<span class="sets-card-row-copy"><strong>' + escapeHtml(title) + '</strong><span class="sets-card-type">' + escapeHtml(typeLine) + '</span><span class="sets-card-meta">' + renderCardListManaCosts(card) + '<span class="sets-card-meta-divider" aria-hidden="true">·</span><span class="sets-card-rarity">' + escapeHtml(rarity) + '</span></span></span><b>' + escapeHtml(card.collectorNumber) + '</b></button>';
 		}).join('');
 	}
 
 	function field(label, key, value, type, attrs) {
 		var inputClass = type === 'date' ? 'input sets-date-input' : 'input';
-		return '<label class="sets-field"><span>' + label + '</span><input class="' + inputClass + '" type="' + (type || 'text') + '" value="' + escapeHtml(value || '') + '" ' + (attrs || '') + ' oninput="CardConjurerSets.previewSetField(\'' + key + '\', this)" onblur="CardConjurerSets.commitSetField(\'' + key + '\', this)"></label>';
+		return '<label class="sets-field"><span>' + label + '</span><input class="' + inputClass + '" type="' + (type || 'text') + '" value="' + escapeHtml(value || '') + '" ' + (attrs || '') + ' data-set-field="' + key + '"></label>';
 	}
 
 	function renderDetailsTab(panel, set) {
 		panel.innerHTML = '<div class="sets-form">' + field('Set name','name',set.name) + field('Short description','description',set.description) + field('Release date','releaseDate',set.releaseDate,'date') + field('Creator','creator',set.creator) +
-			'<label class="sets-field"><span>Notes</span><textarea class="input" rows="3" oninput="CardConjurerSets.updateSetText(\'notes\', this.value)">' + escapeHtml(set.notes) + '</textarea></label>' +
-			'<div class="sets-field"><div class="sets-field-heading"><span>Story (Markdown)</span><button type="button" class="text-field-layout-button" aria-controls="markdown-help-drawer" onclick="document.querySelector(\'#markdown-help-drawer\').classList.add(\'opened\')">Markdown Help</button></div><textarea id="sets-story" class="input" rows="9" oninput="CardConjurerSets.updateSetText(\'story\', this.value); CardConjurerSets.previewStory(this.value)">' + escapeHtml(set.story) + '</textarea></div>' +
+			'<label class="sets-field"><span>Notes</span><textarea class="input" rows="3" data-set-text="notes">' + escapeHtml(set.notes) + '</textarea></label>' +
+			'<div class="sets-field"><div class="sets-field-heading"><span>Story (Markdown)</span><button type="button" class="text-field-layout-button" aria-controls="markdown-help-drawer" data-set-action="open-markdown-help">Markdown Help</button></div><textarea id="sets-story" class="input" rows="9" data-set-text="story">' + escapeHtml(set.story) + '</textarea></div>' +
 			'<section class="sets-markdown-preview" aria-label="Rendered story preview"><span class="creator-eyebrow">Preview</span><div id="sets-story-preview">' + safeMarkdown(set.story) + '</div></section></div>';
 	}
 
 	function renderSymbolTab(panel, set) {
 		var labels = {common:'Common · tokens · basic lands', uncommon:'Uncommon', rare:'Rare', mythic:'Mythic Rare'};
-		panel.innerHTML = '<section class="sets-symbol-loader"><div><strong>Load by set code</strong><span>Fills Common, Uncommon, Rare, and Mythic Rare at once.</span></div><label><span class="sr-only">Symbol set code</span><input id="sets-symbol-code" class="input" type="text" maxlength="12" autocomplete="off" spellcheck="false" value="' + escapeHtml(set.symbolCode || set.code || '') + '" placeholder="Set code" oninput="this.value=CardConjurerSetModel.normalizeSymbolCode(this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();CardConjurerSets.loadSymbolsByCode(this)}"></label><button type="button" class="input sets-primary" onclick="CardConjurerSets.loadSymbolsByCode(document.querySelector(\'#sets-symbol-code\'))">Load all rarities</button></section>' +
+		panel.innerHTML = '<section class="readable-background padding sets-symbol-loader"><div class="art-section-heading"><h4>Load by set code</h4></div><label><span class="sr-only">Symbol set code</span><input id="sets-symbol-code" class="input" type="text" maxlength="12" autocomplete="off" spellcheck="false" value="' + escapeHtml(set.symbolCode || set.code || '') + '" placeholder="Set code" data-symbol-code></label><button type="button" class="input sets-primary" data-symbol-load-all>Load all rarities</button></section>' +
 			'<div class="sets-symbol-grid">' + Model.RARITIES.map(function(rarity) {
-			var source = set.symbolSources[rarity] || '';
-			return '<section class="sets-symbol-card"><div class="sets-symbol-preview">' + (source ? '<img src="' + escapeHtml(source) + '" alt="' + labels[rarity] + ' set symbol">' : '<span>—</span>') + '</div><label><strong>' + labels[rarity] + '</strong><input class="input" value="' + escapeHtml(source) + '" placeholder="Image URL" onblur="CardConjurerSets.updateSymbol(\'' + rarity + '\', this.value)"></label><button type="button" onclick="this.nextElementSibling.click()">Upload image</button><input type="file" accept="image/*" hidden onchange="CardConjurerSets.uploadSymbol(\'' + rarity + '\', event)"></section>';
-		}).join('') + '</div><div class="sets-symbol-actions"><button type="button" class="sets-symbol-clear" onclick="CardConjurerSets.clearSymbols()">Clear Symbols</button></div>';
+				var source = set.symbolSources[rarity] || '';
+				return '<section class="sets-symbol-card"><div class="sets-symbol-preview">' + (source ? '<img src="' + escapeHtml(source) + '" alt="' + labels[rarity] + ' set symbol">' : '<span>—</span>') + '</div><label><strong>' + labels[rarity] + '</strong><input class="input" value="' + escapeHtml(source) + '" placeholder="Image URL" data-symbol-source="' + rarity + '"></label><button type="button" data-symbol-upload="' + rarity + '">Upload image</button><input type="file" accept="image/*" hidden data-symbol-file="' + rarity + '"></section>';
+			}).join('') + '</div><div class="sets-symbol-actions"><button type="button" class="sets-symbol-clear" data-symbol-clear>Clear Symbols</button></div>';
 	}
 
 	function renderCollectorTab(panel, set) {
 		panel.innerHTML = '<div class="sets-form sets-collector-form">' + field('Set code','code',set.code,'text','maxlength="3"') + field('Language','language',set.language,'text','maxlength="8"') +
-			'<label class="sets-field"><span>Copyright</span><textarea class="input" rows="2" maxlength="160" oninput="CardConjurerSets.updateSetText(\'copyright\', this.value)">' + escapeHtml(set.copyright) + '</textarea></label>' +
-			'<label class="checkbox-container input workspace-checkbox frame-advanced-option sets-copyright-note-style"><span class="frame-advanced-option-copy"><strong>Match first copyright line to Note</strong><small>Use the Note font and size on every card in this set</small></span><input type="checkbox" ' + (set.copyrightFirstLineNoteStyle ? 'checked' : '') + ' onchange="CardConjurerSets.updateCopyrightNoteStyle(this.checked)"><span class="checkmark"></span></label>' +
-			'<label class="sets-field"><span>Collector format</span><select class="input" onchange="CardConjurerSets.updateCollectorStyle(this.value)">' + selectOptions(['post-one','pre-one'], set.collectorStyle, {'post-one':'Post-ONE · 0001','pre-one':'Pre-ONE · 001/' + String(collectorSlotCount(set.id)).padStart(3,'0')}) + '</select></label>' +
-			'<section class="readable-background padding sets-collector-groups"><div class="art-section-heading"><h4>Collector Groups</h4></div><ol class="sets-group-list"><li><span>Main Set</span><small>Fixed</small></li>' + set.collectorGroupOrder.map(function(group, index) { return '<li><span>' + escapeHtml(group.replace(/(^|[-:])([a-z])/g, function(_, before, letter) { return (before ? ' ' : '') + letter.toUpperCase(); })) + '</span><span class="sets-group-actions"><button type="button" onclick="CardConjurerSets.moveGroup(' + index + ',-1)" aria-label="Move group up">↑</button><button type="button" onclick="CardConjurerSets.moveGroup(' + index + ',1)" aria-label="Move group down">↓</button></span></li>'; }).join('') + '</ol></section></div>';
+			'<label class="sets-field"><span>Copyright</span><textarea class="input" rows="2" maxlength="160" data-set-text="copyright">' + escapeHtml(set.copyright) + '</textarea></label>' +
+			'<label class="checkbox-container input workspace-checkbox frame-advanced-option sets-copyright-note-style"><span class="frame-advanced-option-copy"><strong>Match first copyright line to Note</strong><small>Use the Note font and size on every card in this set</small></span><input type="checkbox" ' + (set.copyrightFirstLineNoteStyle ? 'checked' : '') + ' data-copyright-note-style><span class="checkmark"></span></label>' +
+			'<label class="sets-field"><span>Collector format</span><select class="input" data-collector-style>' + selectOptions(['post-one','pre-one'], set.collectorStyle, {'post-one':'Post-ONE · 0001','pre-one':'Pre-ONE · 001/' + String(collectorSlotCount(set.id)).padStart(3,'0')}) + '</select></label>' +
+			'<section class="readable-background padding sets-collector-groups"><div class="art-section-heading"><h4>Collector Groups</h4></div><ol class="sets-group-list"><li><span>Main Set</span><small>Fixed</small></li>' + set.collectorGroupOrder.map(function(group, index) { return '<li><span>' + escapeHtml(group.replace(/(^|[-:])([a-z])/g, function(_, before, letter) { return (before ? ' ' : '') + letter.toUpperCase(); })) + '</span><span class="sets-group-actions"><button type="button" data-set-action="move-collector-group" data-group-index="' + index + '" data-group-delta="-1" aria-label="Move group up">↑</button><button type="button" data-set-action="move-collector-group" data-group-index="' + index + '" data-group-delta="1" aria-label="Move group down">↓</button></span></li>'; }).join('') + '</ol></section></div>';
 	}
 
 	function updateUndoButtons() {
@@ -460,7 +537,7 @@
 		var record = activeCardRecord(); var set = activeSet(); var host = document.querySelector('#sets-card-details-summary');
 		if (!record || !set || !host) return;
 		host.innerHTML = '<div class="art-section-heading"><h4>Rarity</h4></div>' +
-			'<label class="card-details-field"><span>Rarity</span><select class="input" onchange="CardConjurerSets.updateCardDetail(\'rarity\',this.value)">' + selectOptions(Model.RARITIES, record.rarity, {mythic:'Mythic Rare'}) + '</select></label>';
+			'<label class="card-details-field"><span>Rarity</span><select class="input" data-card-detail="rarity">' + selectOptions(Model.RARITIES, record.rarity, {mythic:'Mythic Rare'}) + '</select></label>';
 		['#info-number','#info-rarity','#info-set','#info-language','#info-year','#info-copyright','#enableNewCollectorStyle'].forEach(function(selector) { var input = document.querySelector(selector); if (input) input.disabled = true; });
 	}
 
@@ -633,6 +710,9 @@
 					loadedSelection = true;
 				}
 				if (loadedSelection) closeDrawer();
+			} catch (error) {
+				console.error('The selected card could not be opened.', error);
+				showWorkspaceError(error.message || 'The selected card could not be opened.');
 			} finally {
 				await finishCardPreviewTransition();
 				cardSelectionPromise = null;
@@ -780,7 +860,7 @@
 		var draft = Object.assign({}, set, {[key]: value}); var errors = Model.validateSet(draft, state.sets);
 		if (errors[key]) { input.setCustomValidity(errors[key]); input.reportValidity(); input.value = set[key]; return; }
 		await commit('Edit set ' + key, 'set:' + key, function() { set[key] = value; set.updatedAt = new Date().toISOString(); }, [set.id], {render:false});
-		if (['releaseDate'].includes(key)) await loadActiveCard();
+		if (['releaseDate', 'code', 'language'].includes(key)) await loadActiveCard();
 		var option = document.querySelector('#sets-switcher option[value="' + set.id + '"]'); if (option) option.textContent = set.name + ' · ' + set.code;
 	}
 
@@ -957,7 +1037,11 @@
 		}, [sourceSet.id, target.id], {immediate:true}); await loadActiveCard();
 	}
 
-	function downloadJson(value, filename) {
+	async function downloadJson(value, filename) {
+		if (root.setConjurerDesktop) {
+			var extension = filename.endsWith('.cardconjurer-card') ? 'cardconjurer-card' : filename.endsWith('.cardconjurer-set') ? 'cardconjurer-set' : 'json';
+			return root.setConjurerDesktop.files.saveExport({suggestedName: filename, extension: extension, content: JSON.stringify(value, null, 2)});
+		}
 		var link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], {type:'application/json'})); link.download = filename; document.body.appendChild(link); link.click(); setTimeout(function() { URL.revokeObjectURL(link.href); link.remove(); }, 0);
 	}
 
@@ -966,10 +1050,21 @@
 	function exportCardImage(format) {
 		if (typeof downloadCard !== 'function') return;
 		if (format === 'jpeg') downloadCard(false, true);
-		else if (format === 'preview') downloadCard(true);
 		else downloadCard();
 	}
-	function exportSetAction() { var set = activeSet(); if (set) downloadJson(Files.createSetEnvelope(set, cardsFor(set.id)), safeFilename(set.name) + '.cardconjurer-set'); }
+	function exportSetAction() { var set = activeSet(); if (set) return downloadJson(Files.createSetEnvelope(set, cardsFor(set.id)), safeFilename(set.name) + '.cardconjurer-set'); }
+	async function updatePrintQuantity(cardId, value) {
+		var record = state.cards.find(function(item) { return item.id === cardId; });
+		if (!record) return;
+		record.printQuantity = root.SetConjurerPrint ? root.SetConjurerPrint.quantity(value) : Math.max(0, Math.min(99, Math.round(Number(value) || 0)));
+		await persist(true);
+	}
+
+	async function importText(kind, text) {
+		var file = new File([text], kind === 'card' ? 'import.cardconjurer-card' : 'import.cardconjurer-set', {type:'application/json'});
+		var event = {target: {files: [file], value: ''}};
+		return kind === 'card' ? importCardFile(event) : importSetFile(event);
+	}
 
 	function setCardSearchStatus(message, kind) {
 		var status = document.querySelector('#card-search-status');
@@ -1074,7 +1169,6 @@
 		await captureActiveCard();
 		var beforeImport = snapshot();
 		closeCardSearch(false);
-		setStatus('Importing card…', 'saving');
 		try {
 			var record = Model.createDefaultCard(set.id, stripSetOwned(initialBlankCardData || {}));
 			record.sortOrder = Math.max(0, ...cardsFor(set.id).map(function(item) { return Number(item.sortOrder || 0); })) + 1;
@@ -1098,6 +1192,8 @@
 				'#info-copyright': hydrated.infoCopyright
 			};
 			Object.keys(fields).forEach(function(selector) { var input = document.querySelector(selector); if (input) input.value = fields[selector] || ''; });
+			var symbolRarityInput = document.querySelector('#set-symbol-rarity');
+			if (symbolRarityInput) symbolRarityInput.value = hydrated.infoRarity || 'C';
 			if (typeof card !== 'undefined') {
 				card.infoNumber = hydrated.infoNumber;
 				card.infoRarity = hydrated.infoRarity;
@@ -1105,6 +1201,11 @@
 				card.infoLanguage = hydrated.infoLanguage;
 				card.infoYear = hydrated.infoYear;
 				card.infoCopyright = hydrated.infoCopyright;
+			}
+			if (hydrated.setSymbolSource && typeof uploadSetSymbol === 'function') {
+				uploadSetSymbol(hydrated.setSymbolSource);
+				if (typeof waitForRenderableImage === 'function' && typeof setSymbol !== 'undefined') await waitForRenderableImage(setSymbol);
+				if (typeof setSymbolEdited === 'function') setSymbolEdited();
 			}
 			if (typeof bottomInfoEdited === 'function') await bottomInfoEdited();
 			if (typeof waitForRenderableImage === 'function' && typeof art !== 'undefined') await waitForRenderableImage(art);
@@ -1130,7 +1231,6 @@
 			await loadActiveCard();
 			await persist(true);
 			showWorkspaceError(error.message || 'The selected card could not be imported.');
-			setStatus('Card import failed', 'error');
 		}
 	}
 
@@ -1141,6 +1241,8 @@
 
 	function importCardFile(event) {
 		readFile(event, async function(text) {
+			var requirements = Files.validateEnvelope(text, Files.CARD_FORMAT).requiredPacks;
+			if (root.SetConjurerDesktop) await root.SetConjurerDesktop.ensureRequiredPacks(requirements);
 			var set = activeSet(); var imported;
 			await commit('Import card', '', function() { imported = Files.importCardInto(state.cards, text, set.id); state.cards = imported.cards; set.activeCardId = imported.card.id; }, [set.id], {immediate:true}); await loadActiveCard(); setStatus(imported.replaced ? 'Replaced matching card' : 'Imported card', 'saved');
 		});
@@ -1149,6 +1251,7 @@
 	function importSetFile(event) {
 		readFile(event, async function(text) {
 			var parsed = Files.validateEnvelope(text, Files.SET_FORMAT); var importedSet = parsed.payload.set; var importedCards = parsed.payload.cards;
+			if (root.SetConjurerDesktop) await root.SetConjurerDesktop.ensureRequiredPacks(parsed.requiredPacks);
 			var collision = state.sets.find(function(set) { return Model.normalizeText(set.name) === Model.normalizeText(importedSet.name) || String(set.code).toUpperCase() === String(importedSet.code).toUpperCase(); });
 			if (collision) {
 				pendingSetImport = {importedSet: importedSet, importedCards: importedCards, collisionId: collision.id};
@@ -1182,12 +1285,38 @@
 
 	async function ensureZip() {
 		if (root.JSZip) return root.JSZip;
-		if (typeof loadScript === 'function') await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+		if (typeof loadScript === 'function') await loadScript('/node_modules/jszip/dist/jszip.min.js');
 		for (var index = 0; index < 40 && !root.JSZip; index++) await new Promise(function(resolve) { setTimeout(resolve, 100); });
 		if (!root.JSZip) throw new Error('ZIP support could not be loaded.'); return root.JSZip;
 	}
 
 	async function canvasBlob(format) { return new Promise(function(resolve) { previewCanvas.toBlob(resolve, format === 'jpeg' ? 'image/jpeg' : 'image/png', format === 'jpeg' ? 0.92 : undefined); }); }
+
+	async function renderPrintImages(cardIds, onProgress) {
+		await captureActiveCard();
+		var set = activeSet();
+		if (!set) return {};
+		var originalCardId = set.activeCardId;
+		var ids = Array.from(new Set(cardIds || [])).filter(function(id) { return state.cards.some(function(record) { return record.id === id && record.setId === set.id; }); });
+		var images = {};
+		try {
+			for (var index = 0; index < ids.length; index++) {
+				var record = state.cards.find(function(item) { return item.id === ids[index]; });
+				set.activeCardId = record.id;
+				if (typeof onProgress === 'function') onProgress({index: index, total: ids.length, card: clone(record)});
+				await loadActiveCard();
+				await new Promise(function(resolve) { requestAnimationFrame(function() { requestAnimationFrame(resolve); }); });
+				var blob = await canvasBlob('png');
+				if (!blob) throw new Error('The high-resolution print image for ' + (record.derived.title || 'Untitled Card') + ' could not be rendered.');
+				images[record.id] = blob;
+			}
+			return images;
+		} finally {
+			set.activeCardId = originalCardId;
+			renderWorkspace();
+			await loadActiveCard();
+		}
+	}
 
 	async function downloadSetImages() {
 		await captureActiveCard(); var set = activeSet(); var originalSetId = state.activeSetId; var originalCardId = set.activeCardId; var ordered = Model.selectCards(cardsFor(set.id), {sort:'collector',direction:'asc'}); var progress = document.querySelector('#sets-zip-progress'); var progressText = progress && progress.querySelector('span'); zipCanceled = false;
@@ -1272,8 +1401,23 @@
 			await bootstrap(); initialized = true; renderWorkspace(); applyWorkspaceLayout(); await loadActiveCard(); await revealWorkspace();
 			window.addEventListener('cardconjurer:preview-rendered', queueRenderedThumbnailRefresh);
 			document.querySelector('.creator-menu')?.addEventListener('input', function(event) { if (!event.target.closest('#sets-card-details-summary')) queueCapture(420); });
-			document.querySelector('.creator-menu')?.addEventListener('change', function(event) { if (!event.target.closest('#sets-card-details-summary')) queueCapture(0); });
+			document.querySelector('.creator-menu')?.addEventListener('change', function(event) {
+				if (event.target.matches('[data-card-detail]')) void updateCardDetail(event.target.dataset.cardDetail, event.target.value);
+				else if (!event.target.closest('#sets-card-details-summary')) queueCapture(0);
+			});
 			document.addEventListener('click', function(event) {
+				var cardImportAction = event.target.closest('[data-card-import-action]');
+				if (cardImportAction) {
+					var importDropdown = cardImportAction.closest('details.creator-action-dropdown');
+					if (importDropdown) importDropdown.removeAttribute('open');
+					if (cardImportAction.dataset.cardImportAction === 'file') {
+						var cardImportInput = document.querySelector('#sets-card-import');
+						if (cardImportInput) cardImportInput.click();
+					} else if (cardImportAction.dataset.cardImportAction === 'search') {
+						openCardSearch(cardImportAction);
+					}
+					return;
+				}
 				document.querySelectorAll('details.creator-action-dropdown[open]').forEach(function(dropdown) {
 					if (!dropdown.contains(event.target)) dropdown.removeAttribute('open');
 				});
@@ -1286,13 +1430,13 @@
 				}
 				if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !event.isComposing) { event.preventDefault(); event.shiftKey ? redo() : undo(); }
 			});
-			setStatus('Saved locally','saved');
+			setStatus('Saved successfully','saved');
 		} catch (error) {
-			console.error(error); var host=document.querySelector('#sets-workspace-content'); if(host)host.innerHTML='<div class="creator-library-empty"><h3>Sets could not open</h3><p>'+escapeHtml(error.message)+'</p><button class="input" onclick="location.reload()">Retry</button></div>'; setStatus('Local storage unavailable','error'); await revealWorkspace();
+			console.error(error); var host=document.querySelector('#sets-workspace-content'); if(host)host.innerHTML='<div class="creator-library-empty"><h3>Sets could not open</h3><p>'+escapeHtml(error.message)+'</p><button class="input" data-set-action="retry-workspace">Retry</button></div>'; setStatus('Issue saving','error'); await revealWorkspace();
 		}
 	}
 
-	if (channel) channel.onmessage = async function(event) { if (!initialized || !event.data || event.data.revision <= state.revision) return; setStatus('Another tab changed this set — refreshing…','saving'); try { var loaded=await Storage.loadState(); state=Object.assign(state,loaded); numberAllSets(); renderWorkspace(); await loadActiveCard(); } catch(error){showWorkspaceError(error.message);} };
+	if (channel) channel.onmessage = async function(event) { if (!initialized || !event.data || event.data.revision <= state.revision) return; try { var loaded=await Storage.loadState(); state=Object.assign(state,loaded); numberAllSets(); renderWorkspace(); await loadActiveCard(); } catch(error){showWorkspaceError(error.message);} };
 
 	root.CardConjurerSets = {
 		initialize: initialize, captureActiveCard: captureActiveCard, queueCapture: queueCapture, resetActiveCard: resetActiveCard,
@@ -1301,9 +1445,9 @@
 		deleteCard: deleteCardAction, deleteSet: deleteSetAction, undo: undo, redo: redo, updateListState: updateListState,
 		previewSetField: previewSetField, commitSetField: commitSetField, updateSetText: updateSetText, updateCopyrightNoteStyle: updateCopyrightNoteStyle, previewStory: previewStory,
 		updateSymbol: updateSymbol, uploadSymbol: uploadSymbol, loadSymbolsByCode: loadSymbolsByCode, clearSymbols: clearSymbols, updateCollectorStyle: updateCollectorStyle, moveGroup: moveGroup, updateCardDetail: updateCardDetail,
-		moveOrCopy: moveOrCopy, confirmMoveOrCopy: confirmMoveOrCopy, exportCard: exportCardAction, exportCardImage: exportCardImage, exportSet: exportSetAction, importCardFile: importCardFile, importSetFile: importSetFile, resolveSetImport: resolveSetImport, cancelSetImport: cancelSetImport,
+		moveOrCopy: moveOrCopy, confirmMoveOrCopy: confirmMoveOrCopy, exportCard: exportCardAction, exportCardImage: exportCardImage, exportSet: exportSetAction, updatePrintQuantity: updatePrintQuantity, importCardFile: importCardFile, importSetFile: importSetFile, importText: importText, resolveSetImport: resolveSetImport, cancelSetImport: cancelSetImport,
 		openCardSearch: openCardSearch, closeCardSearch: closeCardSearch, searchScryfallCards: searchScryfallCards, importScryfallCard: importScryfallCard,
-		downloadSetImages: downloadSetImages, cancelZip: cancelZip, openDrawer: openDrawer, closeDrawer: closeDrawer, toggleSetsPanel: toggleSetsPanel,
+		downloadSetImages: downloadSetImages, renderPrintImages: renderPrintImages, cancelZip: cancelZip, openDrawer: openDrawer, closeDrawer: closeDrawer, toggleSetsPanel: toggleSetsPanel,
 		getState: function() { return clone(state); }, safeMarkdown: safeMarkdown, deleteDatabaseForTests: Storage.deleteDatabaseForTests
 	};
 

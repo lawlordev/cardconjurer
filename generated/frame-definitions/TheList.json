@@ -1,0 +1,13 @@
+{
+  "pack": "TheList",
+  "frames": [
+    {
+      "name": "Post-M15",
+      "src": "/img/frames/m15/theList/regular.svg"
+    },
+    {
+      "name": "Pre-M15",
+      "src": "/img/frames/m15/theList/old.svg"
+    }
+  ]
+}
