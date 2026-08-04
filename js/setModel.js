@@ -272,12 +272,13 @@
 			next.gameplayFingerprint = currentFingerprint;
 			return next;
 		});
+		var artFamilies = new Set(prepared.filter(function(card) { return card.variantKind === 'art'; }).map(function(card) {
+			return printingGroup(card) + '|' + card.logicalCardId;
+		}));
 		var families = new Map();
 		prepared.forEach(function(card) {
 			var group = printingGroup(card);
-			var isArtFamily = card.variantKind === 'art' || (card.variantKind !== 'treatment' && prepared.some(function(other) {
-				return other.logicalCardId === card.logicalCardId && other.variantKind === 'art' && printingGroup(other) === group;
-			}));
+			var isArtFamily = card.variantKind === 'art' || (card.variantKind !== 'treatment' && artFamilies.has(group + '|' + card.logicalCardId));
 			var key = isArtFamily ? group + '|art|' + card.logicalCardId : group + '|single|' + card.id;
 			if (!families.has(key)) families.set(key, {group: group, cards: []});
 			families.get(key).cards.push(card);
@@ -342,14 +343,100 @@
 
 	function createHistory() { return {entries: [], cursor: 0}; }
 
+	function valuesEqual(left, right) {
+		return left === right || JSON.stringify(left) === JSON.stringify(right);
+	}
+
+	function entityDelta(before, after) {
+		var left = new Map((before || []).map(function(value) { return [value.id, value]; }));
+		var right = new Map((after || []).map(function(value) { return [value.id, value]; }));
+		var ids = new Set(Array.from(left.keys()).concat(Array.from(right.keys())));
+		var changes = [];
+		ids.forEach(function(id) {
+			var oldValue = left.get(id); var newValue = right.get(id);
+			if (valuesEqual(oldValue, newValue)) return;
+			changes.push({id: id, before: oldValue == null ? null : clone(oldValue), after: newValue == null ? null : clone(newValue)});
+		});
+		return changes;
+	}
+
+	function createStateDelta(before, after) {
+		var delta = {
+			kind: 'workspace-delta-v1',
+			sets: entityDelta(before && before.sets, after && after.sets),
+			cards: entityDelta(before && before.cards, after && after.cards)
+		};
+		var oldActive = before && before.activeSetId || null;
+		var newActive = after && after.activeSetId || null;
+		if (oldActive !== newActive) delta.activeSetId = {before: oldActive, after: newActive};
+		return delta;
+	}
+
+	function deltaEmpty(delta) {
+		return !delta || (!(delta.sets || []).length && !(delta.cards || []).length && !delta.activeSetId);
+	}
+
+	function applyEntityDelta(values, changes, side) {
+		var result = (values || []).slice();
+		var indexes = new Map(result.map(function(value, index) { return [value.id, index]; }));
+		(changes || []).forEach(function(change) {
+			var value = change[side]; var index = indexes.get(change.id);
+			if (value == null) {
+				if (index == null) return;
+				result.splice(index, 1);
+				indexes = new Map(result.map(function(item, itemIndex) { return [item.id, itemIndex]; }));
+				return;
+			}
+			if (index == null) {
+				indexes.set(change.id, result.length);
+				result.push(clone(value));
+			} else result[index] = clone(value);
+		});
+		return result;
+	}
+
+	function applyStateDelta(state, delta, side) {
+		var direction = side === 'before' ? 'before' : 'after';
+		return {
+			sets: applyEntityDelta(state && state.sets, delta && delta.sets, direction),
+			cards: applyEntityDelta(state && state.cards, delta && delta.cards, direction),
+			activeSetId: delta && delta.activeSetId ? delta.activeSetId[direction] : state && state.activeSetId || null
+		};
+	}
+
+	function mergeEntityDeltas(first, second) {
+		var byId = new Map();
+		(first || []).forEach(function(change) { byId.set(change.id, clone(change)); });
+		(second || []).forEach(function(change) {
+			var previous = byId.get(change.id);
+			byId.set(change.id, {id: change.id, before: previous ? previous.before : clone(change.before), after: clone(change.after)});
+		});
+		return Array.from(byId.values()).filter(function(change) { return !valuesEqual(change.before, change.after); });
+	}
+
+	function mergeStateDeltas(first, second) {
+		var result = {
+			kind: 'workspace-delta-v1',
+			sets: mergeEntityDeltas(first && first.sets, second && second.sets),
+			cards: mergeEntityDeltas(first && first.cards, second && second.cards)
+		};
+		if (first && first.activeSetId || second && second.activeSetId) result.activeSetId = {
+			before: first && first.activeSetId ? first.activeSetId.before : second.activeSetId.before,
+			after: second && second.activeSetId ? second.activeSetId.after : first.activeSetId.after
+		};
+		if (result.activeSetId && result.activeSetId.before === result.activeSetId.after) delete result.activeSetId;
+		return result;
+	}
+
 	function pushHistory(history, transaction, limit) {
-		var next = clone(history || createHistory());
-		next.entries = next.entries.slice(0, next.cursor);
+		var current = history || createHistory();
+		var next = {entries: current.entries.slice(0, current.cursor), cursor: current.cursor};
 		var previous = next.entries[next.entries.length - 1];
 		if (transaction.coalescingKey && previous && previous.coalescingKey === transaction.coalescingKey && transaction.timestamp - previous.timestamp < 1200) {
-			previous.after = clone(transaction.after);
-			previous.timestamp = transaction.timestamp;
-			previous.label = transaction.label;
+			var merged = Object.assign({}, previous, {timestamp: transaction.timestamp, label: transaction.label});
+			if (previous.delta && transaction.delta) merged.delta = mergeStateDeltas(previous.delta, transaction.delta);
+			else merged.after = clone(transaction.after);
+			next.entries[next.entries.length - 1] = merged;
 		} else next.entries.push(clone(transaction));
 		var cap = limit || 40;
 		if (next.entries.length > cap) next.entries.splice(0, next.entries.length - cap);
@@ -357,20 +444,22 @@
 		return next;
 	}
 
-	function undoHistory(history) {
-		var next = clone(history || createHistory());
+	function undoHistory(history, currentState) {
+		var current = history || createHistory();
+		var next = {entries: current.entries.slice(), cursor: current.cursor};
 		if (next.cursor <= 0) return {history: next, state: null, label: ''};
 		var entry = next.entries[next.cursor - 1];
 		next.cursor--;
-		return {history: next, state: clone(entry.before), label: entry.label};
+		return {history: next, state: entry.delta && currentState ? applyStateDelta(currentState, entry.delta, 'before') : clone(entry.before), label: entry.label};
 	}
 
-	function redoHistory(history) {
-		var next = clone(history || createHistory());
+	function redoHistory(history, currentState) {
+		var current = history || createHistory();
+		var next = {entries: current.entries.slice(), cursor: current.cursor};
 		if (next.cursor >= next.entries.length) return {history: next, state: null, label: ''};
 		var entry = next.entries[next.cursor];
 		next.cursor++;
-		return {history: next, state: clone(entry.after), label: entry.label};
+		return {history: next, state: entry.delta && currentState ? applyStateDelta(currentState, entry.delta, 'after') : clone(entry.after), label: entry.label};
 	}
 
 	return {
@@ -382,6 +471,7 @@
 		deriveCard: deriveCard, gameplayFingerprint: gameplayFingerprint, manaValue: manaValue,
 		printingGroup: printingGroup, collectorBucket: collectorBucket, suffixFor: suffixFor,
 		numberCards: numberCards, naturalCollectorCompare: naturalCollectorCompare, selectCards: selectCards,
-		createHistory: createHistory, pushHistory: pushHistory, undoHistory: undoHistory, redoHistory: redoHistory
+		createHistory: createHistory, createStateDelta: createStateDelta, deltaEmpty: deltaEmpty, applyStateDelta: applyStateDelta,
+		pushHistory: pushHistory, undoHistory: undoHistory, redoHistory: redoHistory
 	};
 });

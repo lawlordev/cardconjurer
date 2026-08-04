@@ -11,12 +11,14 @@ test('pre-update snapshots restore the prior workspace atomically', async () => 
   const storage = new StorageService(root);
   try {
     const before = {sets:[{id:'before'}], cards:[], histories:{}, activeSetId:'before', revision:1};
+	const snapshotted = {sets:[{id:'before', name:'Incrementally saved'}], cards:[], histories:{}, activeSetId:'before', revision:2};
     const after = {sets:[{id:'after'}], cards:[], histories:{}, activeSetId:'after', revision:2};
     await storage.save(before);
+	await storage.applyMutation({sets:snapshotted.sets, cards:[], histories:{}, deletedSetIds:[], deletedCardIds:[], activeSetId:'before', revision:2});
     const snapshot = await storage.snapshot('coordinated-update');
     await storage.save(after);
     await storage.restore(snapshot);
-    assert.deepEqual(await storage.load(), before);
+	assert.deepEqual(await storage.load(), snapshotted);
   } finally {
     await storage.close();
     await rm(root, {recursive: true, force: true});

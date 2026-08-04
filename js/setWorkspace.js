@@ -151,8 +151,8 @@
 	function snapshotEqual(left, right) { return JSON.stringify(left) === JSON.stringify(right); }
 
 	function restoreSnapshot(value) {
-		state.sets = clone(value.sets || []);
-		state.cards = clone(value.cards || []);
+		state.sets = value.sets || [];
+		state.cards = value.cards || [];
 		state.activeSetId = value.activeSetId;
 		numberAllSets();
 	}
@@ -191,8 +191,25 @@
 		persistTimer = setTimeout(save, 120);
 	}
 
+	async function persistMutation(mutation) {
+		if (!root.setConjurerDesktop || !Storage.applyMutation) return persist(true);
+		clearTimeout(persistTimer);
+		state.revision = Date.now();
+		mutation.revision = state.revision;
+		try {
+			await Storage.applyMutation(mutation);
+			setStatus('Saved successfully', 'saved');
+		} catch (error) {
+			console.error(error);
+			setStatus('Issue saving', 'error');
+			showWorkspaceError(error.message || 'Autosave failed.');
+		}
+	}
+
 	function recordHistory(setIds, label, coalescingKey, before, after) {
-		var transaction = {label: label, coalescingKey: coalescingKey || '', timestamp: Date.now(), before: before, after: after};
+		var delta = Model.createStateDelta(before, after);
+		if (Model.deltaEmpty(delta)) return;
+		var transaction = {label: label, coalescingKey: coalescingKey || '', timestamp: Date.now(), delta: delta};
 		Array.from(new Set(setIds.filter(Boolean))).forEach(function(setId) {
 			state.histories[setId] = Model.pushHistory(ensureHistory(setId), transaction, 40);
 		});
@@ -484,6 +501,26 @@
 		}).join('');
 	}
 
+	function updateSelectedCardRows(cardId) {
+		document.querySelectorAll('[data-card-id]').forEach(function(row) {
+			var selected = row.dataset.cardId === cardId;
+			row.classList.toggle('selected', selected);
+			if (row.getAttribute('role') === 'option') row.setAttribute('aria-selected', String(selected));
+		});
+	}
+
+	function refreshCardListRow(cardId) {
+		var record = state.cards.find(function(item) { return item.id === cardId; });
+		var row = document.querySelector('#sets-card-list [data-card-id="' + cardId + '"]');
+		if (!record || !row) return;
+		var title = row.querySelector('.sets-card-row-copy > strong'); if (title) title.textContent = record.derived.title || 'Untitled Card';
+		var typeLine = row.querySelector('.sets-card-type'); if (typeLine) typeLine.textContent = record.derived.typeLine || 'No type line';
+		var mana = row.querySelector('.sets-card-meta');
+		if (mana) mana.innerHTML = renderCardListManaCosts(record) + '<span class="sets-card-meta-divider" aria-hidden="true">Â·</span><span class="sets-card-rarity">' + escapeHtml(record.rarity === 'mythic' ? 'Mythic Rare' : record.rarity[0].toUpperCase() + record.rarity.slice(1)) + '</span>';
+		var number = row.querySelector(':scope > b'); if (number) number.textContent = record.collectorNumber;
+		refreshThumbnailElements(record);
+	}
+
 	function field(label, key, value, type, attrs) {
 		var inputClass = type === 'date' ? 'input sets-date-input' : 'input';
 		return '<label class="sets-field"><span>' + label + '</span><input class="' + inputClass + '" type="' + (type || 'text') + '" value="' + escapeHtml(value || '') + '" ' + (attrs || '') + ' data-set-field="' + key + '"></label>';
@@ -607,19 +644,31 @@
 		var record = activeCardRecord(); var set = activeSet(); if (!record || !set) return;
 		editorDirty = false;
 		var currentData = stripSetOwned(cardStorageSnapshot());
+		if (Storage.ingestAssets) currentData = await Storage.ingestAssets(currentData);
 		if (JSON.stringify(currentData) === JSON.stringify(record.cardData) && JSON.stringify(liveDraftUiSnapshot()) === JSON.stringify(record.uiState)) return;
-		var before = snapshot();
+		var beforeRecord = clone(record); var beforeSet = clone(set); var beforeFingerprint = Model.gameplayFingerprint(record);
+		var beforeGroup = [record.printingCategory, record.frameGroupKey, record.variantKind, record.logicalCardId].join('|');
 		var oldUi = record.uiState || {};
 		record.cardData = currentData; record.uiState = liveDraftUiSnapshot(); record.updatedAt = new Date().toISOString(); record.thumbnailDirty = true;
 		if (record.variantKind === 'art' && oldUi.activeFramePack && record.uiState.activeFramePack && oldUi.activeFramePack !== record.uiState.activeFramePack) {
 			record.variantKind = null; record.logicalCardId = record.id; record.variantOrder = 0;
 		}
 		inferFrameClassification(record);
-		renumberSet(set.id);
-		var after = snapshot();
+		var afterFingerprint = Model.gameplayFingerprint(record);
+		var afterGroup = [record.printingCategory, record.frameGroupKey, record.variantKind, record.logicalCardId].join('|');
+		var listOrderChanged = beforeFingerprint !== afterFingerprint || beforeGroup !== afterGroup;
+		if (listOrderChanged) renumberSet(set.id);
+		else {
+			var derived = Model.deriveCard(record);
+			record.derived = derived.derived; record.gameplayFingerprint = afterFingerprint;
+		}
+		var updatedRecord = state.cards.find(function(item) { return item.id === record.id; }) || record;
+		var before = {sets: [beforeSet], cards: [beforeRecord], activeSetId: state.activeSetId};
+		var after = {sets: [clone(set)], cards: [clone(updatedRecord)], activeSetId: state.activeSetId};
 		recordHistory([set.id], label || 'Edit card', coalescingKey || 'card-edit', before, after);
 		await updateThumbnail(record.id);
-		renderCardList(); await persist(); updateUndoButtons(); renderCardDetailsSummary();
+		if (listOrderChanged) renderCardList(); else refreshCardListRow(record.id);
+		await persistMutation({sets:[set], cards:[updatedRecord], histories:{[set.id]:state.histories[set.id]}, deletedSetIds:[], deletedCardIds:[]}); updateUndoButtons(); renderCardDetailsSummary();
 	}
 
 	function queueCapture(delay) {
@@ -716,8 +765,8 @@
 					var selectionSet = state.sets.find(function(item) { return item.id === selection.setId; });
 					if (!selectionSet || state.activeSetId !== selection.setId || !state.cards.some(function(card) { return card.id === selection.cardId && card.setId === selection.setId; })) continue;
 					selectionSet.activeCardId = selection.cardId;
-					await persist();
-					renderWorkspace();
+					await persistMutation({sets:[selectionSet], cards:[], histories:{}, deletedSetIds:[], deletedCardIds:[], activeSetId:state.activeSetId});
+					updateSelectedCardRows(selection.cardId);
 					await loadActiveCard();
 					loadedSelection = true;
 				}
@@ -842,13 +891,13 @@
 
 	async function undo() {
 		await captureActiveCard(); var set = activeSet(); if (!set) return;
-		var result = Model.undoHistory(ensureHistory(set.id)); if (!result.state) return;
+		var result = Model.undoHistory(ensureHistory(set.id), {sets:state.sets, cards:state.cards, activeSetId:state.activeSetId}); if (!result.state) return;
 		state.histories[set.id] = result.history; restoreSnapshot(result.state); await persist(true); renderWorkspace(); await loadActiveCard(); setStatus('Undid ' + result.label, 'saved');
 	}
 
 	async function redo() {
 		var set = activeSet(); if (!set) return;
-		var result = Model.redoHistory(ensureHistory(set.id)); if (!result.state) return;
+		var result = Model.redoHistory(ensureHistory(set.id), {sets:state.sets, cards:state.cards, activeSetId:state.activeSetId}); if (!result.state) return;
 		state.histories[set.id] = result.history; restoreSnapshot(result.state); await persist(true); renderWorkspace(); await loadActiveCard(); setStatus('Redid ' + result.label, 'saved');
 	}
 
@@ -1051,6 +1100,7 @@
 
 	async function downloadJson(value, filename) {
 		if (root.setConjurerDesktop) {
+			value = await Storage.materializeAssets(value);
 			var extension = filename.endsWith('.cardconjurer-card') ? 'cardconjurer-card' : filename.endsWith('.cardconjurer-set') ? 'cardconjurer-set' : 'json';
 			return root.setConjurerDesktop.files.saveExport({suggestedName: filename, extension: extension, content: JSON.stringify(value, null, 2)});
 		}

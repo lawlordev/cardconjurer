@@ -667,7 +667,7 @@ textarea.input {
 .sets-field .input,
 .sets-card-detail-grid .input { margin: 0; min-width: 0; }
 .sets-card-list { display: grid; gap: .4rem; min-height: 6rem; }
-.sets-card-row { width: 100%; display: grid; grid-template-columns: 3rem minmax(0,1fr) auto; gap: .7rem; align-items: center; padding: .45rem; border: 1px solid rgba(148,163,184,.14); border-radius: var(--workspace-radius,.55rem); background: rgba(15,23,42,.48); color: #dce8f3; font: inherit; text-align: left; cursor: pointer; }
+.sets-card-row { width: 100%; display: grid; grid-template-columns: 3rem minmax(0,1fr) auto; gap: .7rem; align-items: center; padding: .45rem; border: 1px solid rgba(148,163,184,.14); border-radius: var(--workspace-radius,.55rem); background: rgba(15,23,42,.48); color: #dce8f3; font: inherit; text-align: left; cursor: pointer; content-visibility: auto; contain: layout paint style; contain-intrinsic-size: auto 4.5rem; }
 .sets-card-row:hover { border-color: rgba(113,224,210,.45); background: rgba(30,41,59,.65); }
 .sets-card-row.selected { border-color: color-mix(in srgb, var(--workspace-focus) 68%, var(--workspace-border)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--workspace-focus) 14%, transparent); background: color-mix(in srgb, var(--workspace-focus) 9%, var(--workspace-panel)); }
 .sets-card-row > img,

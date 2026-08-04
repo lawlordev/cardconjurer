@@ -7,7 +7,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync,
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
-  channelSchema, externalUrlSchema, IPC, packIdSchema, printRequestSchema, saveStateSchema
+  channelSchema, externalUrlSchema, IPC, packIdSchema, printRequestSchema, saveStateSchema, workspaceMutationSchema
 } from './ipc/contracts.js';
 import { FileService } from './services/file-service.js';
 import { PackService } from './services/pack-service.js';
@@ -153,7 +153,12 @@ async function registerApplicationProtocol(appRoot: string): Promise<void> {
       const body = await response.arrayBuffer();
       return new Response(body, {status: response.status, headers: {'Content-Type': contentType(target), 'Cache-Control': 'no-store'}});
     }
-    if (url.hostname === 'user-asset') return new Response('User asset not found', {status: 404});
+    if (url.hostname === 'user-asset') {
+	  const target = storage?.resolveAsset(url.pathname) || null;
+	  if (!target) return new Response('User asset not found', {status: 404});
+	  const response = await net.fetch(pathToFileURL(target).toString());
+	  return new Response(await response.arrayBuffer(), {status: response.status, headers: {'Content-Type': contentType(target), 'Cache-Control': 'public, max-age=31536000, immutable'}});
+	}
     return new Response('Unsupported Set Conjurer resource', {status: 404});
   });
 }
@@ -253,6 +258,9 @@ function registerIPC(): void {
   ipcMain.handle(IPC.onboardingComplete, trusted(() => { if (!packs?.hasRequiredPacks()) throw new Error('Install Set Symbols and Standard before continuing.'); writeOnboardingComplete(); }));
   ipcMain.handle(IPC.storageLoad, trusted(() => storage!.load()));
   ipcMain.handle(IPC.storageSave, trusted((_event, value) => storage!.save(saveStateSchema.parse(value))));
+	ipcMain.handle(IPC.storageApplyMutation, trusted((_event, value) => storage!.applyMutation(workspaceMutationSchema.parse(value))));
+	ipcMain.handle(IPC.storageIngestAssets, trusted((_event, value) => storage!.ingestAssets(value)));
+	ipcMain.handle(IPC.storageMaterializeAssets, trusted((_event, value) => storage!.materializeAssets(value)));
   ipcMain.handle(IPC.storageFlush, trusted(() => storage!.flush()));
   ipcMain.handle(IPC.storageSnapshot, trusted((_event, label: string) => storage!.snapshot(String(label || 'pre-update').slice(0, 80))));
   ipcMain.handle(IPC.exportSave, trusted((_event, request) => files.saveExport(request)));

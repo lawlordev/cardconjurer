@@ -14,6 +14,18 @@ export const saveStateSchema = z.object({
 
 export type WorkspaceState = z.infer<typeof saveStateSchema>;
 
+export const workspaceMutationSchema = z.object({
+  sets: z.array(z.unknown()).default([]),
+  cards: z.array(z.unknown()).default([]),
+  histories: z.record(z.string(), z.unknown()).default({}),
+  deletedSetIds: z.array(z.string()).default([]),
+  deletedCardIds: z.array(z.string()).default([]),
+  activeSetId: z.string().nullable().optional(),
+  revision: z.number()
+}).strict();
+
+export type WorkspaceMutation = z.infer<typeof workspaceMutationSchema>;
+
 export const externalUrlSchema = z.string().url().refine((value) => {
   const url = new URL(value);
   return url.protocol === 'https:';
@@ -98,6 +110,9 @@ export interface DesktopAPI {
   storage: {
     loadState(): Promise<WorkspaceState>;
     saveState(state: WorkspaceState): Promise<WorkspaceState>;
+		applyMutation(mutation: WorkspaceMutation): Promise<void>;
+		ingestAssets<T>(value: T): Promise<T>;
+		materializeAssets<T>(value: T): Promise<T>;
     flush(): Promise<void>;
     createPreUpdateSnapshot(label: string): Promise<string>;
   };
@@ -139,6 +154,9 @@ export const IPC = Object.freeze({
   storageSave: 'desktop:storage-save',
   storageFlush: 'desktop:storage-flush',
   storageSnapshot: 'desktop:storage-snapshot',
+	storageIngestAssets: 'desktop:storage-ingest-assets',
+	storageMaterializeAssets: 'desktop:storage-materialize-assets',
+	storageApplyMutation: 'desktop:storage-apply-mutation',
   exportSave: 'desktop:export-save',
   importChoose: 'desktop:import-choose',
   associatedFile: 'desktop:associated-file',

@@ -35,6 +35,14 @@ The pack service downloads each archive into a resumable `.partial` file and ext
 
 Electron smoke tests set `SET_CONJURER_TEST_PACK_ROOT` to a generated minimal fixture containing the required base assets. This keeps ordinary CI independent from the multi-gigabyte pack payload while exercising the same protocol and preload boundaries as a packaged application.
 
+## Large workspace performance
+
+Desktop artwork is content-addressed under `assets/sha256` and exposed to the sandboxed renderer as an immutable `set-conjurer://user-asset/<sha256>.<ext>` URL. Card records, autosave mutations, and undo history must retain that URL rather than a data URL. Portable card and set exports materialize the referenced bytes again before writing the file.
+
+SQLite schema version 2 keeps sets, cards, histories, and workspace preferences in normalized tables. Normal card edits and card selection use narrow mutation batches; full replacement saves remain available for imports, resets, and browser-mode IndexedDB compatibility. The legacy `app_state` document is retained as rollback evidence and migrated atomically on first load.
+
+Run `node --test tests/desktop/card-scaling.test.js tests/set-history.test.js` for the deterministic scaling regression. It covers 1,000 cards sharing a 2 MiB artwork, content validation and deduplication, incremental save/reload, export materialization, traversal rejection, and forty bounded history entries.
+
 On Windows, `npm run make -- --arch=x64` produces the Squirrel Setup. The CI integration script installs that Setup into the disposable runner profile, then verifies the stable executable stub, Start-menu and desktop shortcuts, Installed Apps registration, and uninstall. Run the same check from PowerShell with:
 
 ```powershell

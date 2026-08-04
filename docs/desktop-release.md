@@ -59,4 +59,6 @@ First-time onboarding, repair, and explicit manual pack installation retain thei
 
 Before release, install the Windows Setup and run the installed-artifact check. Also validate an N-1 upgrade using a disposable user profile and confirm that workspace data, active pack generations, Start-menu/Desktop shortcuts, Installed Apps registration, and the running version survive the upgrade. A damaged beta workspace must create a `repair-beta-card-layouts` snapshot before targeted card repair.
 
+For beta.4 and later, copy a beta.3 profile with multiple large uploaded artworks into a disposable profile before upgrade testing. Confirm that the first launch migrates to normalized workspace tables, all artwork resolves through `set-conjurer://user-asset`, edit/undo/restart succeeds, and portable card/set exports contain usable embedded artwork. Also open the deterministic 1,000-card fixture and exercise selection near the start, middle, and end of the list. Rollback must preserve the legacy `app_state` recovery document and original content-addressed asset files; do not garbage-collect user assets during this release line.
+
 No workflow releases automatically, and no website or S3 bucket is touched.
