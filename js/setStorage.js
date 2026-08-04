@@ -97,6 +97,21 @@
 		return state;
 	}
 
+	async function applyMutation(mutation) {
+		if (typeof window !== 'undefined' && window.setConjurerDesktop) return window.setConjurerDesktop.storage.applyMutation(mutation);
+		return null;
+	}
+
+	async function ingestAssets(value) {
+		if (typeof window !== 'undefined' && window.setConjurerDesktop) return window.setConjurerDesktop.storage.ingestAssets(value);
+		return value;
+	}
+
+	async function materializeAssets(value) {
+		if (typeof window !== 'undefined' && window.setConjurerDesktop) return window.setConjurerDesktop.storage.materializeAssets(value);
+		return value;
+	}
+
 	async function deleteDatabaseForTests() {
 		if (typeof window !== 'undefined' && window.setConjurerDesktop) throw new Error('Desktop workspace data can only be cleared from the application data folder.');
 		if (connection) { connection.close(); connection = null; }
@@ -111,6 +126,7 @@
 	return {
 		DB_NAME: DB_NAME, DB_VERSION: DB_VERSION,
 		open: open, getAll: getAll, normalizeState: normalizeState, loadState: loadState, saveState: saveState,
+		applyMutation: applyMutation, ingestAssets: ingestAssets, materializeAssets: materializeAssets,
 		deleteDatabaseForTests: deleteDatabaseForTests
 	};
 });

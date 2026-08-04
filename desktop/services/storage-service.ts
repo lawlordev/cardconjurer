@@ -1,18 +1,22 @@
 import { Worker } from 'node:worker_threads';
+import {createHash} from 'node:crypto';
+import {existsSync, readFileSync} from 'node:fs';
 import path from 'node:path';
-import type { WorkspaceState } from '../ipc/contracts.js';
+import type { WorkspaceMutation, WorkspaceState } from '../ipc/contracts.js';
 
 export class StorageService {
   readonly #worker: Worker;
+  readonly #assetRoot: string;
   #requestId = 0;
   #pending = new Map<number, {resolve(value: unknown): void; reject(error: Error): void}>();
 
   constructor(userDataPath: string) {
+	this.#assetRoot = path.join(userDataPath, 'assets', 'sha256');
     this.#worker = new Worker(path.join(__dirname, 'storage-worker.js'), {
       workerData: {
         databasePath: path.join(userDataPath, 'database', 'set-conjurer.sqlite3'),
         backupRoot: path.join(userDataPath, 'backups', 'pre-update'),
-        assetRoot: path.join(userDataPath, 'assets', 'sha256')
+        assetRoot: this.#assetRoot
       }
     });
     this.#worker.on('message', (message: {id: number; ok: boolean; value?: unknown; error?: string}) => {
@@ -42,6 +46,28 @@ export class StorageService {
 
   save(state: WorkspaceState): Promise<WorkspaceState> {
     return this.#request('save', state) as Promise<WorkspaceState>;
+  }
+
+  async applyMutation(mutation: WorkspaceMutation): Promise<void> {
+	await this.#request('mutate', mutation);
+  }
+
+  ingestAssets<T>(value: T): Promise<T> {
+	return this.#request('ingest', value) as Promise<T>;
+  }
+
+  materializeAssets<T>(value: T): Promise<T> {
+	return this.#request('materialize', value) as Promise<T>;
+  }
+
+  resolveAsset(requestPath: string): string | null {
+	const match = /^\/([a-f0-9]{64})\.(png|jpg|webp|gif|svg)$/.exec(requestPath);
+	if (!match) return null;
+	const [, hash, extension] = match;
+	const source = path.join(this.#assetRoot, hash!.slice(0, 2), `${hash}.${extension}`);
+	if (!existsSync(source)) return null;
+	const data = readFileSync(source);
+	return createHash('sha256').update(data).digest('hex') === hash ? source : null;
   }
 
   async flush(): Promise<void> {
