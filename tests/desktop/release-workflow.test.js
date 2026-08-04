@@ -5,6 +5,7 @@ const path = require('node:path');
 const {spawnSync} = require('node:child_process');
 
 const workflow = fs.readFileSync(path.join(__dirname, '../../.github/workflows/release-app.yaml'), 'utf8');
+const packageVersion = JSON.parse(fs.readFileSync(path.join(__dirname, '../../package.json'), 'utf8')).version;
 
 test('application releases validate an existing tag and default to non-publishing mode', () => {
   assert.match(workflow, /publish:[\s\S]*?type: boolean[\s\S]*?default: false/);
@@ -17,9 +18,9 @@ test('application releases validate an existing tag and default to non-publishin
 
 test('release request validation locks the tag and channel to package metadata', () => {
   const validator = path.join(__dirname, '../../scripts/validate-release-request.mjs');
-  const valid = spawnSync(process.execPath, [validator, 'v0.1.0-beta.1', 'beta'], {encoding: 'utf8'});
+  const valid = spawnSync(process.execPath, [validator, `v${packageVersion}`, 'beta'], {encoding: 'utf8'});
   assert.equal(valid.status, 0, valid.stderr);
-  const mismatched = spawnSync(process.execPath, [validator, 'v0.1.0-beta.2', 'beta'], {encoding: 'utf8'});
+  const mismatched = spawnSync(process.execPath, [validator, `v${packageVersion}-mismatch`, 'beta'], {encoding: 'utf8'});
   assert.notEqual(mismatched.status, 0);
   assert.match(mismatched.stderr, /does not match package version/);
 });
