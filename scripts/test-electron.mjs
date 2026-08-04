@@ -63,6 +63,37 @@ try {
   if (!(compactRadiusValue < nestedRadiusValue && nestedRadiusValue < segmentedRadiusValue && segmentedRadiusValue < outerRadiusValue)) {
     throw new Error(`nested component radii are not concentric: ${JSON.stringify({sharedRadius, ...concentricRadii})}`);
   }
+  const updateButton = page.locator('#desktop-update');
+  if (!(await updateButton.evaluate((button) => button.hidden))) throw new Error('Update action is visible before an update is available.');
+  const updatePlacement = await updateButton.evaluate((button) => ({
+    insideSaveStatus: Boolean(button.closest('.creator-app-context')),
+    statusArea: button.parentElement?.parentElement?.classList.contains('creator-app-status-area'),
+    saveStatusFollows: button.parentElement?.nextElementSibling?.classList.contains('creator-app-context')
+  }));
+  if (updatePlacement.insideSaveStatus || !updatePlacement.statusArea || !updatePlacement.saveStatusFollows) throw new Error(`update action is not a separate sibling of save status: ${JSON.stringify(updatePlacement)}`);
+  await page.mouse.move(600, 400);
+  await updateButton.evaluate((button) => { button.hidden = false; button.className = 'creator-app-action desktop-update-action phase-available'; button.textContent = 'Update Now'; });
+  const [newSetStyle, saveStatusHeight, updateStyle] = await Promise.all([
+    page.locator('.creator-new-set').evaluate((element) => { const style = getComputedStyle(element); return {background: style.backgroundColor, border: style.borderTopColor, color: style.color, radius: style.borderTopLeftRadius, weight: style.fontWeight}; }),
+    page.locator('.creator-app-context').evaluate((element) => getComputedStyle(element).height),
+    updateButton.evaluate((element) => { const style = getComputedStyle(element); return {background: style.backgroundColor, border: style.borderTopColor, color: style.color, height: style.height, radius: style.borderTopLeftRadius, weight: style.fontWeight}; })
+  ]);
+  const {height: updateHeight, ...updateAppearance} = updateStyle;
+  if (JSON.stringify(updateAppearance) !== JSON.stringify(newSetStyle)) throw new Error(`Update Now does not match New Set styling: ${JSON.stringify({newSetStyle, updateStyle})}`);
+  if (updateHeight !== saveStatusHeight) throw new Error(`Update Now does not match save-status height: ${JSON.stringify({saveStatusHeight, updateHeight})}`);
+  const progressStyle = await updateButton.evaluate((button) => {
+    button.className = 'creator-app-action desktop-update-action phase-downloading'; button.disabled = true; button.textContent = '42%'; button.style.setProperty('--update-progress', '151.2deg');
+    const style = getComputedStyle(button); const progress = getComputedStyle(button, '::before');
+    return {opacity: style.opacity, cursor: style.cursor, height: style.height, progressBackground: progress.backgroundImage, text: button.textContent};
+  });
+  if (progressStyle.opacity !== '1' || progressStyle.cursor !== 'wait' || progressStyle.height !== saveStatusHeight || progressStyle.progressBackground === 'none' || progressStyle.text !== '42%') throw new Error(`update progress is not visibly contained in the standalone action: ${JSON.stringify({saveStatusHeight, progressStyle})}`);
+  const restartStyle = await updateButton.evaluate((button) => {
+    button.className = 'creator-app-action desktop-update-action phase-staged'; button.disabled = false; button.textContent = 'Restart';
+    const style = getComputedStyle(button); return {background: style.backgroundColor, border: style.borderTopColor, color: style.color, height: style.height, radius: style.borderTopLeftRadius, weight: style.fontWeight};
+  });
+  const {height: restartHeight, ...restartAppearance} = restartStyle;
+  if (JSON.stringify(restartAppearance) !== JSON.stringify(newSetStyle) || restartHeight !== saveStatusHeight) throw new Error(`Restart does not match New Set styling and save-status height: ${JSON.stringify({newSetStyle, saveStatusHeight, restartStyle})}`);
+  await updateButton.evaluate((button) => { button.hidden = true; button.removeAttribute('style'); });
   const cardActions = page.locator('.creator-card-action-buttons');
   if (await cardActions.getByRole('button', {name: 'Copy Card', exact: true}).count()) throw new Error('Copy Card action is still present.');
   const importCardDropdown = cardActions.locator('.creator-card-action-dropdown').filter({hasText: 'Import Card'});

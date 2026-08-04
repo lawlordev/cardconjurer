@@ -39,7 +39,7 @@
 		document.addEventListener('keydown', function(event) { if (event.key === 'Escape') { closeDrawer(); closePrint(); } });
 	}
 	function toolbar() {
-		var host = document.querySelector('.creator-app-context');
+		var host = document.querySelector('.creator-app-status-area');
 		if (!host || document.querySelector('#desktop-toolbar-actions')) return;
 		host.insertAdjacentHTML('afterbegin', '<span id="desktop-toolbar-actions" class="desktop-toolbar-actions"><button type="button" class="creator-app-action desktop-update-action" id="desktop-update" hidden>Update Now</button></span>');
 		document.querySelector('#desktop-update').addEventListener('click', updateAction);

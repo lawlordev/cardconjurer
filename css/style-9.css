@@ -1828,6 +1828,7 @@ body:has(.creator-workspace) .main-content {
 
 .creator-app-identity,
 .creator-app-set-controls,
+.creator-app-status-area,
 .creator-app-context,
 .creator-panel-heading,
 .creator-stage-heading {
@@ -1842,6 +1843,12 @@ body:has(.creator-workspace) .main-content {
 .creator-app-set-controls {
 	gap: .5rem;
 	min-width: 0;
+}
+
+.creator-app-status-area {
+	flex: 0 0 auto;
+	gap: .5rem;
+	margin-left: auto;
 }
 
 .creator-app-set-controls .input {
@@ -1990,6 +1997,8 @@ body.workspace-panel-resizing,body.workspace-panel-resizing * { cursor: col-resi
 	background: color-mix(in srgb, var(--workspace-focus) 8%, var(--workspace-panel));
 	transition: color 180ms ease, border-color 180ms ease, background-color 180ms ease;
 }
+
+.creator-app-status-area .creator-app-context { margin-left: 0; }
 
 .creator-app-context[data-kind='error'] {
 	border-color: color-mix(in srgb, #fb7185 48%, var(--workspace-border));
@@ -3200,9 +3209,9 @@ html.desktop-booting #desktop-boot-screen { position: fixed; inset: 0; z-index: 
 .desktop-icon-action svg { width: 1.05rem; height: 1.05rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .desktop-menu-action { position: fixed; top: .825rem; right: var(--workspace-panel-gutter); z-index: 3480; box-sizing: border-box; width: 2.35rem; height: 2.35rem; }
 .desktop-menu-action svg { width: 1.15rem; height: 1.15rem; }
-.desktop-update-action { position: relative; min-width: 5.7rem; overflow: hidden; }
-.desktop-update-action.phase-downloading,.desktop-update-action.phase-verifying { color: var(--workspace-text); }
-.desktop-update-action.phase-downloading::before,.desktop-update-action.phase-verifying::before { content: ''; width: .9rem; height: .9rem; margin-right: .35rem; border-radius: 50%; background: conic-gradient(var(--workspace-accent) var(--update-progress), var(--workspace-border) 0); -webkit-mask: radial-gradient(circle, transparent 46%, #000 49%); mask: radial-gradient(circle, transparent 46%, #000 49%); }
+.desktop-update-action { position: relative; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 5.7rem; height: 2.35rem; min-height: 2.35rem; padding: 0 .75rem; overflow: hidden; border-color: var(--workspace-accent); color: #0b151d; background: var(--workspace-accent); font: inherit; font-size: .7rem; font-weight: 800; white-space: nowrap; }
+.desktop-update-action.phase-downloading,.desktop-update-action.phase-verifying { color: #0b151d; }
+.desktop-update-action.phase-downloading::before,.desktop-update-action.phase-verifying::before { content: ''; width: .9rem; height: .9rem; margin-right: .35rem; border-radius: 50%; background: conic-gradient(#0b151d var(--update-progress), rgba(11,21,29,.22) 0); -webkit-mask: radial-gradient(circle, transparent 46%, #000 49%); mask: radial-gradient(circle, transparent 46%, #000 49%); }
 .desktop-overlay { position: fixed; inset: 0; z-index: 3490; background: rgba(2,6,23,.68); }
 .desktop-drawer { z-index: 3500; display: flex; flex-direction: column; width: min(27rem, 94vw); }
 .desktop-drawer > .layout-drawer-body { min-height: 0; overflow-y: auto; }
@@ -3559,6 +3568,7 @@ html.desktop-booting #desktop-boot-screen { position: fixed; inset: 0; z-index: 
 }
 
 .creator-workspace .creator-new-set,
+.creator-workspace .desktop-update-action,
 .creator-workspace .creator-card-action-buttons > button.sets-primary {
 	border-color: #71e0d2 !important;
 	color: #0b151d !important;
@@ -3568,6 +3578,8 @@ html.desktop-booting #desktop-boot-screen { position: fixed; inset: 0; z-index: 
 
 .creator-workspace .creator-new-set:hover,
 .creator-workspace .creator-new-set:focus-visible,
+.creator-workspace .desktop-update-action:not(:disabled):hover,
+.creator-workspace .desktop-update-action:not(:disabled):focus-visible,
 .creator-workspace .creator-card-action-buttons > button.sets-primary:hover,
 .creator-workspace .creator-card-action-buttons > button.sets-primary:focus-visible {
 	border-color: #8aeadf !important;
@@ -3605,6 +3617,14 @@ html.desktop-booting #desktop-boot-screen { position: fixed; inset: 0; z-index: 
 	background: var(--workspace-control-disabled) !important;
 	box-shadow: none !important;
 	cursor: not-allowed;
+}
+
+.creator-workspace .desktop-update-action:disabled {
+	opacity: 1;
+	border-color: #71e0d2 !important;
+	color: #0b151d !important;
+	background: #71e0d2 !important;
+	cursor: wait;
 }
 
 #desktop-print .desktop-print-quantity button:disabled {

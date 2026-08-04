@@ -240,10 +240,12 @@
 					<button id='sets-undo-app' type='button' class='creator-app-action creator-history-action' onclick='CardConjurerSets.undo();' aria-label='Undo' title='Undo (Ctrl or Command Z)'><svg aria-hidden='true' viewBox='0 0 24 24'><path d='M9 7 4 12l5 5'/><path d='M5 12h8a6 6 0 0 1 6 6'/></svg></button>
 					<button id='sets-redo-app' type='button' class='creator-app-action creator-history-action' onclick='CardConjurerSets.redo();' aria-label='Redo' title='Redo (Ctrl or Command Shift Z)'><svg aria-hidden='true' viewBox='0 0 24 24'><path d='m15 7 5 5-5 5'/><path d='M19 12h-8a6 6 0 0 0-6 6'/></svg></button>
 				</div>
-				<div class='creator-app-context' data-kind='saved' role='status' aria-live='polite' aria-atomic='true' aria-label='Workspace save status'>
-					<span class='creator-status-dot' data-kind='saved' aria-hidden='true'></span>
-					<span id='sets-global-status'>Saved successfully</span>
-					<label id='sets-drawer-open' class='creator-app-action sets-drawer-open' for='sets-drawer-toggle' role='button' tabindex='0' aria-controls='sets-workspace' aria-expanded='false'>Sets</label>
+				<div class='creator-app-status-area'>
+					<div class='creator-app-context' data-kind='saved' role='status' aria-live='polite' aria-atomic='true' aria-label='Workspace save status'>
+						<span class='creator-status-dot' data-kind='saved' aria-hidden='true'></span>
+						<span id='sets-global-status'>Saved successfully</span>
+						<label id='sets-drawer-open' class='creator-app-action sets-drawer-open' for='sets-drawer-toggle' role='button' tabindex='0' aria-controls='sets-workspace' aria-expanded='false'>Sets</label>
+					</div>
 				</div>
 			</div>
 			<input id='sets-drawer-toggle' class='sets-drawer-toggle' type='checkbox' hidden aria-hidden='true'>

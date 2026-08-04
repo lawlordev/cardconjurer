@@ -8,7 +8,7 @@
 - Text styles: `.creator-eyebrow` for compact uppercase context and `.input` for controls — defined in `css/style-9.css`.
 
 ## Screen scaffold
-- Header: `.creator-app-bar` aligns the set selector with the set-count edge and the fixed Settings control with the right-panel gutter; the content-sized save card preserves the same `.5rem` control gap used by New Set/Undo/Redo — `creator/index.html` and `css/style-9.css`.
+- Header: `.creator-app-bar` aligns the set selector with the set-count edge and the fixed Settings control with the right-panel gutter; `.creator-app-status-area` keeps the New Set-style Update/Restart action separate from the content-sized save card, matches its `2.35rem` height, and preserves the same `.5rem` control gap used by New Set/Undo/Redo — `creator/index.html`, `js/desktopBridge.js`, and `css/style-9.css`.
 - Workspace: three-column `.creator-grid` containing the set library, live preview, and editor menu — `creator/index.html` and `css/style-9.css`.
 - Primary and secondary buttons: teal is explicitly scoped to `.creator-new-set`, the New Card `.sets-primary`, and segmented-tab selectors; every other action uses the shared dark bordered control treatment — `creator/index.html` and `css/style-9.css`.
 - Drawers: shared `.textbox-editor` left drawer with a close-button row followed by one `.textbox-editor-title` and a divider; its fixed-height input, select, and button controls use zero block padding for consistent vertical centering across card text, searches, art layout, and watermark layout — `creator/index.html` and `css/style-9.css`.
