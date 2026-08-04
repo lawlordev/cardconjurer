@@ -3,7 +3,7 @@ import {
 } from 'electron';
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, watch, writeFileSync, type FSWatcher } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, watch, writeFileSync, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -16,32 +16,6 @@ import { UpdateCoordinator } from './services/update-coordinator.js';
 import { UpdateService as AppUpdateService } from './services/update-service.js';
 
 const WINDOWS_APP_USER_MODEL_ID = 'com.squirrel.set_conjurer.set-conjurer';
-
-function synchronizeWindowsShortcuts(event: '--squirrel-install' | '--squirrel-updated' | '--squirrel-uninstall'): void {
-  const appRoot = path.resolve(path.dirname(process.execPath), '..');
-  const stableExecutable = path.join(appRoot, path.basename(process.execPath));
-  const shortcuts = [
-    path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Set Conjurer.lnk'),
-    path.join(app.getPath('desktop'), 'Set Conjurer.lnk')
-  ];
-  if (event === '--squirrel-uninstall') {
-    for (const shortcut of shortcuts) rmSync(shortcut, {force: true});
-    return;
-  }
-  const details = {
-    target: stableExecutable,
-    cwd: appRoot,
-    description: 'Create custom Magic card sets with Set Conjurer.',
-    icon: process.execPath,
-    iconIndex: 0,
-    appUserModelId: WINDOWS_APP_USER_MODEL_ID
-  };
-  for (const shortcut of shortcuts) {
-    if (!shell.writeShortcutLink(shortcut, 'replace', details)) {
-      throw new Error(`Could not write Windows shortcut: ${shortcut}`);
-    }
-  }
-}
 
 function handleSquirrelLifecycle(): boolean {
   if (process.platform !== 'win32') return false;
@@ -57,11 +31,6 @@ function handleSquirrelLifecycle(): boolean {
     spawn(updateExe, [shortcutAction, path.basename(process.execPath)], {detached: true, stdio: 'ignore'}).unref();
   } catch (error) {
     console.error('Could not complete the Windows installer lifecycle event.', error);
-  }
-  try {
-    synchronizeWindowsShortcuts(event);
-  } catch (error) {
-    console.error('Could not synchronize Windows launch shortcuts.', error);
   }
   // Squirrel invokes the app during installation and gives it a short window
   // to finish lifecycle work. Keep the event loop alive long enough for

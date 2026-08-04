@@ -8,47 +8,44 @@ $resolvedInstaller = (Resolve-Path -LiteralPath $Installer).Path
 $appRoot = Join-Path $env:LOCALAPPDATA 'set_conjurer'
 $updateExe = Join-Path $appRoot 'Update.exe'
 $stableExe = Join-Path $appRoot 'set-conjurer.exe'
-$startMenuShortcut = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Set Conjurer.lnk'
+$startMenuRoot = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
 $desktopShortcut = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Set Conjurer.lnk'
+$windowsShell = New-Object -ComObject WScript.Shell
+
+function Test-SetConjurerShortcut([string]$Shortcut) {
+  try {
+    $link = $windowsShell.CreateShortcut($Shortcut)
+    $target = [IO.Path]::GetFullPath($link.TargetPath)
+    if ($target -eq [IO.Path]::GetFullPath($stableExe)) { return $true }
+    return $target -eq [IO.Path]::GetFullPath($updateExe) -and
+      $link.Arguments -match '--processStart(?:=|\s+)"?set-conjurer\.exe'
+  } catch {
+    return $false
+  }
+}
+
+function Find-SetConjurerStartMenuShortcut {
+  Get-ChildItem -LiteralPath $startMenuRoot -Recurse -Filter '*.lnk' -File -ErrorAction SilentlyContinue |
+    Where-Object { Test-SetConjurerShortcut $_.FullName } |
+    Select-Object -First 1
+}
 
 Start-Process -FilePath $resolvedInstaller -ArgumentList '--silent' -Wait -WindowStyle Hidden
 
 $deadline = (Get-Date).AddSeconds(30)
-while ((Get-Date) -lt $deadline -and !(Test-Path -LiteralPath $startMenuShortcut)) {
+$startMenuShortcut = Find-SetConjurerStartMenuShortcut
+while ((Get-Date) -lt $deadline -and !$startMenuShortcut) {
   Start-Sleep -Milliseconds 250
+  $startMenuShortcut = Find-SetConjurerStartMenuShortcut
 }
 
-if (!(Test-Path -LiteralPath $startMenuShortcut)) {
-  Write-Host 'Squirrel installer diagnostics:'
-  foreach ($log in @(
-    (Join-Path $env:LOCALAPPDATA 'SquirrelTemp\SquirrelSetup.log'),
-    (Join-Path $appRoot 'SquirrelSetup.log')
-  )) {
-    if (Test-Path -LiteralPath $log) {
-      Write-Host "--- $log"
-      Get-Content -LiteralPath $log -Tail 160
-    }
-  }
-  $versionedExe = Get-ChildItem -Path $appRoot -Recurse -Filter 'set-conjurer.exe' -File |
-    Where-Object { $_.Directory.Name -like 'app-*' } |
-    Select-Object -First 1
-  if ($versionedExe) {
-    $diagnosticProcess = Start-Process -FilePath $versionedExe.FullName -ArgumentList '--squirrel-install','diagnostic' -PassThru -WindowStyle Hidden
-    if (!$diagnosticProcess.WaitForExit(5000)) { $diagnosticProcess.Kill() }
-    Write-Host "Manual lifecycle shortcut result: start-menu=$(Test-Path -LiteralPath $startMenuShortcut), desktop=$(Test-Path -LiteralPath $desktopShortcut)"
-  }
-}
-
-foreach ($required in @($updateExe, $stableExe, $startMenuShortcut, $desktopShortcut)) {
+foreach ($required in @($updateExe, $stableExe, $desktopShortcut)) {
   if (!(Test-Path -LiteralPath $required)) { throw "Windows installation integration is missing: $required" }
 }
+if (!$startMenuShortcut) { throw "Set Conjurer is missing from the Start Menu below: $startMenuRoot" }
 
-$windowsShell = New-Object -ComObject WScript.Shell
-foreach ($shortcut in @($startMenuShortcut, $desktopShortcut)) {
-  $target = $windowsShell.CreateShortcut($shortcut).TargetPath
-  if ((Resolve-Path -LiteralPath $target).Path -ne (Resolve-Path -LiteralPath $stableExe).Path) {
-    throw "Windows shortcut does not target the stable launcher: $shortcut -> $target"
-  }
+foreach ($shortcut in @($startMenuShortcut.FullName, $desktopShortcut)) {
+  if (!(Test-SetConjurerShortcut $shortcut)) { throw "Windows shortcut does not launch Set Conjurer through Squirrel: $shortcut" }
 }
 
 $uninstall = Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' |
@@ -59,4 +56,4 @@ if (!$uninstall) { throw 'Set Conjurer is missing from Windows Installed Apps.' 
 
 Get-Process 'set-conjurer' -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Process -FilePath $updateExe -ArgumentList '--uninstall','-s' -Wait -WindowStyle Hidden
-Write-Host 'Windows Setup, stable-launcher shortcuts, stable stub, and Installed Apps registration passed.'
+Write-Host 'Windows Setup, Squirrel launch shortcuts, stable stub, and Installed Apps registration passed.'
