@@ -1099,6 +1099,9 @@ function enhanceWorkspaceSelect(select) {
 			dropdown.classList.add('open');
 			trigger.setAttribute('aria-expanded', 'true');
 			requestAnimationFrame(() => positionFrameCascadeMenu(dropdown, trigger, menu));
+		} else {
+			close();
+			trigger.focus();
 		}
 	};
 	select.addEventListener('change', sync);

@@ -23,7 +23,10 @@ test('desktop image exports use the validated native save bridge', () => {
 	assert.match(service, /Buffer\.from\(request\.content, 'base64'\)/);
 	assert.match(creator, /setConjurerDesktop\.files\.saveExport/);
 	assert.doesNotMatch(workspace, /Open in new tab/);
-	assert.doesNotMatch(workspace, /<summary><span aria-hidden='true'>↑<\/span>Import Card/);
+	assert.match(workspace, /<summary><span aria-hidden='true'>↑<\/span>Import Card/);
+	assert.match(workspace, /document\.querySelector\('#sets-card-import'\)\.click\(\)/);
+	assert.match(workspace, /CardConjurerSets\.openCardSearch\(this\)/);
+	assert.doesNotMatch(workspace, /moveOrCopy\('copy'\)/);
 });
 
 test('downloaded packs verify checksums and block unsafe archive paths', () => {

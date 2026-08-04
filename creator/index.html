@@ -262,7 +262,6 @@
 							<button id='card-editor-duplicate' type='button' onclick='CardConjurerSets.duplicateCard();' title='Duplicate this card'><span aria-hidden='true'>⧉</span>Duplicate</button>
 							<button id='card-editor-add-variant' type='button' onclick="CardConjurerSets.addVariant('art');" title='Add an art variant of this card'><span aria-hidden='true'>◫</span>Add Variant</button>
 							<button type='button' onclick="CardConjurerSets.moveOrCopy('move');"><span aria-hidden='true'>↗</span>Move to Set...</button>
-							<button type='button' onclick="CardConjurerSets.moveOrCopy('copy');"><span aria-hidden='true'>□</span>Copy Card</button>
 							<details class='creator-action-dropdown creator-card-action-dropdown'>
 								<summary><span aria-hidden='true'>↓</span>Export Card <span class='card-specific-chevron' aria-hidden='true'></span></summary>
 								<div class='creator-action-dropdown-menu'>
@@ -270,6 +269,13 @@
 									<button type='button' onclick="this.closest('details').removeAttribute('open'); CardConjurerSets.exportCardImage('jpeg');">JPG</button>
 									<button type='button' onclick="this.closest('details').removeAttribute('open'); CardConjurerSets.exportCard();">.cardconjurer-card file</button>
 									<button type='button' onclick="this.closest('details').removeAttribute('open'); SetConjurerDesktop.openPrint('card');">Print</button>
+								</div>
+							</details>
+							<details class='creator-action-dropdown creator-card-action-dropdown'>
+								<summary><span aria-hidden='true'>↑</span>Import Card <span class='card-specific-chevron' aria-hidden='true'></span></summary>
+								<div class='creator-action-dropdown-menu'>
+									<button type='button' onclick="this.closest('details').removeAttribute('open'); document.querySelector('#sets-card-import').click();">.cardconjurer-card file</button>
+									<button type='button' onclick="this.closest('details').removeAttribute('open'); CardConjurerSets.openCardSearch(this);">Card search</button>
 								</div>
 							</details>
 							<button type='button' class='danger' onclick='CardConjurerSets.deleteCard();'><span aria-hidden='true'>×</span>Delete Card</button>

@@ -3984,6 +3984,7 @@ function drawCollectorCopyright() {
 	var secondLineMetrics = hasSecondLine ? measureCollectorCopyrightLine(lines[1], layout) : null;
 	var blockWidth = hasSecondLine ? Math.min(layout.width, secondLineMetrics.width) : layout.width;
 	var blockX = layout.x + layout.width - blockWidth;
+	var firstLineY = hasSecondLine || !hasStatBox ? layout.firstY : layout.secondY;
 	var common = {
 		x: blockX,
 		width: blockWidth,
@@ -3998,7 +3999,7 @@ function drawCollectorCopyright() {
 	var firstLine = Object.assign({}, common, {
 		name: 'copyrightLine1',
 		text: lines[0],
-		y: hasSecondLine ? layout.firstY : layout.secondY,
+		y: firstLineY,
 		align: hasStatBox && hasSecondLine ? 'left' : 'right',
 		font: firstLineLayout.font,
 		size: firstLineLayout.size,
