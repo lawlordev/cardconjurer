@@ -1192,6 +1192,8 @@
 				'#info-copyright': hydrated.infoCopyright
 			};
 			Object.keys(fields).forEach(function(selector) { var input = document.querySelector(selector); if (input) input.value = fields[selector] || ''; });
+			var symbolRarityInput = document.querySelector('#set-symbol-rarity');
+			if (symbolRarityInput) symbolRarityInput.value = hydrated.infoRarity || 'C';
 			if (typeof card !== 'undefined') {
 				card.infoNumber = hydrated.infoNumber;
 				card.infoRarity = hydrated.infoRarity;
@@ -1199,6 +1201,11 @@
 				card.infoLanguage = hydrated.infoLanguage;
 				card.infoYear = hydrated.infoYear;
 				card.infoCopyright = hydrated.infoCopyright;
+			}
+			if (hydrated.setSymbolSource && typeof uploadSetSymbol === 'function') {
+				uploadSetSymbol(hydrated.setSymbolSource);
+				if (typeof waitForRenderableImage === 'function' && typeof setSymbol !== 'undefined') await waitForRenderableImage(setSymbol);
+				if (typeof setSymbolEdited === 'function') setSymbolEdited();
 			}
 			if (typeof bottomInfoEdited === 'function') await bottomInfoEdited();
 			if (typeof waitForRenderableImage === 'function' && typeof art !== 'undefined') await waitForRenderableImage(art);
@@ -1399,6 +1406,18 @@
 				else if (!event.target.closest('#sets-card-details-summary')) queueCapture(0);
 			});
 			document.addEventListener('click', function(event) {
+				var cardImportAction = event.target.closest('[data-card-import-action]');
+				if (cardImportAction) {
+					var importDropdown = cardImportAction.closest('details.creator-action-dropdown');
+					if (importDropdown) importDropdown.removeAttribute('open');
+					if (cardImportAction.dataset.cardImportAction === 'file') {
+						var cardImportInput = document.querySelector('#sets-card-import');
+						if (cardImportInput) cardImportInput.click();
+					} else if (cardImportAction.dataset.cardImportAction === 'search') {
+						openCardSearch(cardImportAction);
+					}
+					return;
+				}
 				document.querySelectorAll('details.creator-action-dropdown[open]').forEach(function(dropdown) {
 					if (!dropdown.contains(event.target)) dropdown.removeAttribute('open');
 				});

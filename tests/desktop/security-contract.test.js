@@ -24,8 +24,9 @@ test('desktop image exports use the validated native save bridge', () => {
 	assert.match(creator, /setConjurerDesktop\.files\.saveExport/);
 	assert.doesNotMatch(workspace, /Open in new tab/);
 	assert.match(workspace, /<summary><span aria-hidden='true'>↑<\/span>Import Card/);
-	assert.match(workspace, /document\.querySelector\('#sets-card-import'\)\.click\(\)/);
-	assert.match(workspace, /CardConjurerSets\.openCardSearch\(this\)/);
+	assert.match(workspace, /data-card-import-action='file'/);
+	assert.match(workspace, /data-card-import-action='search'/);
+	assert.doesNotMatch(workspace, /onclick=["'][^"']*(?:sets-card-import|openCardSearch)/);
 	assert.doesNotMatch(workspace, /moveOrCopy\('copy'\)/);
 });
 
