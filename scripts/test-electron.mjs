@@ -221,6 +221,20 @@ try {
     if (!(await page.locator('#sets-error').evaluate((element) => element.hidden))) throw new Error(`Download Images failed: ${await page.locator('#sets-error').innerText()}`);
   }
   const sharedRadius = await page.locator('#desktop-settings').evaluate((element) => getComputedStyle(element).borderTopLeftRadius);
+  const settingsPointerContract = await page.locator('#desktop-settings').evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return {
+      appRegion: style.getPropertyValue('-webkit-app-region'),
+      background: style.backgroundColor,
+      center: {x: rect.left + (rect.width / 2), y: rect.top + (rect.height / 2)},
+      hitTarget: document.elementFromPoint(rect.left + (rect.width / 2), rect.top + (rect.height / 2))?.closest('#desktop-settings')?.id || ''
+    };
+  });
+  if (settingsPointerContract.appRegion !== 'no-drag' || settingsPointerContract.hitTarget !== 'desktop-settings') throw new Error(`Settings is not a physical pointer target outside the macOS drag region: ${JSON.stringify(settingsPointerContract)}`);
+  await page.mouse.move(settingsPointerContract.center.x, settingsPointerContract.center.y);
+  const settingsHover = await page.locator('#desktop-settings').evaluate((element) => ({hovered: element.matches(':hover'), background: getComputedStyle(element).backgroundColor}));
+  if (!settingsHover.hovered || settingsHover.background === settingsPointerContract.background) throw new Error(`Settings does not expose its hover state to a physical pointer: ${JSON.stringify({settingsPointerContract, settingsHover})}`);
   for (const [selector, label] of [
     ['.creator-new-set', 'New Set'],
     ['.creator-card-action-buttons > button', 'card action button'],
@@ -351,6 +365,27 @@ try {
   await newSetTrigger.click();
   await page.keyboard.press('Escape');
   if (await newSetDropdown.evaluate((element) => element.open)) throw new Error('New Set did not close with Escape.');
+  await page.locator('.creator-grid').evaluate((grid) => grid.style.setProperty('--sets-panel-width', '208px'));
+  await page.waitForTimeout(100);
+  const narrowCardListLayout = await page.locator('.sets-card-scroll').evaluate((scroll) => {
+    const row = scroll.querySelector('.sets-card-row');
+    const collectorNumber = row?.querySelector(':scope > b');
+    if (!row || !collectorNumber) return null;
+    const scrollRect = scroll.getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+    const collectorRect = collectorNumber.getBoundingClientRect();
+    return {
+      clientWidth: scroll.clientWidth,
+      scrollWidth: scroll.scrollWidth,
+      scrollRight: scrollRect.right,
+      rowRight: rowRect.right,
+      collectorRight: collectorRect.right
+    };
+  });
+  if (!narrowCardListLayout) throw new Error('Could not measure a card row at the minimum left-panel width.');
+  if (narrowCardListLayout.scrollWidth > narrowCardListLayout.clientWidth + 1 || narrowCardListLayout.rowRight > narrowCardListLayout.scrollRight + 1 || narrowCardListLayout.collectorRight > narrowCardListLayout.scrollRight + 1) throw new Error(`Card rows overflow the minimum left-panel width: ${JSON.stringify(narrowCardListLayout)}`);
+  await page.screenshot({path: path.join(evidence, '02-narrow-panel.png'), fullPage: true});
+  await page.locator('.creator-grid').evaluate((grid) => grid.style.removeProperty('--sets-panel-width'));
   await page.screenshot({path: path.join(evidence, '02-editor.png'), fullPage: true});
   if (!packagedExecutable) {
     const settingsPacks = await page.evaluate(() => window.setConjurerDesktop.packs.list());
@@ -408,6 +443,9 @@ try {
   const packRowRadius = await page.locator('.desktop-pack-row').first().evaluate((element) => getComputedStyle(element).borderTopLeftRadius);
   if (packRowRadius !== sharedRadius) throw new Error(`settings drawer card does not use the shared ${sharedRadius} radius: ${packRowRadius}`);
   await page.screenshot({path: path.join(evidence, '03-settings-and-frame-packs.png'), fullPage: true});
+  await page.click('#desktop-drawer .textbox-editor-close');
+  await page.click('#desktop-settings');
+  await page.waitForSelector('#desktop-drawer.opened');
   await page.click('#desktop-drawer .textbox-editor-close');
   await page.evaluate(() => {
     const renderPrintImages = window.CardConjurerSets.renderPrintImages;
