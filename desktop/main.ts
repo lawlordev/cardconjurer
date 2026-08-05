@@ -7,7 +7,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync,
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
-  channelSchema, externalUrlSchema, IPC, packIdSchema, printRequestSchema, saveStateSchema, workspaceMutationSchema
+  archiveBeginSchema, channelSchema, externalUrlSchema, IPC, packIdSchema, printRequestSchema, saveStateSchema, workspaceMutationSchema
 } from './ipc/contracts.js';
 import { FileService } from './services/file-service.js';
 import { PackService } from './services/pack-service.js';
@@ -264,6 +264,11 @@ function registerIPC(): void {
   ipcMain.handle(IPC.storageFlush, trusted(() => storage!.flush()));
   ipcMain.handle(IPC.storageSnapshot, trusted((_event, label: string) => storage!.snapshot(String(label || 'pre-update').slice(0, 80))));
   ipcMain.handle(IPC.exportSave, trusted((_event, request) => files.saveExport(request)));
+  ipcMain.handle(IPC.archiveBegin, trusted((_event, request) => files.beginArchive(archiveBeginSchema.parse(request))));
+  ipcMain.handle(IPC.archiveAppend, trusted((_event, id, chunk) => files.appendArchive(id, chunk)));
+  ipcMain.handle(IPC.archiveComplete, trusted((_event, id) => files.completeArchive(id)));
+  ipcMain.handle(IPC.archiveSave, trusted((_event, id) => files.saveArchive(id)));
+  ipcMain.handle(IPC.archiveCancel, trusted((_event, id) => files.cancelArchive(id)));
   ipcMain.handle(IPC.importChoose, trusted((_event, kind: 'card' | 'set') => files.chooseImport(kind)));
   ipcMain.handle(IPC.packsList, trusted(() => packs!.list()));
   ipcMain.handle(IPC.packsRefresh, trusted(() => packs!.refreshCatalog()));

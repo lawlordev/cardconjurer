@@ -13,14 +13,19 @@ test('desktop window is sandboxed and preload is context-isolated', () => {
 	assert.match(main, /SET_CONJURER_ALLOW_TEST_INSTANCE.*!app\.isPackaged/);
 });
 
-test('desktop image exports use the validated native save bridge', () => {
+test('desktop binary exports use validated native save bridges', () => {
 	const contracts = fs.readFileSync(path.join(__dirname, '../../desktop/ipc/contracts.ts'), 'utf8');
 	const service = fs.readFileSync(path.join(__dirname, '../../desktop/services/file-service.ts'), 'utf8');
 	const creator = fs.readFileSync(path.join(__dirname, '../../js/creator-23.js'), 'utf8');
 	const workspace = fs.readFileSync(path.join(__dirname, '../../creator/index.html'), 'utf8');
 	assert.match(contracts, /'png', 'jpg'/);
-	assert.match(contracts, /Only image exports may use base64 encoding/);
+	assert.match(contracts, /Only binary exports may use base64 encoding/);
+	assert.match(contracts, /archiveIdSchema = z\.string\(\)\.uuid\(\)/);
 	assert.match(service, /Buffer\.from\(request\.content, 'base64'\)/);
+	assert.match(service, /MAX_ARCHIVE_CHUNK_BYTES/);
+	assert.match(service, /await session\.handle\.writeFile\(chunk\)/);
+	assert.match(service, /filters: \[\{name: 'ZIP Archive'/);
+	assert.doesNotMatch(service, /Buffer\.concat/);
 	assert.match(creator, /setConjurerDesktop\.files\.saveExport/);
 	assert.doesNotMatch(workspace, /Open in new tab/);
 	assert.match(workspace, /<summary><span aria-hidden='true'>↑<\/span>Import Card/);

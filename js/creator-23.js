@@ -4498,10 +4498,13 @@ function drawCard() {
 		cardContext.drawImage(corner, -card.height, 0, scaleWidth(59/w), scaleWidth(59/w));
 		cardContext.rotate(Math.PI / 2);
 	}
-	// show preview
-	previewContext.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
-	previewContext.drawImage(cardCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
-	window.dispatchEvent(new CustomEvent('cardconjurer:preview-rendered'));
+	// ZIP exports render through the high-resolution card canvas without
+	// flashing each temporary card through the visible editor preview.
+	if (!window.cardConjurerSuppressPreviewRender) {
+		previewContext.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+		previewContext.drawImage(cardCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
+		window.dispatchEvent(new CustomEvent('cardconjurer:preview-rendered'));
+	}
 
 	if (window.cardDrawingPromiseResolver) {
         window.cardDrawingPromiseResolver();
