@@ -198,6 +198,10 @@ async function dispatchAssociatedFiles(): Promise<void> {
 function createWindow(appRoot: string): BrowserWindow {
   const window = new BrowserWindow({
     title: 'Set Conjurer',
+    ...(process.platform === 'darwin' ? {
+      titleBarStyle: 'customButtonsOnHover' as const,
+      trafficLightPosition: {x: 14, y: 22}
+    } : {}),
     width: 1665,
     height: 1040,
     minWidth: 980,

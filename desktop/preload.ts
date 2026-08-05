@@ -1,6 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { DesktopAPI, PackId, ReleaseChannel, UpdateState, WorkspaceMutation, WorkspaceState } from './ipc/contracts.js';
 
+const desktopPlatform = process.platform;
+const markDesktopPlatform = (): void => { document.documentElement.dataset.desktopPlatform = desktopPlatform; };
+if (document.documentElement) markDesktopPlatform();
+else window.addEventListener('DOMContentLoaded', markDesktopPlatform, {once: true});
+
 // Sandboxed preloads cannot load local CommonJS modules at runtime. Keep this
 // frozen channel table self-contained; contracts.ts remains the typed source
 // of truth used by the privileged main process.

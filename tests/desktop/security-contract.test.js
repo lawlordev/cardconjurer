@@ -13,6 +13,20 @@ test('desktop window is sandboxed and preload is context-isolated', () => {
 	assert.match(main, /SET_CONJURER_ALLOW_TEST_INSTANCE.*!app\.isPackaged/);
 });
 
+test('macOS folds the workspace app bar into hover-revealed native window controls', () => {
+	const main = fs.readFileSync(path.join(__dirname, '../../desktop/main.ts'), 'utf8');
+	const preload = fs.readFileSync(path.join(__dirname, '../../desktop/preload.ts'), 'utf8');
+	const styles = fs.readFileSync(path.join(__dirname, '../../css/style-9.css'), 'utf8');
+	assert.match(main, /process\.platform === 'darwin'[\s\S]{0,180}titleBarStyle: 'customButtonsOnHover'/);
+	assert.match(main, /trafficLightPosition: \{x: 14, y: 22\}/);
+	assert.match(preload, /document\.documentElement\.dataset\.desktopPlatform = desktopPlatform/);
+	assert.match(styles, /grid-template-rows: 3\.65rem minmax\(0, 1fr\)/);
+	assert.match(styles, /html\[data-desktop-platform='darwin'\] \.creator-app-bar\s*\{[\s\S]{0,120}padding-left: 6\.75rem;[\s\S]{0,120}-webkit-app-region: drag;/);
+	assert.match(styles, /html\[data-desktop-platform='darwin'\] \.creator-app-bar::before[\s\S]{0,140}top: 22px;[\s\S]{0,180}box-shadow: 23px 0 #4a4a4d, 46px 0 #4a4a4d;/);
+	assert.match(styles, /html\[data-desktop-platform='darwin'\] \.creator-app-bar :is\([^)]+\)\s*\{\s*-webkit-app-region: no-drag;/);
+	assert.match(styles, /\.desktop-menu-action \{[^}]*top: var\(--workspace-panel-gutter\);[^}]*right: var\(--workspace-panel-gutter\);/);
+});
+
 test('desktop binary exports use validated native save bridges', () => {
 	const contracts = fs.readFileSync(path.join(__dirname, '../../desktop/ipc/contracts.ts'), 'utf8');
 	const service = fs.readFileSync(path.join(__dirname, '../../desktop/services/file-service.ts'), 'utf8');
