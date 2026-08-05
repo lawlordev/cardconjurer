@@ -1,7 +1,7 @@
 {
   "name": "set-conjurer",
   "productName": "Set Conjurer",
-  "version": "0.1.0-beta.3",
+  "version": "0.1.0-beta.4",
   "description": "A local-first desktop fork of Card Conjurer for creating custom card sets.",
   "author": "Jake Lawlor",
   "license": "GPL-3.0-only",
