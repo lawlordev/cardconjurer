@@ -159,11 +159,15 @@ try {
     const zipModalStyles = await page.evaluate(() => {
       const dialog = document.querySelector('#sets-zip-dialog');
       const cancel = document.querySelector('#sets-zip-cancel');
-      const reference = document.querySelector('#desktop-settings');
       const style = (element) => { const computed = getComputedStyle(element); return {background: computed.backgroundColor, border: computed.borderTopColor, color: computed.color, radius: computed.borderTopLeftRadius}; };
-      return {cancel: style(cancel), reference: style(reference), backdrop: getComputedStyle(dialog, '::backdrop').backgroundColor};
+      const tokenProbe = document.createElement('span');
+      tokenProbe.style.cssText = 'position:absolute;visibility:hidden;border:1px solid var(--workspace-control-border);border-radius:var(--workspace-radius);color:var(--workspace-control-text);background:var(--workspace-control)';
+      dialog.appendChild(tokenProbe);
+      const expected = style(tokenProbe);
+      tokenProbe.remove();
+      return {cancel: style(cancel), expected, backdrop: getComputedStyle(dialog, '::backdrop').backgroundColor};
     });
-    if (JSON.stringify(zipModalStyles.cancel) !== JSON.stringify(zipModalStyles.reference)) throw new Error(`ZIP cancel action does not inherit the themed neutral action: ${JSON.stringify(zipModalStyles)}`);
+    if (JSON.stringify(zipModalStyles.cancel) !== JSON.stringify(zipModalStyles.expected)) throw new Error(`ZIP cancel action does not inherit the themed neutral action: ${JSON.stringify(zipModalStyles)}`);
     await page.screenshot({path: path.join(evidence, '04-zip-export.png'), fullPage: true});
     let zipExportRequest = null;
     for (let attempt = 0; attempt < 80 && !zipExportRequest?.saved; attempt += 1) {
