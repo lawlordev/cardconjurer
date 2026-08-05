@@ -19,6 +19,7 @@
     "package": "npm run build:desktop && electron-forge package",
     "make": "npm run build:desktop && electron-forge make",
     "make:local": "npm run packs:seed && npm run build:desktop && SET_CONJURER_INCLUDE_DEV_PACKS=1 electron-forge make",
+    "preview:mac-installer": "node scripts/preview-mac-installer.mjs",
     "typecheck": "tsc -p tsconfig.desktop.json --noEmit",
     "lint": "node scripts/check-desktop-security.mjs",
     "test": "npm run build:desktop && node --test tests/*.test.js tests/ci/*.test.js tests/desktop/*.test.js tests/packs/*.test.js tests/print/*.test.js",
