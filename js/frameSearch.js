@@ -613,6 +613,13 @@ function frameHasCustomizableLayer(requirement) {
 	});
 }
 
+function frameComponentConflictsWithActiveLayer(pack) {
+	const details = FRAME_REGISTRY?.components?.[pack];
+	if (!details?.incompatibleLayer) return false;
+	const selected = activeFrameComponentOptions[details.slot];
+	return selected?.pack !== pack && frameHasCustomizableLayer(details.incompatibleLayer);
+}
+
 function renderFrameCustomize(basePack = activeFramePack) {
 	const section = document.querySelector('#frameCustomize');
 	const container = document.querySelector('#frameCustomizeControls');
@@ -653,6 +660,7 @@ function renderFrameCustomize(basePack = activeFramePack) {
 	const componentCustomizations = Object.entries(FRAME_REGISTRY.components).filter(([pack, details]) => {
 		if (details.review || !['select', 'checkbox'].includes(details.mode)) return false;
 		if (planeswalkerContext && ['M15Miracle', 'Brawl'].includes(pack)) return false;
+		if (frameComponentConflictsWithActiveLayer(pack)) return false;
 		const familyMatches = applicableFamilies.has(String(details.family).toLowerCase()) ||
 			(planeswalkerContext && pack === 'M15CIPips');
 		if (!familyMatches) return false;

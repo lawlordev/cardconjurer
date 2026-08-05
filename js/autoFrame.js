@@ -1310,6 +1310,13 @@ function automaticHoloStampAllowed() {
 	return !FRAME_REGISTRY.components?.[borderSelection.pack]?.suppressHoloStamp;
 }
 
+function automaticFrameLayerAllowed(layer) {
+	if (typeof activeFrameComponentOptions === 'undefined' || typeof FRAME_REGISTRY === 'undefined') return true;
+	return !Object.values(activeFrameComponentOptions).some(selection =>
+		FRAME_REGISTRY.components?.[selection?.pack]?.incompatibleLayer === layer
+	);
+}
+
 
 // ============================================================================
 // SECTION 5: AUTO FRAME ORCHESTRATION
@@ -1397,7 +1404,7 @@ function buildAutoFrames(frameType, colors, mana_cost, type_line, power, mana2Te
 	// Build frames in Z-order (bottom to top). Each layer is added to the frames array.
 
 	// LEGENDARY CROWNS (if legendary creature/planeswalker)
-	if (config.supportsCrown && isLegendary) {
+	if (config.supportsCrown && isLegendary && automaticFrameLayerAllowed('legend-crown')) {
 		// Add inner Nyx starfield crowns for enchantments
 		if (style === 'Nyx') {
 			if (properties.pinlineRight) {
