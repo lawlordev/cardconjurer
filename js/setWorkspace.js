@@ -598,10 +598,10 @@
 	}
 
 	function renderCardDetailsSummary() {
-		var record = activeCardRecord(); var set = activeSet(); var host = document.querySelector('#sets-card-details-summary');
+		var record = activeCardRecord(); var set = activeSet(); var host = document.querySelector('#text-rarity-field');
 		if (!record || !set || !host) return;
-		host.innerHTML = '<div class="art-section-heading"><h4>Rarity</h4></div>' +
-			'<label class="card-details-field"><span>Rarity</span><select class="input" data-card-detail="rarity">' + selectOptions(Model.RARITIES, record.rarity, {mythic:'Mythic Rare'}) + '</select></label>';
+		host.innerHTML = '<div class="text-field-card-heading"><label>Rarity</label></div>' +
+			'<select class="input text-field-input" data-card-detail="rarity" aria-label="Rarity">' + selectOptions(Model.RARITIES, record.rarity, {mythic:'Mythic Rare'}) + '</select>';
 		['#info-number','#info-rarity','#info-set','#info-language','#info-year','#info-copyright','#enableNewCollectorStyle'].forEach(function(selector) { var input = document.querySelector(selector); if (input) input.disabled = true; });
 	}
 
@@ -1579,10 +1579,10 @@
 			initialBlankCardData = stripSetOwned(typeof cardStorageSnapshot === 'function' ? cardStorageSnapshot() : {});
 			await bootstrap(); initialized = true; renderWorkspace(); applyWorkspaceLayout(); await loadActiveCard(); await revealWorkspace();
 			window.addEventListener('cardconjurer:preview-rendered', queueRenderedThumbnailRefresh);
-			document.querySelector('.creator-menu')?.addEventListener('input', function(event) { if (!event.target.closest('#sets-card-details-summary')) queueCapture(420); });
+			document.querySelector('.creator-menu')?.addEventListener('input', function(event) { if (!event.target.closest('#text-rarity-field')) queueCapture(420); });
 			document.querySelector('.creator-menu')?.addEventListener('change', function(event) {
 				if (event.target.matches('[data-card-detail]')) void updateCardDetail(event.target.dataset.cardDetail, event.target.value);
-				else if (!event.target.closest('#sets-card-details-summary')) queueCapture(0);
+				else if (!event.target.closest('#text-rarity-field')) queueCapture(0);
 			});
 			document.addEventListener('click', function(event) {
 				var cardImportAction = event.target.closest('[data-card-import-action]');

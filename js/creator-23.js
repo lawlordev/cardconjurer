@@ -1576,11 +1576,21 @@ function createTextFieldCard(key, textObject, optionalPlaceholder) {
 	return field;
 }
 
+function orderedTextFieldEntries(textObjects) {
+	var entries = Object.entries(textObjects || {});
+	var titleIndex = entries.findIndex(item => item[0] === 'title');
+	var manaIndex = entries.findIndex(item => item[0] === 'mana');
+	if (titleIndex < 0 || manaIndex < 0 || titleIndex < manaIndex) return entries;
+	var titleEntry = entries.splice(titleIndex, 1)[0];
+	entries.splice(manaIndex, 0, titleEntry);
+	return entries;
+}
+
 function renderTextFieldForm(focusState) {
 	var form = document.querySelector('#text-field-form');
 	if (!form) return;
 	var fragment = document.createDocumentFragment();
-	Object.entries(card.text || {}).forEach(item => {
+	orderedTextFieldEntries(card.text).forEach(item => {
 		if (!textFieldSupportedForCurrentCard(item[0])) return;
 		fragment.appendChild(createTextFieldCard(item[0], item[1], false));
 	});
@@ -1588,6 +1598,12 @@ function renderTextFieldForm(focusState) {
 		if (!textFieldSupportedForCurrentCard(item[0])) return;
 		if (!card.text[item[0]]) fragment.appendChild(createTextFieldCard(item[0], optionalTextboxDefinitionForCurrentCard(item[0]), true));
 	});
+	var rarityField = document.querySelector('#text-rarity-field');
+	if (rarityField) {
+		var typeField = fragment.querySelector('.text-field-card[data-text-key="type"]');
+		if (typeField) typeField.after(rarityField);
+		else fragment.appendChild(rarityField);
+	}
 	form.replaceChildren(fragment);
 	renderCardSpecificTextTools();
 
