@@ -44,7 +44,7 @@ window.FRAME_REGISTRY = (() => {
 		UBLegendCrowns: {slot:'crown', family:'universes-beyond', when:'legendary'},
 		M15InnerCrowns: {slot:'inner-crown', family:'regular', when:'legendary && enchantment', layer:'above:crown'},
 		InnerCrownsEtched: {slot:'inner-crown', family:'etched', when:'legendary && enchantment', layer:'above:crown'},
-		M15Miracle: {slot:'miracle', family:'regular', mode:'checkbox', label:'Miracle'},
+		M15Miracle: {slot:'miracle', family:'regular', mode:'checkbox', label:'Miracle', incompatibleLayer:'legend-crown'},
 		M15HoloStamps: {slot:'holo-stamp', family:'all', when:'rarity:R|M|S'},
 		'M15Nickname-2': {slot:'nickname', family:'regular', when:'hasNickname'},
 		M15SmoothNickname: {slot:'nickname-crown', family:'borderless', when:'hasNickname && legendary'},
