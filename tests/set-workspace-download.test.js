@@ -2,21 +2,57 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const workspace = fs.readFileSync(path.join(__dirname, '../js/setWorkspace.js'), 'utf8');
+const creator = fs.readFileSync(path.join(__dirname, '../js/creator-23.js'), 'utf8');
 
-function functionSource(name) {
-	const asyncStart = workspace.indexOf(`async function ${name}(`);
-	const start = asyncStart === -1 ? workspace.indexOf(`function ${name}(`) : asyncStart;
+function functionSource(name, source = workspace) {
+	const asyncStart = source.indexOf(`async function ${name}(`);
+	const start = asyncStart === -1 ? source.indexOf(`function ${name}(`) : asyncStart;
 	assert.notEqual(start, -1, `${name} should exist`);
-	const bodyStart = workspace.indexOf('{', start);
+	const bodyStart = source.indexOf('{', start);
 	let depth = 0;
-	for (let index = bodyStart; index < workspace.length; index++) {
-		if (workspace[index] === '{') depth++;
-		else if (workspace[index] === '}' && --depth === 0) return workspace.slice(start, index + 1);
+	for (let index = bodyStart; index < source.length; index++) {
+		if (source[index] === '{') depth++;
+		else if (source[index] === '}' && --depth === 0) return source.slice(start, index + 1);
 	}
 	throw new Error(`Could not extract ${name}`);
 }
+
+test('single-card PNG and JPG exports do not require artist credit', () => {
+	const exports = [];
+	const notifications = [];
+	const context = {
+		card: {infoArtist: '', artSource: 'data:image/png;base64,ART', artZoom: 1},
+		cardCanvas: {
+			toDataURL(type) {
+				return `data:${type};base64,IMAGE`;
+			}
+		},
+		getCardName() { return 'Untitled Card'; },
+		notify(message) { notifications.push(message); },
+		console,
+		window: {
+			setConjurerDesktop: {
+				files: {
+					saveExport(request) {
+						exports.push(request);
+						return Promise.resolve();
+					}
+				}
+			}
+		}
+	};
+	vm.createContext(context);
+	vm.runInContext(`${functionSource('downloadCard', creator)}\ndownloadCard();\ndownloadCard(false, true);`, context);
+
+	assert.deepEqual(exports.map(({suggestedName, extension, content}) => ({suggestedName, extension, content})), [
+		{suggestedName: 'Untitled Card.png', extension: 'png', content: 'IMAGE'},
+		{suggestedName: 'Untitled Card.jpg', extension: 'jpg', content: 'IMAGE'}
+	]);
+	assert.deepEqual(notifications, []);
+});
 
 test('set image ZIPs use the native save dialog in the desktop app', () => {
 	const download = functionSource('downloadSetImages');
