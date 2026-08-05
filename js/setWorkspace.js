@@ -120,6 +120,20 @@
 		return data;
 	}
 
+	async function syncActiveCollectorNumber(record) {
+		if (!record || typeof card === 'undefined') return false;
+		var nextNumber = String(record.collectorNumber || '');
+		var input = document.querySelector('#info-number');
+		var inputChanged = Boolean(input && String(input.value) !== nextNumber);
+		var cardChanged = String(card.infoNumber || '') !== nextNumber;
+		if (!inputChanged && !cardChanged) return false;
+		if (input) input.value = nextNumber;
+		card.infoNumber = nextNumber;
+		if (input && typeof bottomInfoEdited === 'function') await bottomInfoEdited();
+		else if (typeof drawCard === 'function') drawCard();
+		return true;
+	}
+
 	function symbolSourceKey(source) {
 		var value = String(source || ''); var hash = 2166136261;
 		for (var index = 0; index < value.length; index++) {
@@ -663,6 +677,11 @@
 			record.derived = derived.derived; record.gameplayFingerprint = afterFingerprint;
 		}
 		var updatedRecord = state.cards.find(function(item) { return item.id === record.id; }) || record;
+		if (listOrderChanged) {
+			loadingCard = true;
+			try { await syncActiveCollectorNumber(updatedRecord); }
+			finally { loadingCard = false; }
+		}
 		var before = {sets: [beforeSet], cards: [beforeRecord], activeSetId: state.activeSetId};
 		var after = {sets: [clone(set)], cards: [clone(updatedRecord)], activeSetId: state.activeSetId};
 		recordHistory([set.id], label || 'Edit card', coalescingKey || 'card-edit', before, after);
@@ -1069,6 +1088,7 @@
 				record.thumbnailDirty = true;
 				inferFrameClassification(record);
 				renumberSet(set.id);
+				await syncActiveCollectorNumber(state.cards.find(function(item) { return item.id === record.id; }) || record);
 			} finally { loadingCard = false; editorDirty = false; }
 			var after = snapshot();
 			recordHistory([set.id], 'Change card rarity', '', before, after);
