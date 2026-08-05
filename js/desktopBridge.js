@@ -34,7 +34,8 @@
 			'<div id="desktop-overlay" class="desktop-overlay" hidden></div>' +
 			'<aside id="desktop-drawer" class="textbox-editor layout-drawer desktop-drawer" role="dialog" aria-modal="true" aria-labelledby="desktop-drawer-title" aria-hidden="true"><div class="textbox-editor-heading"><h2 id="desktop-drawer-title" class="textbox-editor-title">Set Conjurer</h2></div><button type="button" class="textbox-editor-close" aria-label="Close drawer">×</button><div id="desktop-drawer-body" class="layout-drawer-body"></div></aside>' +
 			'<dialog id="desktop-onboarding" class="sets-dialog desktop-onboarding"><form method="dialog"><header class="desktop-onboarding-header"><img class="desktop-onboarding-mark" src="/resources/icons/set-conjurer.png" alt="Set Conjurer"><h2>Welcome to Set Conjurer</h2><p>Choose the frame packs you want available offline. Pack sizes are shown before anything downloads.</p></header><div id="desktop-onboarding-packs" class="desktop-pack-list desktop-onboarding-pack-list"></div><div class="desktop-onboarding-download"><strong id="desktop-onboarding-total">Calculating download…</strong><button id="desktop-onboarding-retry" type="button" class="input" hidden>Retry pack list</button></div><div id="desktop-onboarding-progress" class="desktop-pack-progress desktop-onboarding-progress" hidden aria-live="polite"><span class="desktop-pack-progress-label"></span><span class="desktop-pack-progress-track" aria-hidden="true"><i></i></span></div><footer class="desktop-onboarding-footer"><small class="desktop-onboarding-credit">Set Conjurer is an open-source desktop fork of Kyle Burton\'s Card Conjurer, adapted for local set creation. <a href="https://github.com/lawlordev/cardconjurer" target="_blank" rel="noreferrer">View repository</a></small><button id="desktop-onboarding-start" type="button" class="sets-confirm" disabled>Download &amp; Continue</button></footer></form></dialog>' +
-			'<section id="desktop-print" class="desktop-print" hidden aria-label="Print cards"><header class="desktop-print-toolbar"><button type="button" class="creator-app-action desktop-print-back" id="desktop-print-close">' + icon('back') + '<span>Back</span></button><div class="desktop-print-toolbar-actions"><select id="desktop-print-paper" class="input desktop-print-select" aria-label="Paper size"><option value="letter">US Letter</option><option value="a4">A4</option></select><select id="desktop-print-backs" class="input desktop-print-select desktop-print-back-select" aria-label="Card backs"><option value="standard">Standard card back</option><option value="none">No backs</option></select><button type="button" class="creator-app-action desktop-print-run" id="desktop-print-run" disabled>' + icon('print') + '<span>Print</span></button></div></header><div class="desktop-print-content"><aside class="desktop-print-sidebar"><div id="desktop-print-cards" class="desktop-print-card-list"></div></aside><main class="desktop-print-preview"><div id="desktop-print-pages" class="desktop-print-pages"></div></main></div></section>'
+			'<section id="desktop-print" class="desktop-print" hidden aria-label="Print cards"><header class="desktop-print-toolbar"><button type="button" class="creator-app-action desktop-print-back" id="desktop-print-close">' + icon('back') + '<span>Back</span></button><div class="desktop-print-toolbar-actions"><select id="desktop-print-paper" class="input desktop-print-select" aria-label="Paper size"><option value="letter">US Letter</option><option value="a4">A4</option></select><select id="desktop-print-backs" class="input desktop-print-select desktop-print-back-select" aria-label="Card backs"><option value="standard">Standard card back</option><option value="none">No backs</option></select><button type="button" class="creator-app-action desktop-print-run" id="desktop-print-run" disabled>' + icon('print') + '<span>Print</span></button></div></header><div class="desktop-print-content"><aside class="desktop-print-sidebar"><div id="desktop-print-cards" class="desktop-print-card-list"></div></aside><main class="desktop-print-preview"><div id="desktop-print-pages" class="desktop-print-pages"></div></main></div></section>' +
+			'<dialog id="desktop-print-loading" class="sets-dialog sets-zip-dialog desktop-print-loading" aria-labelledby="desktop-print-loading-copy"><form method="dialog"><div class="desktop-settings-loading"><span class="creator-loading-spinner" aria-hidden="true"></span><p id="desktop-print-loading-copy" class="desktop-inline-status desktop-settings-loading-copy" role="status">Loading Pages...</p></div></form></dialog>'
 		);
 		document.querySelector('#desktop-settings').addEventListener('click', function(event) { void openSettings(event.currentTarget); });
 		document.querySelector('#desktop-drawer .textbox-editor-close').addEventListener('click', closeDrawer);
@@ -46,6 +47,7 @@
 		document.querySelector('#desktop-print-paper').addEventListener('change', function(event) { selectedPaper = event.target.value; renderPrintPages(); });
 		document.querySelector('#desktop-print-paper').value = selectedPaper;
 		document.querySelector('#desktop-print-backs').addEventListener('change', function(event) { selectedBack = event.target.value; renderPrintPages(); });
+		document.querySelector('#desktop-print-loading').addEventListener('cancel', function(event) { event.preventDefault(); });
 		document.addEventListener('keydown', function(event) { if (event.key === 'Escape') { closeDrawer(); closePrint(); } });
 	}
 	function toolbar() {
@@ -223,15 +225,25 @@
 		printSourceUrls = [];
 		printCards.forEach(function(card) { delete card.printSource; });
 	}
+	function showPrintLoading() {
+		var dialog = document.querySelector('#desktop-print-loading');
+		if (dialog && !dialog.open) dialog.showModal();
+	}
+	function hidePrintLoading() {
+		var dialog = document.querySelector('#desktop-print-loading');
+		if (dialog && dialog.open) dialog.close();
+	}
 	async function openPrint(scope) {
 		if (!root.CardConjurerSets) return;
 		var token = ++printJobToken;
 		releasePrintSources();
-		await root.CardConjurerSets.captureActiveCard(); var state = root.CardConjurerSets.getState(); var set = state.sets.find(function(item) { return item.id === state.activeSetId; });
-		printCards = state.cards.filter(function(card) { return card.setId === state.activeSetId && (scope !== 'card' || card.id === set.activeCardId); });
 		var view = document.querySelector('#desktop-print'); var printButton = document.querySelector('#desktop-print-run');
-		view.hidden = false; view.classList.add('is-rendering'); document.body.classList.add('desktop-printing'); printButton.disabled = true; renderPrintList(); renderPrintPages();
+		view.hidden = false; view.classList.add('is-rendering'); document.body.classList.add('desktop-printing'); printButton.disabled = true; showPrintLoading();
 		try {
+			await new Promise(function(resolve) { requestAnimationFrame(function() { requestAnimationFrame(resolve); }); });
+			await root.CardConjurerSets.captureActiveCard(); var state = root.CardConjurerSets.getState(); var set = state.sets.find(function(item) { return item.id === state.activeSetId; });
+			printCards = state.cards.filter(function(card) { return card.setId === state.activeSetId && (scope !== 'card' || card.id === set.activeCardId); });
+			renderPrintList(); renderPrintPages();
 			var images = await root.CardConjurerSets.renderPrintImages(printCards.map(function(card) { return card.id; }));
 			if (token !== printJobToken) return;
 			printCards.forEach(function(card) { var blob = images[card.id]; if (!blob) return; var url = URL.createObjectURL(blob); printSourceUrls.push(url); card.printSource = url; });
@@ -242,6 +254,8 @@
 		} catch (error) {
 			if (token !== printJobToken) return;
 			view.classList.remove('is-rendering'); printButton.disabled = true; console.error(error);
+		} finally {
+			if (token === printJobToken) hidePrintLoading();
 		}
 	}
 	function renderPrintList() {
@@ -266,7 +280,7 @@
 			return new Promise(function(resolve) { image.addEventListener('load', resolve, {once:true}); image.addEventListener('error', resolve, {once:true}); });
 		}));
 	}
-	function closePrint() { var view = document.querySelector('#desktop-print'); if (view && !view.hidden) { printJobToken++; releasePrintSources(); view.hidden = true; view.classList.remove('is-rendering'); document.body.classList.remove('desktop-printing'); } }
+	function closePrint() { var view = document.querySelector('#desktop-print'); if (view && !view.hidden) { printJobToken++; hidePrintLoading(); releasePrintSources(); view.hidden = true; view.classList.remove('is-rendering'); document.body.classList.remove('desktop-printing'); } }
 	async function runPrint() {
 		var button = document.querySelector('#desktop-print-run'); if (!button || button.disabled) return;
 		button.disabled = true; button.setAttribute('aria-busy','true');

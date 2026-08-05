@@ -332,8 +332,8 @@ try {
   const settingsOpenMs = Date.now() - settingsClickStarted;
   if (settingsOpenMs > 500) throw new Error(`Settings drawer waited ${settingsOpenMs}ms before opening.`);
   if (!packagedExecutable) {
-    await page.waitForSelector('.desktop-settings-loading .creator-loading-spinner');
-    const settingsLoadingStyle = await page.locator('.desktop-settings-loading').evaluate((element) => {
+    await page.waitForSelector('#desktop-settings-content.desktop-settings-loading .creator-loading-spinner');
+    const settingsLoadingStyle = await page.locator('#desktop-settings-content.desktop-settings-loading').evaluate((element) => {
       const copy = element.querySelector('.desktop-settings-loading-copy');
       const spinner = element.querySelector('.creator-loading-spinner');
       const body = element.parentElement;
@@ -368,9 +368,27 @@ try {
   if (packRowRadius !== sharedRadius) throw new Error(`settings drawer card does not use the shared ${sharedRadius} radius: ${packRowRadius}`);
   await page.screenshot({path: path.join(evidence, '03-settings-and-frame-packs.png'), fullPage: true});
   await page.click('#desktop-drawer .textbox-editor-close');
+  await page.evaluate(() => {
+    const renderPrintImages = window.CardConjurerSets.renderPrintImages;
+    window.CardConjurerSets.renderPrintImages = async function(...args) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      return renderPrintImages.apply(this, args);
+    };
+  });
   await page.locator('.creator-card-action-dropdown').first().click();
   await page.getByRole('button', {name: 'Print', exact: true}).click();
   await page.waitForSelector('#desktop-print:not([hidden])');
+  await page.waitForSelector('#desktop-print-loading[open]');
+  if ((await page.locator('#desktop-print-loading').innerText()).trim() !== 'Loading Pages...') throw new Error('Print preview loading state does not show the expected message.');
+  const printLoadingStyle = await page.locator('#desktop-print-loading').evaluate((dialog) => {
+    const copy = dialog.querySelector('.desktop-settings-loading-copy');
+    const spinner = dialog.querySelector('.creator-loading-spinner');
+    const copyStyle = getComputedStyle(copy);
+    const spinnerStyle = getComputedStyle(spinner);
+    return {fontFamily: copyStyle.fontFamily, fontSize: copyStyle.fontSize, fontWeight: copyStyle.fontWeight, spinnerWidth: Number.parseFloat(spinnerStyle.width), spinnerHeight: Number.parseFloat(spinnerStyle.height), spinnerAnimation: spinnerStyle.animationName};
+  });
+  if (!printLoadingStyle.fontFamily.includes('Montserrat') || printLoadingStyle.fontSize !== '11.52px' || printLoadingStyle.fontWeight !== '700' || Math.abs(printLoadingStyle.spinnerWidth - 18.4) > 0.1 || Math.abs(printLoadingStyle.spinnerHeight - 18.4) > 0.1 || printLoadingStyle.spinnerAnimation !== 'creator-loading-spin') throw new Error(`Print preview does not reuse the Settings loading treatment: ${JSON.stringify(printLoadingStyle)}`);
+  await page.locator('#desktop-print-loading').waitFor({state: 'hidden'});
   for (const [selector, label] of [
     ['.desktop-print-toolbar-actions > button', 'print toolbar button'],
     ['.desktop-print .workspace-select-trigger', 'print dropdown'],
