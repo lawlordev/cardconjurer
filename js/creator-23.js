@@ -190,6 +190,13 @@ watermark.onload = watermarkEdited;
 var previewCanvas = document.querySelector('#previewCanvas');
 var previewContext = previewCanvas.getContext('2d');
 var previewRenderCommitId = 0;
+var draggingArt = false;
+var activeArtPointerId = null;
+var artDragTarget = 'art';
+var artDragLastPoint = {x: 0, y: 0};
+var artDragLastClientY = 0;
+var pendingArtDrag = null;
+var artDragAnimationFrame = 0;
 
 function beginPreviewRenderCommit() {
 	return ++previewRenderCommitId;
@@ -3334,12 +3341,55 @@ async function pasteArt() {
   }
 }
 function artEdited() {
+	var artXInput = document.querySelector('#art-x');
+	var artYInput = document.querySelector('#art-y');
+	var artZoomInput = document.querySelector('#art-zoom');
+	var artRotateInput = document.querySelector('#art-rotate');
+	var rawValues = [artXInput.value, artYInput.value, artZoomInput.value, artRotateInput.value];
+	if (rawValues.some(function(value) { return String(value).trim() === '' || !Number.isFinite(Number(value)); })) {
+		card.artSource = art.src;
+		drawCard();
+		return;
+	}
+	var requestedX = Number(artXInput.value);
+	var requestedY = Number(artYInput.value);
+	var requestedZoom = Number(artZoomInput.value) / 100;
+	var requestedRotation = Number(artRotateInput.value) || 0;
+	if (window.CardConjurerArtBounds && card.artBounds && art.naturalWidth && art.naturalHeight && !art.src.includes('/img/blank.png')) {
+		var previousX = Number(card.artX) * card.width;
+		var previousY = Number(card.artY) * card.height;
+		var transformChanged = Math.abs(requestedZoom - Number(card.artZoom)) > 1e-9 || Math.abs(requestedRotation - Number(card.artRotate || 0)) > 1e-9;
+		var constrain = transformChanged ? window.CardConjurerArtBounds.constrainPlacement : window.CardConjurerArtBounds.constrainMovement;
+		var placement = constrain({
+			x: requestedX,
+			y: requestedY,
+			fromX: previousX,
+			fromY: previousY,
+			zoom: requestedZoom,
+			rotation: requestedRotation,
+			imageWidth: art.naturalWidth,
+			imageHeight: art.naturalHeight,
+			bounds: {
+				x: card.artBounds.x * card.width,
+				y: card.artBounds.y * card.height,
+				width: card.artBounds.width * card.width,
+				height: card.artBounds.height * card.height
+			}
+		});
+		requestedX = placement.x;
+		requestedY = placement.y;
+		requestedZoom = placement.zoom;
+		artXInput.value = Math.round(requestedX * 1000) / 1000;
+		artYInput.value = Math.round(requestedY * 1000) / 1000;
+		artZoomInput.value = Math.round(requestedZoom * 1000) / 10;
+	}
 	card.artSource = art.src;
-	card.artX = document.querySelector('#art-x').value / card.width;
-	card.artY = document.querySelector('#art-y').value / card.height;
-	card.artZoom = document.querySelector('#art-zoom').value / 100;
-	card.artRotate = document.querySelector('#art-rotate').value;
+	card.artX = requestedX / card.width;
+	card.artY = requestedY / card.height;
+	card.artZoom = requestedZoom;
+	card.artRotate = requestedRotation;
 	drawCard();
+	if (typeof queueLiveDraftSave === 'function') queueLiveDraftSave();
 }
 function autoFitArt() {
 	if (document.querySelector("#art-preserve-position")?.checked) return;
@@ -3435,64 +3485,138 @@ function tryMTGPicsArt(src) {
 	attemptedImage.src = src;
 }
 function initDraggableArt() {
-	previewCanvas.onmousedown = artStartDrag;
-	previewCanvas.onmousemove = artDrag;
-	previewCanvas.onmouseout = artStopDrag;
-	previewCanvas.onmouseup = artStopDrag;
+	previewCanvas.onpointerdown = artStartDrag;
+	previewCanvas.onpointermove = artDrag;
+	previewCanvas.onpointerup = artStopDrag;
+	previewCanvas.onpointercancel = artStopDrag;
+	previewCanvas.onwheel = artWheelZoom;
 	draggingArt = false;
-	lastArtDragTime = 0;
+}
+function previewPointToCard(e) {
+	var bounds = previewCanvas.getBoundingClientRect();
+	var previewPoint = new DOMPoint(
+		(e.clientX - bounds.left) * previewCanvas.width / bounds.width,
+		(e.clientY - bounds.top) * previewCanvas.height / bounds.height
+	);
+	var canvasPoint = previewContext.getTransform().inverse().transformPoint(previewPoint);
+	return {
+		x: canvasPoint.x * cardCanvas.width / previewCanvas.width,
+		y: canvasPoint.y * cardCanvas.height / previewCanvas.height
+	};
 }
 function artStartDrag(e) {
 	e.preventDefault();
 	e.stopPropagation();
-	startX = parseInt(e.clientX);
-	startY = parseInt(e.clientY);
+	artDragTarget = document.querySelector('#drag-target-setSymbol').checked ? 'setSymbol' : 'art';
+	artDragLastPoint = previewPointToCard(e);
+	artDragLastClientY = Number(e.clientY);
+	pendingArtDrag = null;
+	if (artDragAnimationFrame) cancelAnimationFrame(artDragAnimationFrame);
+	artDragAnimationFrame = 0;
+	activeArtPointerId = e.pointerId;
 	draggingArt = true;
+	previewCanvas.setPointerCapture?.(e.pointerId);
 }
 function artDrag(e) {
-	var target = document.querySelector('#drag-target-setSymbol').checked ? "setSymbol" : "art";
-	var canRotate = true;
-	var edited = target == "art" ? artEdited : setSymbolEdited;
-
+	if (!draggingArt || e.pointerId !== activeArtPointerId) return;
 	e.preventDefault();
 	e.stopPropagation();
-	if (draggingArt && Date.now() > lastArtDragTime + 25) {
-		lastArtDragTime = Date.now();
-		if (e.shiftKey || e.ctrlKey) {
-			startX = parseInt(e.clientX);
-			const endY = parseInt(e.clientY);
-			if (e.ctrlKey && canRotate) {
-				document.querySelector(`#${target}-rotate`).value = Math.round((parseFloat(document.querySelector(`#${target}-rotate`).value) - (startY - endY) / 10) % 360 * 10) / 10;
-			} else {
-				document.querySelector(`#${target}-zoom`).value = Math.round((parseFloat(document.querySelector(`#${target}-zoom`).value) * (1.002 ** (startY - endY))) * 10) / 10;
-			}
-			startY = endY;
-			edited();
+	pendingArtDrag = {
+		clientX: Number(e.clientX),
+		clientY: Number(e.clientY),
+		pointerId: e.pointerId,
+		shiftKey: Boolean(e.shiftKey),
+		ctrlKey: Boolean(e.ctrlKey)
+	};
+	if (!artDragAnimationFrame) artDragAnimationFrame = requestAnimationFrame(flushArtDrag);
+}
+function flushArtDrag() {
+	artDragAnimationFrame = 0;
+	var e = pendingArtDrag;
+	pendingArtDrag = null;
+	if (!e || !draggingArt || e.pointerId !== activeArtPointerId) return;
+	var target = artDragTarget;
+	var canRotate = true;
+	var edited = target == "art" ? artEdited : setSymbolEdited;
+	if (e.shiftKey || e.ctrlKey) {
+		var changeY = e.clientY - artDragLastClientY;
+		if (e.ctrlKey && canRotate) {
+			document.querySelector(`#${target}-rotate`).value = Math.round((parseFloat(document.querySelector(`#${target}-rotate`).value) + changeY / 10) % 360 * 10) / 10;
 		} else {
-			const endX = parseInt(e.clientX);
-			const endY = parseInt(e.clientY);
-			var changeX = (endX - startX) * 2;
-			var changeY = (endY - startY) * 2;
-			if (card.landscape) {
-				const temp = changeX;
-				changeX = -changeY;
-				changeY = temp;
-			}
-			document.querySelector(`#${target}-x`).value = parseInt(document.querySelector(`#${target}-x`).value) + changeX;
-			document.querySelector(`#${target}-y`).value = parseInt(document.querySelector(`#${target}-y`).value) + changeY;
-			startX = endX;
-			startY = endY;
-			edited();
+			document.querySelector(`#${target}-zoom`).value = Math.round((parseFloat(document.querySelector(`#${target}-zoom`).value) * (1.002 ** -changeY)) * 10) / 10;
 		}
-
+		artDragLastPoint = previewPointToCard(e);
+	} else {
+		var currentPoint = previewPointToCard(e);
+		var xInput = document.querySelector(`#${target}-x`);
+		var yInput = document.querySelector(`#${target}-y`);
+		xInput.value = (parseFloat(xInput.value) || 0) + currentPoint.x - artDragLastPoint.x;
+		yInput.value = (parseFloat(yInput.value) || 0) + currentPoint.y - artDragLastPoint.y;
+		artDragLastPoint = currentPoint;
 	}
+	artDragLastClientY = e.clientY;
+	edited();
+	if (pendingArtDrag && !artDragAnimationFrame) artDragAnimationFrame = requestAnimationFrame(flushArtDrag);
 }
 function artStopDrag(e) {
 	e.preventDefault();
 	e.stopPropagation();
-	if (draggingArt) {
-		draggingArt = false;
-	}
+	if (!draggingArt || e.pointerId !== activeArtPointerId) return;
+	pendingArtDrag = {
+		clientX: Number(e.clientX),
+		clientY: Number(e.clientY),
+		pointerId: e.pointerId,
+		shiftKey: Boolean(e.shiftKey),
+		ctrlKey: Boolean(e.ctrlKey)
+	};
+	if (artDragAnimationFrame) cancelAnimationFrame(artDragAnimationFrame);
+	artDragAnimationFrame = 0;
+	flushArtDrag();
+	draggingArt = false;
+	previewCanvas.releasePointerCapture?.(e.pointerId);
+	activeArtPointerId = null;
+	pendingArtDrag = null;
+}
+function artWheelZoom(e) {
+	if (!window.CardConjurerArtBounds || !card.artBounds || !art.naturalWidth || !art.naturalHeight || art.src.includes('/img/blank.png')) return;
+	e.preventDefault();
+	e.stopPropagation();
+	var zoomInput = document.querySelector('#art-zoom');
+	var xInput = document.querySelector('#art-x');
+	var yInput = document.querySelector('#art-y');
+	var fromZoom = (parseFloat(zoomInput.value) || 0) / 100;
+	if (!fromZoom) return;
+	var wheelDelta = e.deltaY * (e.deltaMode === 1 ? 16 : (e.deltaMode === 2 ? previewCanvas.clientHeight : 1));
+	var wheelSteps = Math.max(-4, Math.min(4, -wheelDelta / 100));
+	if (!wheelSteps) return;
+	var toZoom = fromZoom * (1.1 ** wheelSteps);
+	var minimumZoom = window.CardConjurerArtBounds.minimumZoom({
+		imageWidth: art.naturalWidth,
+		imageHeight: art.naturalHeight,
+		rotation: parseFloat(document.querySelector('#art-rotate').value) || 0,
+		bounds: {
+			x: card.artBounds.x * card.width,
+			y: card.artBounds.y * card.height,
+			width: card.artBounds.width * card.width,
+			height: card.artBounds.height * card.height
+		}
+	});
+	minimumZoom = Math.ceil((minimumZoom - 1e-9) * 1000) / 1000;
+	toZoom = Math.max(minimumZoom, Math.round(toZoom * 1000) / 1000);
+	if (Math.abs(toZoom - fromZoom) < 1e-9) return;
+	var cardPoint = previewPointToCard(e);
+	var placement = window.CardConjurerArtBounds.zoomAroundPoint({
+		x: parseFloat(xInput.value) || 0,
+		y: parseFloat(yInput.value) || 0,
+		anchorX: cardPoint.x - scaleWidth(card.marginX),
+		anchorY: cardPoint.y - scaleHeight(card.marginY),
+		fromZoom: fromZoom,
+		toZoom: toZoom
+	});
+	xInput.value = placement.x;
+	yInput.value = placement.y;
+	zoomInput.value = placement.zoom * 100;
+	artEdited();
 }
 //SET SYMBOL TAB
 function uploadSetSymbol(imageSource, otherParams) {
