@@ -4513,49 +4513,45 @@ function drawCard() {
 }
 //DOWNLOADING
 function downloadCard(alt = false, jpeg = false) {
-	if (card.infoArtist.replace(/ /g, '') == '' && !card.artSource.includes('/img/blank.png') && !card.artZoom == 0) {
-		notify('You must credit an artist before downloading!', 5);
+	// Prep file information
+	var imageDataURL;
+	var imageName = getCardName();
+	if (jpeg) {
+		imageDataURL = cardCanvas.toDataURL('image/jpeg', 0.8);
+		imageName = imageName + '.jpg';
 	} else {
-		// Prep file information
-		var imageDataURL;
-		var imageName = getCardName();
-		if (jpeg) {
-			imageDataURL = cardCanvas.toDataURL('image/jpeg', 0.8);
-			imageName = imageName + '.jpg';
-		} else {
-			imageDataURL = cardCanvas.toDataURL('image/png');
-			imageName = imageName + '.png';
+		imageDataURL = cardCanvas.toDataURL('image/png');
+		imageName = imageName + '.png';
+	}
+	// Download image
+	if (alt) {
+		const newWindow = window.open('about:blank');
+		setTimeout(function(){
+			newWindow.document.body.appendChild(newWindow.document.createElement('img')).src = imageDataURL;
+			newWindow.document.querySelector('img').style = 'max-height: 100vh; max-width: 100vw;';
+			newWindow.document.body.style = 'padding: 0; margin: 0; text-align: center; background-color: #888;';
+			newWindow.document.title = imageName;
+		}, 0);
+	} else {
+		if (window.setConjurerDesktop) {
+			void window.setConjurerDesktop.files.saveExport({
+				suggestedName: imageName,
+				extension: jpeg ? 'jpg' : 'png',
+				encoding: 'base64',
+				content: imageDataURL.slice(imageDataURL.indexOf(',') + 1)
+			}).catch(function(error) {
+				console.error(error);
+				notify('Set Conjurer could not export that image.', 5);
+			});
+			return;
 		}
-		// Download image
-		if (alt) {
-			const newWindow = window.open('about:blank');
-			setTimeout(function(){
-				newWindow.document.body.appendChild(newWindow.document.createElement('img')).src = imageDataURL;
-				newWindow.document.querySelector('img').style = 'max-height: 100vh; max-width: 100vw;';
-				newWindow.document.body.style = 'padding: 0; margin: 0; text-align: center; background-color: #888;';
-				newWindow.document.title = imageName;
-			}, 0);
-		} else {
-			if (window.setConjurerDesktop) {
-				void window.setConjurerDesktop.files.saveExport({
-					suggestedName: imageName,
-					extension: jpeg ? 'jpg' : 'png',
-					encoding: 'base64',
-					content: imageDataURL.slice(imageDataURL.indexOf(',') + 1)
-				}).catch(function(error) {
-					console.error(error);
-					notify('Set Conjurer could not export that image.', 5);
-				});
-				return;
-			}
-			const downloadElement = document.createElement('a');
-			downloadElement.download = imageName;
-			downloadElement.target = '_blank';
-			downloadElement.href = imageDataURL;
-			document.body.appendChild(downloadElement);
-			downloadElement.click();
-			downloadElement.remove();
-		}
+		const downloadElement = document.createElement('a');
+		downloadElement.download = imageName;
+		downloadElement.target = '_blank';
+		downloadElement.href = imageDataURL;
+		document.body.appendChild(downloadElement);
+		downloadElement.click();
+		downloadElement.remove();
 	}
 }
 async function bulkDownloadZip() {
