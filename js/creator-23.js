@@ -1749,10 +1749,11 @@ function textEdited(key, value, optionalPlaceholder=false) {
 	const editedTextObject = typeof key === 'string' ? card.text[key] : null;
 	drawTextBuffer(editedTextObject?.manaCost ? 35 : 160);
 	const flipsideColorEdited = key === 'flipSideReminder';
-	if (typeof key !== 'string' || editedTextObject?.manaCost || key === 'type' || key === 'nickname' || flipsideColorEdited) {
+	const landRulesColorEdited = key === 'rules' && (card.text?.type?.text || '').toLowerCase().includes('land');
+	if (typeof key !== 'string' || editedTextObject?.manaCost || key === 'type' || key === 'nickname' || flipsideColorEdited || landRulesColorEdited) {
 		autoFrameBuffer(editedTextObject?.manaCost || flipsideColorEdited ? 120 : 500);
 	}
-	if ((key === 'type' || editedTextObject?.manaCost || flipsideColorEdited) && typeof renderFrameCustomize === 'function') renderFrameCustomize();
+	if ((key === 'type' || editedTextObject?.manaCost || flipsideColorEdited || landRulesColorEdited) && typeof renderFrameCustomize === 'function') renderFrameCustomize();
 	if (typeof syncAutomaticWatermarkColors === 'function') syncAutomaticWatermarkColors();
 	if (key === 'ability3') autoUpdatePlaneswalkerStyleFromAbility4();
 	if (typeof queueLiveDraftSave === 'function') queueLiveDraftSave();
