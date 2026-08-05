@@ -1379,6 +1379,9 @@ textarea.collector-copyright-input {
 	padding: 0.55rem 0.65rem;
 	line-height: 1.45;
 }
+.creator-workspace .text-field-card > .workspace-select {
+	grid-column: 1 / -1;
+}
 .creator-workspace textarea.text-field-input {
 	min-height: 5.4rem;
 	max-height: 15rem;

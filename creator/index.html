@@ -407,7 +407,9 @@
 								<button type='button' class='text-field-layout-button' aria-controls='formatting-help-drawer' onclick='document.querySelector("#formatting-help-drawer").classList.add("opened");'>Formatting Help</button>
 							</div>
 							<section id='card-specific-text-tools' class='card-specific-text-tools hidden' aria-live='polite'></section>
-							<div id='text-field-form' class='text-field-form'></div>
+							<div id='text-field-form' class='text-field-form'>
+								<section id='text-rarity-field' class='text-field-card'></section>
+							</div>
 							<div id='text-options' class='hidden' aria-hidden='true'></div>
 							<textarea id='text-editor' class='hidden' aria-hidden='true' tabindex='-1'></textarea>
 							<input id='text-editor-font-size' class='hidden' type='number' tabindex='-1'>
@@ -707,7 +709,6 @@
 						</section>
 					</div>
 					<div id='creator-menu-cardDetails' class='hidden'>
-						<div id='sets-card-details-summary' class='readable-background padding margin-bottom'></div>
 						<section class='readable-background padding margin-bottom card-details-note-panel'>
 							<div class='art-section-heading'><h4>Note</h4></div>
 							<label class='card-details-field'><span>Note</span><input id='info-note' type='text' class='input' oninput='bottomInfoEdited();' placeholder='Optional collector note' value=''></label>
