@@ -18,6 +18,7 @@
 	var thumbnailRefreshCardId = null;
 	var initialBlankCardData = null;
 	var zipCanceled = false;
+	var zipRendering = false;
 	var pendingTransferMode = null;
 	var pendingSetImport = null;
 	var scryfallSearchResults = [];
@@ -494,8 +495,8 @@
 	function renderCardsTab(panel, set) {
 		var view = Object.assign({}, Model.DEFAULT_LIST_STATE, set.listState || {});
 		panel.innerHTML = '<label class="sets-search"><span class="sr-only">Search cards</span><svg class="sets-search-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg><input type="search" class="input" value="' + escapeHtml(view.search) + '" placeholder="Search title, type, rules, artist…" data-card-search><button type="button" class="sets-search-clear" aria-label="Clear search" data-set-action="clear-card-search"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"></path></svg></button></label>' +
-			'<div class="sets-card-scroll"><div id="sets-card-list" class="sets-card-list" role="listbox" aria-label="Cards in ' + escapeHtml(set.name) + '"></div>' +
-			'<div id="sets-zip-progress" class="sets-zip-progress" hidden><span></span><button type="button" data-set-action="cancel-zip">Cancel</button></div></div>';
+			'<div class="sets-card-scroll">' +
+			'<div id="sets-card-list" class="sets-card-list" role="listbox" aria-label="Cards in ' + escapeHtml(set.name) + '"></div></div>';
 		renderCardList();
 	}
 
@@ -590,8 +591,8 @@
 				record.updatedAt = new Date().toISOString();
 			}
 			if (typeof setBottomInfoStyle === 'function') { await setBottomInfoStyle(); await bottomInfoEdited(); }
-			renderCardDetailsSummary();
-			var thumbnailChanged = await updateThumbnail(record.id);
+			if (!zipRendering) renderCardDetailsSummary();
+			var thumbnailChanged = zipRendering ? false : await updateThumbnail(record.id);
 			if (repairedSymbolPlacement || thumbnailChanged) await persist();
 		} finally { loadingCard = false; editorDirty = false; }
 	}
@@ -1372,7 +1373,66 @@
 		if (!root.JSZip) throw new Error('ZIP support could not be loaded.'); return root.JSZip;
 	}
 
-	async function canvasBlob(format) { return new Promise(function(resolve) { previewCanvas.toBlob(resolve, format === 'jpeg' ? 'image/jpeg' : 'image/png', format === 'jpeg' ? 0.92 : undefined); }); }
+	function ensureZipDialog() {
+		var dialog = document.querySelector('#sets-zip-dialog');
+		if (dialog) return dialog;
+		document.body.insertAdjacentHTML('beforeend', '<dialog id="sets-zip-dialog" class="sets-dialog desktop-onboarding sets-zip-dialog" aria-labelledby="sets-zip-title"><form method="dialog"><header class="desktop-onboarding-header"><h2 id="sets-zip-title">Preparing card images</h2></header><div class="desktop-pack-progress desktop-onboarding-progress sets-zip-modal-progress" aria-live="polite"><span id="sets-zip-progress-label" class="desktop-pack-progress-label">Preparing image export…</span><span class="desktop-pack-progress-track" aria-hidden="true"><i></i></span></div><footer class="desktop-onboarding-footer sets-zip-footer"><button id="sets-zip-cancel" type="button" class="creator-app-action sets-zip-cancel">Cancel</button></footer></form></dialog>');
+		dialog = document.querySelector('#sets-zip-dialog');
+		dialog.querySelector('#sets-zip-cancel').addEventListener('click', cancelZip);
+		dialog.addEventListener('cancel', function(event) { event.preventDefault(); cancelZip(); });
+		return dialog;
+	}
+
+	function updateZipDialog(message, percent) {
+		var dialog = ensureZipDialog();
+		var label = dialog.querySelector('#sets-zip-progress-label');
+		var fill = dialog.querySelector('.desktop-pack-progress-track i');
+		if (label) label.textContent = message;
+		if (fill) fill.style.width = clamp(Number(percent) || 0, 0, 100) + '%';
+	}
+
+	function openZipDialog() {
+		var dialog = ensureZipDialog();
+		var cancel = dialog.querySelector('#sets-zip-cancel');
+		var workspace = document.querySelector('.creator-workspace');
+		var workspaceBackground = workspace && getComputedStyle(workspace).getPropertyValue('--workspace-bg').trim();
+		dialog.style.setProperty('--sets-zip-backdrop', workspaceBackground || '#0b0f16');
+		if (cancel) { cancel.disabled = false; cancel.textContent = 'Cancel'; }
+		updateZipDialog('Preparing image export…', 0);
+		if (!dialog.open) dialog.showModal();
+		return dialog;
+	}
+
+	function closeZipDialog() {
+		var dialog = document.querySelector('#sets-zip-dialog');
+		if (dialog && dialog.open) dialog.close();
+	}
+
+	async function canvasBlob(format) { return new Promise(function(resolve) { cardCanvas.toBlob(resolve, format === 'jpeg' ? 'image/jpeg' : 'image/png', format === 'jpeg' ? 0.92 : undefined); }); }
+
+	async function streamZipToDesktop(zip, archiveId) {
+		return new Promise(function(resolve, reject) {
+			var settled = false; var chunks = []; var chunkBytes = 0; var latestPercent = 0; var batchBytes = 2 * 1024 * 1024;
+			var stream = zip.generateInternalStream({type:'uint8array',streamFiles:true});
+			function fail(error) { if (settled) return; settled = true; reject(error); }
+			function flush() {
+				if (!chunkBytes) return Promise.resolve();
+				var batch = new Uint8Array(chunkBytes); var offset = 0;
+				chunks.forEach(function(chunk) { batch.set(chunk, offset); offset += chunk.byteLength; });
+				chunks = []; chunkBytes = 0;
+				return root.setConjurerDesktop.files.appendArchive(archiveId, batch).then(function() { updateZipDialog('Building ZIP…', 90 + latestPercent / 10); });
+			}
+			stream.on('data', function(chunk, metadata) {
+				if (zipCanceled) { fail(new Error('Image export canceled.')); return; }
+				chunks.push(chunk); chunkBytes += chunk.byteLength; latestPercent = metadata.percent;
+				if (chunkBytes < batchBytes) return;
+				stream.pause(); flush().then(function() { if (!settled) stream.resume(); }, fail);
+			});
+			stream.on('error', fail);
+			stream.on('end', function() { flush().then(function() { if (!settled) { settled = true; resolve(); } }, fail); });
+			stream.resume();
+		});
+	}
 
 	async function renderPrintImages(cardIds, onProgress) {
 		await captureActiveCard();
@@ -1401,20 +1461,42 @@
 	}
 
 	async function downloadSetImages() {
-		await captureActiveCard(); var set = activeSet(); var originalSetId = state.activeSetId; var originalCardId = set.activeCardId; var ordered = Model.selectCards(cardsFor(set.id), {sort:'collector',direction:'asc'}); var progress = document.querySelector('#sets-zip-progress'); var progressText = progress && progress.querySelector('span'); zipCanceled = false;
+		openZipDialog(); var originalSetId = state.activeSetId; var set = activeSet(); var originalCardId = set && set.activeCardId; var previousPreviewSuppression = Boolean(root.cardConjurerSuppressPreviewRender); var workspaceRestored = false; var failureMessage = ''; var archiveId = ''; zipCanceled = false;
+		async function restoreWorkspace() {
+			if (workspaceRestored) return; workspaceRestored = true; zipRendering = true; root.cardConjurerSuppressPreviewRender = true;
+			state.activeSetId=originalSetId; set=activeSet(); if(set) { set.activeCardId=originalCardId; renderWorkspace(); await loadActiveCard(); }
+			await new Promise(function(resolve) { requestAnimationFrame(function() { requestAnimationFrame(resolve); }); });
+			zipRendering = false; root.cardConjurerSuppressPreviewRender = previousPreviewSuppression;
+		}
 		try {
-			var Zip = await ensureZip(); var zip = new Zip(); if (progress) progress.hidden = false;
-			var formatValue = document.querySelector('#download-format').value; var format = formatValue === 'jpeg' ? 'jpeg' : 'png'; var used = new Set();
+			await new Promise(function(resolve) { requestAnimationFrame(resolve); });
+			await captureActiveCard(); set = activeSet(); if (!set) throw new Error('No set is available to export.');
+			var ordered = Model.selectCards(cardsFor(set.id), {sort:'collector',direction:'asc'}); zipRendering = true; root.cardConjurerSuppressPreviewRender = true;
+			var Zip = await ensureZip(); var zip = new Zip();
+			var formatInput = document.querySelector('#download-format'); var formatValue = formatInput ? formatInput.value : 'png'; var format = formatValue === 'jpeg' ? 'jpeg' : 'png'; var used = new Set();
 			for (var index = 0; index < ordered.length; index++) {
-				if (zipCanceled) throw new Error('Image export canceled.'); var record = ordered[index]; set.activeCardId = record.id; if (progressText) progressText.textContent = 'Rendering ' + (index + 1) + ' of ' + ordered.length + ': ' + (record.derived.title || 'Untitled Card'); await loadActiveCard();
+				if (zipCanceled) throw new Error('Image export canceled.'); var record = ordered[index]; set.activeCardId = record.id; updateZipDialog('Rendering ' + (index + 1) + ' of ' + ordered.length + ': ' + (record.derived.title || 'Untitled Card'), ordered.length ? (index / ordered.length) * 90 : 90); await loadActiveCard();
 				var blob = await canvasBlob(format); var filename = safeFilename(record.collectorNumber.replace('/', '-') + ' ' + (record.derived.title || 'Untitled Card')) + '.' + (format === 'jpeg' ? 'jpg' : 'png'); var base=filename, suffix=2; while(used.has(filename)){filename=base.replace(/(\.[^.]+)$/,'-'+suffix+'$1');suffix++;} used.add(filename); zip.file(filename, blob);
 			}
-			if (progressText) progressText.textContent = 'Building ZIP…'; var content = await zip.generateAsync({type:'blob'}); var link=document.createElement('a'); link.href=URL.createObjectURL(content); link.download=safeFilename(set.name)+'-images.zip'; document.body.appendChild(link); link.click(); setTimeout(function(){URL.revokeObjectURL(link.href);link.remove();},0); setStatus('Downloaded ' + ordered.length + ' card images','saved');
-		} catch (error) { if (!zipCanceled) showWorkspaceError(error.message); else setStatus('Image export canceled','saved'); }
-		finally { state.activeSetId=originalSetId; set=activeSet(); if(set) set.activeCardId=originalCardId; if(progress) progress.hidden=true; renderWorkspace(); await loadActiveCard(); }
+			updateZipDialog('Building ZIP…', 90); var desktopExport = Boolean(root.setConjurerDesktop); var zipName = safeFilename(set.name) + '-images.zip'; var content;
+			if (desktopExport) {
+				var archive = await root.setConjurerDesktop.files.beginArchive({suggestedName:zipName}); archiveId = archive.id;
+				await streamZipToDesktop(zip, archiveId); if (zipCanceled) throw new Error('Image export canceled.');
+				await root.setConjurerDesktop.files.completeArchive(archiveId);
+				await restoreWorkspace(); closeZipDialog();
+				var result = await root.setConjurerDesktop.files.saveArchive(archiveId); archiveId = '';
+				if (result.canceled) { setStatus('Image export canceled','saved'); return; }
+			} else {
+				content = await zip.generateAsync({type:'blob'}, function(metadata) { if (zipCanceled) throw new Error('Image export canceled.'); updateZipDialog('Building ZIP…', 90 + metadata.percent / 10); });
+				await restoreWorkspace(); closeZipDialog();
+				var link=document.createElement('a'); link.href=URL.createObjectURL(content); link.download=zipName; document.body.appendChild(link); link.click(); setTimeout(function(){URL.revokeObjectURL(link.href);link.remove();},0);
+			}
+			setStatus('Downloaded ' + ordered.length + ' card images','saved');
+		} catch (error) { if (!zipCanceled) failureMessage = error.message; else setStatus('Image export canceled','saved'); }
+		finally { if (archiveId) { try { await root.setConjurerDesktop.files.cancelArchive(archiveId); } catch (cleanupError) { if (!failureMessage) failureMessage = cleanupError.message; } } await restoreWorkspace(); closeZipDialog(); if(failureMessage) { showWorkspaceError(failureMessage); setStatus('Image export failed','error'); } }
 	}
 
-	function cancelZip() { zipCanceled = true; }
+	function cancelZip() { zipCanceled = true; var button = document.querySelector('#sets-zip-cancel'); if(button) { button.disabled = true; button.textContent = 'Canceling…'; } updateZipDialog('Canceling image export…', 0); }
 
 	function openDrawer(trigger) { var drawer=document.querySelector('#sets-workspace'), toggle=document.querySelector('#sets-drawer-toggle'), button=document.querySelector('#sets-drawer-open'); drawerReturnFocus=trigger||document.activeElement; if(toggle)toggle.checked=true; if(drawer)drawer.classList.add('opened'); if(button)button.setAttribute('aria-expanded','true'); document.body.classList.add('sets-drawer-active'); setTimeout(function(){drawer&&drawer.querySelector('.sets-drawer-close')&&drawer.querySelector('.sets-drawer-close').focus();},0); }
 	function closeDrawer() { var drawer=document.querySelector('#sets-workspace'), toggle=document.querySelector('#sets-drawer-toggle'), button=document.querySelector('#sets-drawer-open'); if(toggle)toggle.checked=false; if(drawer)drawer.classList.remove('opened'); if(button)button.setAttribute('aria-expanded','false'); document.body.classList.remove('sets-drawer-active'); if(drawerReturnFocus&&drawerReturnFocus.isConnected)drawerReturnFocus.focus(); }

@@ -40,11 +40,17 @@ export const exportRequestSchema = z.object({
   encoding: z.enum(['utf8', 'base64']).optional(),
   content: z.string().max(128 * 1024 * 1024)
 }).strict().superRefine((request, context) => {
-  const image = request.extension === 'png' || request.extension === 'jpg';
-  if (image && request.encoding !== 'base64') context.addIssue({code: 'custom', path: ['encoding'], message: 'Image exports must use base64 encoding.'});
-  if (!image && request.encoding === 'base64') context.addIssue({code: 'custom', path: ['encoding'], message: 'Only image exports may use base64 encoding.'});
-  if (request.encoding === 'base64' && !/^[a-z0-9+/]*={0,2}$/i.test(request.content)) context.addIssue({code: 'custom', path: ['content'], message: 'Image export content is not valid base64.'});
+  const binary = request.extension === 'png' || request.extension === 'jpg';
+  if (binary && request.encoding !== 'base64') context.addIssue({code: 'custom', path: ['encoding'], message: 'Binary exports must use base64 encoding.'});
+  if (!binary && request.encoding === 'base64') context.addIssue({code: 'custom', path: ['encoding'], message: 'Only binary exports may use base64 encoding.'});
+  if (request.encoding === 'base64' && !/^[a-z0-9+/]*={0,2}$/i.test(request.content)) context.addIssue({code: 'custom', path: ['content'], message: 'Binary export content is not valid base64.'});
 });
+
+export const archiveBeginSchema = z.object({
+  suggestedName: z.string().min(1).max(180)
+}).strict();
+
+export const archiveIdSchema = z.string().uuid();
 
 export const printRequestSchema = z.object({
   paper: z.enum(['letter', 'a4']),
@@ -118,6 +124,11 @@ export interface DesktopAPI {
   };
   files: {
     saveExport(request: z.infer<typeof exportRequestSchema>): Promise<{canceled: boolean; path: string | null}>;
+    beginArchive(request: z.infer<typeof archiveBeginSchema>): Promise<{id: string}>;
+    appendArchive(id: string, chunk: Uint8Array): Promise<void>;
+    completeArchive(id: string): Promise<void>;
+    saveArchive(id: string): Promise<{canceled: boolean; path: string | null}>;
+    cancelArchive(id: string): Promise<void>;
     chooseImport(kind: 'card' | 'set'): Promise<{canceled: boolean; name: string | null; content: string | null}>;
     onAssociatedFile(listener: (file: {name: string; content: string}) => void): () => void;
   };
@@ -158,6 +169,11 @@ export const IPC = Object.freeze({
 	storageMaterializeAssets: 'desktop:storage-materialize-assets',
 	storageApplyMutation: 'desktop:storage-apply-mutation',
   exportSave: 'desktop:export-save',
+  archiveBegin: 'desktop:archive-begin',
+  archiveAppend: 'desktop:archive-append',
+  archiveComplete: 'desktop:archive-complete',
+  archiveSave: 'desktop:archive-save',
+  archiveCancel: 'desktop:archive-cancel',
   importChoose: 'desktop:import-choose',
   associatedFile: 'desktop:associated-file',
   packsList: 'desktop:packs-list',

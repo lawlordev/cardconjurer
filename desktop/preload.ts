@@ -9,7 +9,7 @@ const IPC = Object.freeze({
   storageLoad: 'desktop:storage-load', storageSave: 'desktop:storage-save', storageFlush: 'desktop:storage-flush', storageSnapshot: 'desktop:storage-snapshot',
   storageIngestAssets: 'desktop:storage-ingest-assets', storageMaterializeAssets: 'desktop:storage-materialize-assets',
   storageApplyMutation: 'desktop:storage-apply-mutation',
-  exportSave: 'desktop:export-save', importChoose: 'desktop:import-choose', associatedFile: 'desktop:associated-file',
+  exportSave: 'desktop:export-save', archiveBegin: 'desktop:archive-begin', archiveAppend: 'desktop:archive-append', archiveComplete: 'desktop:archive-complete', archiveSave: 'desktop:archive-save', archiveCancel: 'desktop:archive-cancel', importChoose: 'desktop:import-choose', associatedFile: 'desktop:associated-file',
   packsList: 'desktop:packs-list', packsRefresh: 'desktop:packs-refresh', packsInstall: 'desktop:packs-install', packsRemove: 'desktop:packs-remove', packsProgress: 'desktop:packs-progress',
   updateState: 'desktop:update-state', updateCheck: 'desktop:update-check', updateBegin: 'desktop:update-begin', updateChannel: 'desktop:update-channel', updateSetChannel: 'desktop:update-set-channel', updateChanged: 'desktop:update-changed',
   printRun: 'desktop:print-run', externalOpen: 'desktop:external-open'
@@ -41,6 +41,11 @@ const api: DesktopAPI = Object.freeze({
   },
   files: {
     saveExport: (request: Parameters<DesktopAPI['files']['saveExport']>[0]) => ipcRenderer.invoke(IPC.exportSave, request),
+    beginArchive: (request: Parameters<DesktopAPI['files']['beginArchive']>[0]) => ipcRenderer.invoke(IPC.archiveBegin, request),
+    appendArchive: (id: string, chunk: Uint8Array) => ipcRenderer.invoke(IPC.archiveAppend, id, chunk),
+    completeArchive: (id: string) => ipcRenderer.invoke(IPC.archiveComplete, id),
+    saveArchive: (id: string) => ipcRenderer.invoke(IPC.archiveSave, id),
+    cancelArchive: (id: string) => ipcRenderer.invoke(IPC.archiveCancel, id),
     chooseImport: (kind: 'card' | 'set') => ipcRenderer.invoke(IPC.importChoose, kind),
     onAssociatedFile: (listener: Parameters<DesktopAPI['files']['onAssociatedFile']>[0]) => subscribe(IPC.associatedFile, listener)
   },

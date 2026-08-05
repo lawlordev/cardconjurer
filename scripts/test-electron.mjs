@@ -114,6 +114,67 @@ try {
   errors.length = 0; // Pre-onboarding frame requests are expected before packs activate and the page reloads.
   const requiredFrameAvailable = await page.evaluate(async () => (await fetch('/img/frames/m15/regular/m15FrameA.png')).ok);
   if (!requiredFrameAvailable) throw new Error('The installed Standard pack does not resolve its default frame asset.');
+  if (!packagedExecutable) {
+    await application.evaluate(({ipcMain}) => {
+      globalThis.__setConjurerZipExportRequest = {bytes: 0, signature: [], completed: false, saved: false};
+      for (const channel of ['desktop:archive-begin', 'desktop:archive-append', 'desktop:archive-complete', 'desktop:archive-save', 'desktop:archive-cancel']) ipcMain.removeHandler(channel);
+      ipcMain.handle('desktop:archive-begin', () => ({id: '00000000-0000-4000-8000-000000000001'}));
+      ipcMain.handle('desktop:archive-append', (_event, _id, chunk) => {
+        const bytes = Buffer.from(chunk);
+        globalThis.__setConjurerZipExportRequest.bytes += bytes.length;
+        if (!globalThis.__setConjurerZipExportRequest.signature.length) globalThis.__setConjurerZipExportRequest.signature = [...bytes.subarray(0, 4)];
+      });
+      ipcMain.handle('desktop:archive-complete', () => { globalThis.__setConjurerZipExportRequest.completed = true; });
+      ipcMain.handle('desktop:archive-save', () => {
+        globalThis.__setConjurerZipExportRequest.saved = true;
+        return {canceled: false, path: 'set-conjurer-test.zip'};
+      });
+      ipcMain.handle('desktop:archive-cancel', () => {});
+    });
+    if (await page.locator('#download-format').count()) throw new Error('The ZIP export regression requires the removed legacy format control to stay absent.');
+    await page.evaluate(async () => { await window.CardConjurerSets.duplicateCard(); });
+    await page.evaluate(() => {
+      const input = document.querySelector('.text-field-input[data-text-key="title"]');
+      input.value = 'ZIP modal preview sentinel';
+      input.dispatchEvent(new Event('input', {bubbles: true}));
+    });
+    await page.evaluate(async () => { await window.CardConjurerSets.captureActiveCard('Prepare ZIP modal regression card', ''); });
+    await page.evaluate(() => {
+      window.__setConjurerZipDialogOpened = false;
+      window.__setConjurerZipPreviewChanged = false;
+      const preview = document.querySelector('#previewCanvas');
+      const previewBeforeExport = preview.toDataURL();
+      window.addEventListener('cardconjurer:preview-rendered', () => {
+        if (document.querySelector('#sets-zip-dialog')?.open && preview.toDataURL() !== previewBeforeExport) window.__setConjurerZipPreviewChanged = true;
+      });
+      const showModal = HTMLDialogElement.prototype.showModal;
+      HTMLDialogElement.prototype.showModal = function() {
+        if (this.id === 'sets-zip-dialog') window.__setConjurerZipDialogOpened = true;
+        return showModal.call(this);
+      };
+    });
+    await page.locator('.sets-options-dropdown > summary').click();
+    await page.getByRole('button', {name: 'Download Images', exact: true}).click();
+    await page.waitForSelector('#sets-zip-dialog[open]');
+    const zipModalStyles = await page.evaluate(() => {
+      const dialog = document.querySelector('#sets-zip-dialog');
+      const cancel = document.querySelector('#sets-zip-cancel');
+      const reference = document.querySelector('#desktop-settings');
+      const style = (element) => { const computed = getComputedStyle(element); return {background: computed.backgroundColor, border: computed.borderTopColor, color: computed.color, radius: computed.borderTopLeftRadius}; };
+      return {cancel: style(cancel), reference: style(reference), backdrop: getComputedStyle(dialog, '::backdrop').backgroundColor};
+    });
+    if (JSON.stringify(zipModalStyles.cancel) !== JSON.stringify(zipModalStyles.reference)) throw new Error(`ZIP cancel action does not inherit the themed neutral action: ${JSON.stringify(zipModalStyles)}`);
+    await page.screenshot({path: path.join(evidence, '04-zip-export.png'), fullPage: true});
+    let zipExportRequest = null;
+    for (let attempt = 0; attempt < 80 && !zipExportRequest?.saved; attempt += 1) {
+      zipExportRequest = await application.evaluate(() => globalThis.__setConjurerZipExportRequest);
+      if (!zipExportRequest?.saved) await page.waitForTimeout(125);
+    }
+    if (!zipExportRequest?.completed || !zipExportRequest.saved || zipExportRequest.bytes === 0 || zipExportRequest.signature[0] !== 0x50 || zipExportRequest.signature[1] !== 0x4b) throw new Error(`Download Images did not stream a ZIP to the native save bridge: ${JSON.stringify(zipExportRequest)}`);
+    const zipDialogState = await page.evaluate(() => ({opened: window.__setConjurerZipDialogOpened, stillOpen: document.querySelector('#sets-zip-dialog')?.open, previewChanged: window.__setConjurerZipPreviewChanged}));
+    if (!zipDialogState.opened || zipDialogState.stillOpen || zipDialogState.previewChanged) throw new Error(`Download Images did not isolate and dismiss its progress modal before saving: ${JSON.stringify(zipDialogState)}`);
+    if (!(await page.locator('#sets-error').evaluate((element) => element.hidden))) throw new Error(`Download Images failed: ${await page.locator('#sets-error').innerText()}`);
+  }
   const sharedRadius = await page.locator('#desktop-settings').evaluate((element) => getComputedStyle(element).borderTopLeftRadius);
   for (const [selector, label] of [
     ['.creator-new-set', 'New Set'],
