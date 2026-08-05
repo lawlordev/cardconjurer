@@ -282,15 +282,14 @@ footer > div > * {
 img {
 	max-width: 100%;
 }
-/*Scrollbar Mod*/
-::-webkit-scrollbar {
-  width: 0.5rem;
-  height: 0;
-  background: #222;
+/* Hide visual scroll indicators app-wide without disabling scroll behavior. */
+* {
+	scrollbar-width: none;
 }
-::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 0.25rem;
+*::-webkit-scrollbar {
+	display: none;
+	width: 0;
+	height: 0;
 }
 /*Fonts*/
 .title {
@@ -1761,7 +1760,7 @@ body:has(.creator-workspace) .main-content {
 	--workspace-danger-hover: #3a1b25;
 	--workspace-panel-gutter: .65rem;
 	display: grid;
-	grid-template-rows: 4rem minmax(0, 1fr);
+	grid-template-rows: 3.65rem minmax(0, 1fr);
 	height: 100vh;
 	min-height: 0;
 	color: var(--workspace-text);
@@ -1825,6 +1824,28 @@ body:has(.creator-workspace) .main-content {
 	background: rgba(14, 19, 28, 0.94);
 	box-shadow: 0 12px 30px #0004;
 	z-index: 5;
+}
+
+html[data-desktop-platform='darwin'] .creator-app-bar {
+	padding-left: 6.75rem;
+	-webkit-app-region: drag;
+}
+
+html[data-desktop-platform='darwin'] .creator-app-bar::before {
+	content: '';
+	position: absolute;
+	top: 22px;
+	left: 14px;
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: #4a4a4d;
+	box-shadow: 23px 0 #4a4a4d, 46px 0 #4a4a4d;
+	pointer-events: none;
+}
+
+html[data-desktop-platform='darwin'] .creator-app-bar :is(button, input, select, textarea, a, summary, label) {
+	-webkit-app-region: no-drag;
 }
 
 .creator-app-identity,
@@ -1910,7 +1931,7 @@ body:has(.creator-workspace) .main-content {
 .sets-panel-toggle:hover { border-color: #4c5b74; color: #f1f5f9; background: #1b2330; }
 .sets-panel-toggle svg { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform 220ms ease; }
 .sets-collapsed-rail { display: none; min-height: 0; height: 100%; padding: .55rem .45rem; flex-direction: column; align-items: center; gap: .55rem; }
-.sets-rail-cards { display: grid; width: 100%; min-height: 0; padding: .05rem; gap: .4rem; overflow-y: auto; scrollbar-width: thin; }
+.sets-rail-cards { display: grid; width: 100%; min-height: 0; padding: .05rem; gap: .4rem; overflow-y: auto; }
 .sets-rail-card { width: 100%; padding: .12rem; border: 1px solid transparent; border-radius: var(--workspace-radius-nested,.35rem); background: transparent; cursor: pointer; }
 .sets-rail-card:hover { border-color: rgba(148,163,184,.4); background: rgba(30,41,59,.55); }
 .sets-rail-card.selected { border-color: #71e0d2; background: rgba(38,86,86,.3); }
@@ -2555,22 +2576,6 @@ body.workspace-panel-resizing,body.workspace-panel-resizing * { cursor: col-resi
 	overflow-y: hidden;
 	overscroll-behavior-x: contain;
 	scroll-snap-type: x proximity;
-	scrollbar-color: #3a465b #0b1017;
-	scrollbar-width: thin;
-}
-
-.frame-catalog::-webkit-scrollbar {
-	height: 0.4rem;
-}
-
-.frame-catalog::-webkit-scrollbar-track {
-	border-radius: 999px;
-	background: #0b1017;
-}
-
-.frame-catalog::-webkit-scrollbar-thumb {
-	border-radius: 999px;
-	background: #3a465b;
 }
 
 .frame-catalog-item {
@@ -3208,7 +3213,7 @@ html.desktop-booting #desktop-boot-screen { position: fixed; inset: 0; z-index: 
 .desktop-toolbar-actions { display: inline-flex; align-items: center; gap: .35rem; }
 .desktop-icon-action { width: 2rem; padding: 0; display: inline-grid; place-items: center; }
 .desktop-icon-action svg { width: 1.05rem; height: 1.05rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.desktop-menu-action { position: fixed; top: .825rem; right: var(--workspace-panel-gutter); z-index: 3480; box-sizing: border-box; width: 2.35rem; height: 2.35rem; }
+.desktop-menu-action { position: fixed; top: var(--workspace-panel-gutter); right: var(--workspace-panel-gutter); z-index: 3480; box-sizing: border-box; width: 2.35rem; height: 2.35rem; }
 .desktop-menu-action svg { width: 1.15rem; height: 1.15rem; }
 .desktop-update-action { position: relative; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 5.7rem; height: 2.35rem; min-height: 2.35rem; padding: 0 .75rem; overflow: hidden; border-color: var(--workspace-accent); color: #0b151d; background: var(--workspace-accent); font: inherit; font-size: .7rem; font-weight: 800; white-space: nowrap; }
 .desktop-update-action[hidden] { display: none !important; }
@@ -3379,12 +3384,7 @@ html.desktop-booting #desktop-boot-screen { position: fixed; inset: 0; z-index: 
 	overflow-y: hidden;
 	overscroll-behavior-x: contain;
 	scroll-snap-type: x proximity;
-	scrollbar-color: #3a465b #0b1017;
-	scrollbar-width: thin;
 }
-.watermark-catalog::-webkit-scrollbar { height: .4rem; }
-.watermark-catalog::-webkit-scrollbar-track { border-radius: 999px; background: #0b1017; }
-.watermark-catalog::-webkit-scrollbar-thumb { border-radius: 999px; background: #3a465b; }
 .watermark-catalog-item {
 	display: grid;
 	grid-template-rows: 4.35rem minmax(1.1rem,auto);

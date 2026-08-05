@@ -4,7 +4,7 @@
 ## Design tokens
 - Fonts: Montserrat variants for workspace UI, with app fallbacks — defined in `css/style-9.css`.
 - Colors: shared site tokens map legacy surfaces and browser selection to the workspace's dark slate, teal, and light-blue palette; workspace semantic custom properties define neutral, hover, selected, disabled, primary, and destructive interaction roles (`--workspace-control*`, `--workspace-accent*`, `--workspace-focus`, and `--workspace-danger*`) — defined in `css/style-9.css`.
-- Spacing, radii, elevation: compact rem-based controls use `--workspace-radius: .55rem` matching the Settings button for outer rectangular surfaces, with derived `--workspace-radius-segmented`, `--workspace-radius-inner`, `--workspace-radius-nested`, and `--workspace-radius-compact` values keeping inset children visually concentric; thin semantic borders, dark layered surfaces, and one `--workspace-panel-gutter` align both tab strips with their content; true circles, progress tracks, scrollbars, and rendered card/image content retain shape-specific radii — defined throughout the creator workspace section of `css/style-9.css`.
+- Spacing, radii, elevation: compact rem-based controls use `--workspace-radius: .55rem` matching the Settings button for outer rectangular surfaces, with derived `--workspace-radius-segmented`, `--workspace-radius-inner`, `--workspace-radius-nested`, and `--workspace-radius-compact` values keeping inset children visually concentric; thin semantic borders, dark layered surfaces, and one `--workspace-panel-gutter` align both tab strips with their content; true circles, progress tracks, and rendered card/image content retain shape-specific radii — defined throughout the creator workspace section of `css/style-9.css`.
 - Text styles: `.creator-eyebrow` for compact uppercase context and `.input` for controls — defined in `css/style-9.css`.
 
 ## Screen scaffold
@@ -57,6 +57,7 @@
 - Keep controls compact and use Montserrat workspace typography.
 - Preserve the mobile Sets drawer behavior below the desktop workspace breakpoint.
 - Reserve prominent teal for the active segmented tab, New Set, and New Card.
-- Use `--workspace-radius` for outer rectangular workspace and desktop-shell components, then use the derived inset radius that matches a nested child's depth so compound-control corners remain concentric; only intrinsically circular indicators, progress/scrollbar tracks, and rendered card/image content use shape-specific radii.
+- Use `--workspace-radius` for outer rectangular workspace and desktop-shell components, then use the derived inset radius that matches a nested child's depth so compound-control corners remain concentric; only intrinsically circular indicators, progress tracks, and rendered card/image content use shape-specific radii.
+- Keep wheel, trackpad, keyboard, touch, and programmatic scrolling available, but hide visual scroll indicators app-wide on every platform.
 - Use dark blue for selected cards, frames, presets, choices, checked controls, and open secondary dropdowns; neutral controls stay near-black and only lighten their border and background on hover.
 - Use gray for disabled controls and red only for destructive actions such as delete, remove, clear, and uninstall.
