@@ -530,7 +530,7 @@
 		var title = row.querySelector('.sets-card-row-copy > strong'); if (title) title.textContent = record.derived.title || 'Untitled Card';
 		var typeLine = row.querySelector('.sets-card-type'); if (typeLine) typeLine.textContent = record.derived.typeLine || 'No type line';
 		var mana = row.querySelector('.sets-card-meta');
-		if (mana) mana.innerHTML = renderCardListManaCosts(record) + '<span class="sets-card-meta-divider" aria-hidden="true">Â·</span><span class="sets-card-rarity">' + escapeHtml(record.rarity === 'mythic' ? 'Mythic Rare' : record.rarity[0].toUpperCase() + record.rarity.slice(1)) + '</span>';
+		if (mana) mana.innerHTML = renderCardListManaCosts(record) + '<span class="sets-card-meta-divider" aria-hidden="true">·</span><span class="sets-card-rarity">' + escapeHtml(record.rarity === 'mythic' ? 'Mythic Rare' : record.rarity[0].toUpperCase() + record.rarity.slice(1)) + '</span>';
 		var number = row.querySelector(':scope > b'); if (number) number.textContent = record.collectorNumber;
 		refreshThumbnailElements(record);
 	}

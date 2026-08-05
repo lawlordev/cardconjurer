@@ -6,7 +6,8 @@ const path = require('node:path');
 const workspace = fs.readFileSync(path.join(__dirname, '../js/setWorkspace.js'), 'utf8');
 
 function functionSource(name) {
-	const start = workspace.indexOf(`async function ${name}(`);
+	const asyncStart = workspace.indexOf(`async function ${name}(`);
+	const start = asyncStart === -1 ? workspace.indexOf(`function ${name}(`) : asyncStart;
 	assert.notEqual(start, -1, `${name} should exist`);
 	const bodyStart = workspace.indexOf('{', start);
 	let depth = 0;
@@ -30,4 +31,12 @@ test('card edit and rarity renumbering both refresh the live collector number', 
 	const detail = functionSource('updateCardDetail');
 	assert.match(capture, /if \(listOrderChanged\)[\s\S]*await syncActiveCollectorNumber\(updatedRecord\)/);
 	assert.match(detail, /renumberSet\(set\.id\);\s*await syncActiveCollectorNumber/);
+});
+
+test('initial and refreshed card rows use the same metadata divider', () => {
+	const initialRender = functionSource('renderCardList');
+	const refreshedRow = functionSource('refreshCardListRow');
+	assert.match(initialRender, /sets-card-meta-divider[^>]*>·<\/span>/);
+	assert.match(refreshedRow, /sets-card-meta-divider[^>]*>·<\/span>/);
+	assert.doesNotMatch(refreshedRow, /Â·/);
 });
