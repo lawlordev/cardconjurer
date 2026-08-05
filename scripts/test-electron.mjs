@@ -368,6 +368,13 @@ try {
   if (packRowRadius !== sharedRadius) throw new Error(`settings drawer card does not use the shared ${sharedRadius} radius: ${packRowRadius}`);
   await page.screenshot({path: path.join(evidence, '03-settings-and-frame-packs.png'), fullPage: true});
   await page.click('#desktop-drawer .textbox-editor-close');
+  await page.evaluate(() => {
+    const renderPrintImages = window.CardConjurerSets.renderPrintImages;
+    window.CardConjurerSets.renderPrintImages = async function(...args) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      return renderPrintImages.apply(this, args);
+    };
+  });
   await page.locator('.creator-card-action-dropdown').first().click();
   await page.getByRole('button', {name: 'Print', exact: true}).click();
   await page.waitForSelector('#desktop-print:not([hidden])');
