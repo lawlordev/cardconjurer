@@ -117,3 +117,25 @@ test('loading a card keeps its own override available during frame changes', asy
 	context.loadTextOptions({ability0: {name: 'Ability 1', text: '', size: 0.0353}});
 	assert.equal(context.card.text.ability0.fontSize, '-8');
 });
+
+test('a new card does not inherit previous planeswalker abilities when its layout changes', async () => {
+	const context = createContext();
+	context.savedTextContents = {
+		ability0: 'Previous planeswalker ability',
+		ability1: 'Another previous ability'
+	};
+	const newCard = cardData();
+	newCard.text = {
+		type: {name: 'Type', text: '', oneLine: true},
+		rules: {name: 'Rules Text', text: ''}
+	};
+
+	await context.loadCardData(newCard);
+	context.loadTextOptions({
+		ability0: {name: 'Ability 1', text: '', size: 0.0353},
+		ability1: {name: 'Ability 2', text: '', size: 0.0353}
+	});
+
+	assert.equal(context.card.text.ability0.text, '');
+	assert.equal(context.card.text.ability1.text, '');
+});

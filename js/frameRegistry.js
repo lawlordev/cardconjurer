@@ -227,6 +227,8 @@ window.FRAME_REGISTRY = (() => {
 		},
 		PlaneswalkerRegular: {coloredPath:'/img/frames/planeswalker/holo/{color}.png', bounds:{x:0.4394, y:0.9015, width:0.1214, height:0.051}},
 		PlaneswalkerBorderless: {coloredPath:'/img/frames/planeswalker/holo/{color}.png', bounds:{x:0.4394, y:0.9015, width:0.1214, height:0.051}},
+		PlaneswalkerTall: {coloredPath:'/img/frames/planeswalker/holo/{color}.png', bounds:{x:0.4394, y:0.9015, width:0.1214, height:0.051}},
+		PlaneswalkerTallBorderless: {coloredPath:'/img/frames/planeswalker/holo/{color}.png', bounds:{x:0.4394, y:0.9015, width:0.1214, height:0.051}},
 		PlaneswalkerSeventh: {coloredPath:'/img/frames/planeswalker/holo/{color}.png', bounds:{x:0.4394, y:0.9015, width:0.1214, height:0.051}}
 	};
 
