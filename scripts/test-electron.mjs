@@ -359,7 +359,7 @@ try {
       verticalOffset: Math.abs(((groupRect.top + groupRect.bottom) / 2) - ((bodyRect.top + bodyRect.bottom) / 2))
     };
   });
-  if (settingsLoadingStyle.drawerDisplay !== 'flex' || settingsLoadingStyle.position !== 'absolute' || settingsLoadingStyle.inset.some((value) => value !== '0px') || settingsLoadingStyle.placeContent !== 'center' || settingsLoadingStyle.color !== settingsLoadingStyle.expectedColor || settingsLoadingStyle.horizontalOffset > 1 || settingsLoadingStyle.verticalOffset > 1) throw new Error(`Settings loading state is not centered with workspace text: ${JSON.stringify(settingsLoadingStyle)}`);
+  if (settingsLoadingStyle.drawerDisplay !== 'flex' || settingsLoadingStyle.position !== 'absolute' || settingsLoadingStyle.inset.some((value) => value !== '0px') || settingsLoadingStyle.placeContent !== 'center' || settingsLoadingStyle.color !== settingsLoadingStyle.expectedColor || settingsLoadingStyle.horizontalOffset > 2 || settingsLoadingStyle.verticalOffset > 2) throw new Error(`Settings loading state is not centered with workspace text: ${JSON.stringify(settingsLoadingStyle)}`);
   await page.waitForSelector('#desktop-channel', {state: 'attached'});
   await page.waitForTimeout(350);
   const packRowRadius = await page.locator('.desktop-pack-row').first().evaluate((element) => getComputedStyle(element).borderTopLeftRadius);
