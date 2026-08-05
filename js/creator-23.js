@@ -1175,15 +1175,15 @@ function frameElementClicked(event) {
 		}
 		// Basic manipulations
 		document.querySelector('#frame-editor-x').value = scaleWidth(selectedFrame.bounds.x || 0);
-		document.querySelector('#frame-editor-x').onchange = (event) => {selectedFrame.bounds.x = (event.target.value / card.width); drawFrames(); queueLiveDraftSave();}
+		document.querySelector('#frame-editor-x').oninput = (event) => {selectedFrame.bounds.x = (event.target.value / card.width); drawFrames(); queueLiveDraftSave();}
 		document.querySelector('#frame-editor-y').value = scaleHeight(selectedFrame.bounds.y || 0);
-		document.querySelector('#frame-editor-y').onchange = (event) => {selectedFrame.bounds.y = (event.target.value / card.height); drawFrames(); queueLiveDraftSave();}
+		document.querySelector('#frame-editor-y').oninput = (event) => {selectedFrame.bounds.y = (event.target.value / card.height); drawFrames(); queueLiveDraftSave();}
 		document.querySelector('#frame-editor-width').value = scaleWidth(selectedFrame.bounds.width || 1);
-		document.querySelector('#frame-editor-width').onchange = (event) => {selectedFrame.bounds.width = (event.target.value / card.width); drawFrames(); queueLiveDraftSave();}
+		document.querySelector('#frame-editor-width').oninput = (event) => {selectedFrame.bounds.width = (event.target.value / card.width); drawFrames(); queueLiveDraftSave();}
 		document.querySelector('#frame-editor-height').value = scaleHeight(selectedFrame.bounds.height || 1);
-		document.querySelector('#frame-editor-height').onchange = (event) => {selectedFrame.bounds.height = (event.target.value / card.height); drawFrames(); queueLiveDraftSave();}
+		document.querySelector('#frame-editor-height').oninput = (event) => {selectedFrame.bounds.height = (event.target.value / card.height); drawFrames(); queueLiveDraftSave();}
 		document.querySelector('#frame-editor-opacity').value = selectedFrame.opacity || 100;
-		document.querySelector('#frame-editor-opacity').onchange = (event) => {selectedFrame.opacity = event.target.value; drawFrames(); queueLiveDraftSave();}
+		document.querySelector('#frame-editor-opacity').oninput = (event) => {selectedFrame.opacity = event.target.value; drawFrames(); queueLiveDraftSave();}
 		document.querySelector('#frame-editor-erase').checked = selectedFrame.erase || false;
 		document.querySelector('#frame-editor-erase').onchange = (event) => {selectedFrame.erase = event.target.checked; drawFrames(); queueLiveDraftSave();}
 		document.querySelector('#frame-editor-alpha').checked = selectedFrame.preserveAlpha || false;
@@ -1192,18 +1192,22 @@ function frameElementClicked(event) {
 		document.querySelector('#frame-editor-color-overlay-check').onchange = (event) => {selectedFrame.colorOverlayCheck = event.target.checked; drawFrames(); queueLiveDraftSave();}
 		document.querySelector('#frame-editor-color-overlay').value = selectedFrame.colorOverlay || false;
 		document.querySelector('#frame-editor-color-overlay').onchange = (event) => {selectedFrame.colorOverlay = event.target.value; drawFrames(); queueLiveDraftSave();}
-		document.querySelector('#frame-editor-hsl-hue').value = selectedFrame.hslHue || 0;
-		document.querySelector('#frame-editor-hsl-hue-slider').value = selectedFrame.hslHue || 0;
-		document.querySelector('#frame-editor-hsl-hue').onchange = (event) => {selectedFrame.hslHue = event.target.value; drawFrames(); queueLiveDraftSave();}
-		document.querySelector('#frame-editor-hsl-hue-slider').onchange = (event) => {selectedFrame.hslHue = event.target.value; drawFrames(); queueLiveDraftSave();}
-		document.querySelector('#frame-editor-hsl-saturation').value = selectedFrame.hslSaturation || 0;
-		document.querySelector('#frame-editor-hsl-saturation-slider').value = selectedFrame.hslSaturation || 0;
-		document.querySelector('#frame-editor-hsl-saturation').onchange = (event) => {selectedFrame.hslSaturation = event.target.value; drawFrames(); queueLiveDraftSave();}
-		document.querySelector('#frame-editor-hsl-saturation-slider').onchange = (event) => {selectedFrame.hslSaturation = event.target.value; drawFrames(); queueLiveDraftSave();}
-		document.querySelector('#frame-editor-hsl-lightness').value = selectedFrame.hslLightness || 0;
-		document.querySelector('#frame-editor-hsl-lightness-slider').value = selectedFrame.hslLightness || 0;
-		document.querySelector('#frame-editor-hsl-lightness').onchange = (event) => {selectedFrame.hslLightness = event.target.value; drawFrames(); queueLiveDraftSave();}
-		document.querySelector('#frame-editor-hsl-lightness-slider').onchange = (event) => {selectedFrame.hslLightness = event.target.value; drawFrames(); queueLiveDraftSave();}
+		[['hue', 'hslHue'], ['saturation', 'hslSaturation'], ['lightness', 'hslLightness']].forEach(([name, property]) => {
+			var numberInput = document.querySelector(`#frame-editor-hsl-${name}`);
+			var sliderInput = document.querySelector(`#frame-editor-hsl-${name}-slider`);
+			var value = selectedFrame[property] || 0;
+			numberInput.value = value;
+			sliderInput.value = value;
+			var update = (event) => {
+				selectedFrame[property] = event.target.value;
+				numberInput.value = event.target.value;
+				sliderInput.value = event.target.value;
+				drawFrames();
+				queueLiveDraftSave();
+			};
+			numberInput.oninput = update;
+			sliderInput.oninput = update;
+		});
 		// Removing masks
 		const selectMaskElement = document.querySelector('#frame-editor-masks');
 		selectMaskElement.innerHTML = null;
@@ -1673,6 +1677,7 @@ function renderCardSpecificTextTools() {
 
 	document.querySelector('#card-specific-layout-title').textContent = `${tools.title || 'Card'} Layout`;
 	drawerBody.innerHTML = layoutHTML || '';
+	window.CardConjurerLayoutNumbers?.enhance(drawerBody);
 	if (typeof tools.onRender === 'function') tools.onRender();
 }
 
@@ -1735,13 +1740,13 @@ function textboxEditor() {
 	document.querySelector('#textbox-editor-title').textContent = `${selectedTextbox.name || 'Text'} Layout`;
 	document.querySelector('#textbox-editor').classList.add('opened');
 	document.querySelector('#textbox-editor-x').value = scaleWidth(selectedTextbox.x || 0);
-	document.querySelector('#textbox-editor-x').onchange = (event) => {selectedTextbox.x = (event.target.value / card.width); drawTextBuffer(); queueLiveDraftSave();}
+	document.querySelector('#textbox-editor-x').oninput = (event) => {selectedTextbox.x = (event.target.value / card.width); drawTextBuffer(); queueLiveDraftSave();}
 	document.querySelector('#textbox-editor-y').value = scaleHeight(selectedTextbox.y || 0);
-	document.querySelector('#textbox-editor-y').onchange = (event) => {selectedTextbox.y = (event.target.value / card.height); drawTextBuffer(); queueLiveDraftSave();}
+	document.querySelector('#textbox-editor-y').oninput = (event) => {selectedTextbox.y = (event.target.value / card.height); drawTextBuffer(); queueLiveDraftSave();}
 	document.querySelector('#textbox-editor-width').value = scaleWidth(selectedTextbox.width || 1);
-	document.querySelector('#textbox-editor-width').onchange = (event) => {selectedTextbox.width = (event.target.value / card.width); drawTextBuffer(); queueLiveDraftSave();}
+	document.querySelector('#textbox-editor-width').oninput = (event) => {selectedTextbox.width = (event.target.value / card.width); drawTextBuffer(); queueLiveDraftSave();}
 	document.querySelector('#textbox-editor-height').value = scaleHeight(selectedTextbox.height || 1);
-	document.querySelector('#textbox-editor-height').onchange = (event) => {selectedTextbox.height = (event.target.value / card.height); drawTextBuffer(); queueLiveDraftSave();}
+	document.querySelector('#textbox-editor-height').oninput = (event) => {selectedTextbox.height = (event.target.value / card.height); drawTextBuffer(); queueLiveDraftSave();}
 	document.querySelector('#textbox-editor-font-size').value = selectedTextbox.fontSize || 0;
 	document.querySelector('#textbox-editor-font-size').oninput = (event) => {selectedTextbox.fontSize = event.target.value; drawTextBuffer(); queueLiveDraftSave();}
 }
@@ -6732,6 +6737,7 @@ bindInputs('#show-guidelines', '#show-guidelines-2', true);
 renderWatermarkCatalog();
 updateWatermarkColorControls();
 syncAutomaticWatermarkColors();
+window.CardConjurerLayoutNumbers?.enhance(document);
 
 // Load / init whatever
 loadScript('/node_modules/jszip/dist/jszip.min.js');

@@ -114,6 +114,47 @@ try {
   errors.length = 0; // Pre-onboarding frame requests are expected before packs activate and the page reloads.
   const requiredFrameAvailable = await page.evaluate(async () => (await fetch('/img/frames/m15/regular/m15FrameA.png')).ok);
   if (!requiredFrameAvailable) throw new Error('The installed Standard pack does not resolve its default frame asset.');
+
+  await page.locator('#creator-menu-tabs .selectable').filter({hasText: /^Text$/}).click();
+  const rulesField = page.locator('.text-field-card[data-text-key="rules"]');
+  await rulesField.getByRole('button', {name: 'Layout', exact: true}).click();
+  const typographyInput = page.locator('#textbox-editor-font-size');
+  const typographyIncrease = page.getByRole('button', {name: 'Increase Text field font size adjustment', exact: true});
+  const typographyBefore = Number(await typographyInput.inputValue());
+  await page.evaluate(() => {
+    window.__setConjurerHeldTypographyRenders = [];
+    window.__setConjurerHeldTypographyInputs = [];
+    document.querySelector('#textbox-editor-font-size')?.addEventListener('input', event => {
+      window.__setConjurerHeldTypographyInputs.push(Number(event.currentTarget.value));
+    });
+    window.addEventListener('cardconjurer:preview-rendered', () => {
+      window.__setConjurerHeldTypographyRenders.push(document.querySelector('#textbox-editor-font-size')?.value);
+    });
+  });
+  await page.waitForTimeout(250); // Let the layout drawer finish sliding before targeting its control.
+  const typographyButton = await typographyIncrease.boundingBox();
+  if (!typographyButton) throw new Error('Typography increase control is not visible.');
+  await page.mouse.move(typographyButton.x + typographyButton.width / 2, typographyButton.y + typographyButton.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(1_150);
+  const heldTypography = await page.evaluate(() => ({
+    value: Number(document.querySelector('#textbox-editor-font-size')?.value),
+    renders: [...window.__setConjurerHeldTypographyRenders],
+    inputs: [...window.__setConjurerHeldTypographyInputs]
+  }));
+  await page.mouse.up();
+  if (heldTypography.value <= typographyBefore + 1 || heldTypography.renders.length < 2) {
+    throw new Error(`Held Typography did not update the preview continuously: ${JSON.stringify({typographyBefore, heldTypography})}`);
+  }
+  if (
+    heldTypography.inputs[0] !== typographyBefore + 1
+    || heldTypography.inputs.at(-1) !== heldTypography.value
+    || heldTypography.inputs.some((value, index) => index > 0 && value !== heldTypography.inputs[index - 1] + 1)
+  ) {
+    throw new Error(`Held Typography skipped displayed values: ${JSON.stringify({typographyBefore, heldTypography})}`);
+  }
+  await page.locator('#textbox-editor .textbox-editor-close').click();
+
   if (!packagedExecutable) {
     await application.evaluate(({ipcMain}) => {
       globalThis.__setConjurerZipExportRequest = {bytes: 0, signature: [], completed: false, saved: false};

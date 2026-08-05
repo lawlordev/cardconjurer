@@ -3687,6 +3687,74 @@ html.desktop-booting #desktop-boot-screen { position: fixed; inset: 0; z-index: 
 .creator-workspace .sets-search-clear { border-color: transparent; background: transparent; }
 .creator-workspace .sets-search-clear:not(:disabled):hover { border-color: transparent; background: rgba(148,163,184,.12); }
 
+/* Shared live number controls borrow the compact minus/output/plus treatment from Print. */
+.layout-number-control .input[type='number'] {
+	padding-right: 7rem;
+	-moz-appearance: textfield;
+	appearance: textfield;
+}
+.layout-number-control .input[type='number']::-webkit-inner-spin-button,
+.layout-number-control .input[type='number']::-webkit-outer-spin-button {
+	margin: 0;
+	-webkit-appearance: none;
+}
+.layout-number-control > small { right: 4.25rem; }
+.layout-input-shell-standalone { width: 100%; }
+.layout-number-control.layout-input-shell-standalone .input[type='number'] {
+	box-sizing: border-box;
+	width: 100%;
+	padding-right: 4.15rem;
+}
+.layout-number-stepper {
+	position: absolute;
+	top: 50%;
+	right: .35rem;
+	display: grid;
+	grid-template-columns: repeat(2,1.55rem);
+	overflow: hidden;
+	border: 1px solid var(--workspace-control-border);
+	border-radius: var(--workspace-radius-inner,.42rem);
+	background: var(--workspace-panel-raised);
+	transform: translateY(-50%);
+}
+.creator-workspace button.layout-number-stepper-button,
+.textbox-editor button.layout-number-stepper-button {
+	display: grid;
+	width: 1.55rem !important;
+	min-width: 0;
+	height: 1.55rem !important;
+	min-height: 0;
+	padding: 0 !important;
+	place-items: center;
+	border: 0 !important;
+	border-radius: 0;
+	color: var(--workspace-control-text);
+	background: transparent !important;
+	box-shadow: none !important;
+	font: inherit;
+	font-size: .78rem;
+	line-height: 1;
+	cursor: pointer;
+	touch-action: none;
+	user-select: none;
+}
+.creator-workspace button.layout-number-stepper-button + button.layout-number-stepper-button,
+.textbox-editor button.layout-number-stepper-button + button.layout-number-stepper-button {
+	border-left: 1px solid var(--workspace-control-border) !important;
+}
+.creator-workspace button.layout-number-stepper-button:not(:disabled):hover,
+.textbox-editor button.layout-number-stepper-button:not(:disabled):hover {
+	color: var(--workspace-control-text-hover);
+	background: var(--workspace-control-hover) !important;
+}
+.creator-workspace button.layout-number-stepper-button:focus-visible,
+.textbox-editor button.layout-number-stepper-button:focus-visible {
+	position: relative;
+	z-index: 1;
+	border-color: var(--workspace-focus) !important;
+	box-shadow: inset 0 0 0 2px var(--workspace-focus) !important;
+}
+
 @media only screen and (max-width: 720px) {
 	.art-source-actions,.watermark-appearance-grid,.watermark-custom-colors,.card-details-grid { grid-template-columns: 1fr; }
 	.watermark-opacity-field { grid-column: auto; }
