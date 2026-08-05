@@ -768,6 +768,16 @@
 		});
 	}
 
+	async function runCardPreviewTransition(action) {
+		beginCardPreviewTransition();
+		try {
+			await waitForCardPreviewTransitionPaint();
+			return await action();
+		} finally {
+			await finishCardPreviewTransition();
+		}
+	}
+
 	function selectCard(id) {
 		var set = activeSet();
 		if (!set || !state.cards.some(function(card) { return card.id === id && card.setId === set.id; }) || set.activeCardId === id) return Promise.resolve();
@@ -852,13 +862,15 @@
 	}
 
 	async function newCard() {
-		await captureActiveCard(); var set = activeSet();
-		await commit('Create card', '', function() {
-			var newCardRecord = Model.createDefaultCard(set.id, stripSetOwned(initialBlankCardData || {}));
-			newCardRecord.sortOrder = Math.max(0, ...cardsFor(set.id).map(function(item) { return Number(item.sortOrder || 0); })) + 1;
-			state.cards.push(newCardRecord); set.activeCardId = newCardRecord.id;
-		}, [set.id], {immediate: true});
-		await loadActiveCard();
+		return runCardPreviewTransition(async function() {
+			await captureActiveCard(); var set = activeSet();
+			await commit('Create card', '', function() {
+				var newCardRecord = Model.createDefaultCard(set.id, stripSetOwned(initialBlankCardData || {}));
+				newCardRecord.sortOrder = Math.max(0, ...cardsFor(set.id).map(function(item) { return Number(item.sortOrder || 0); })) + 1;
+				state.cards.push(newCardRecord); set.activeCardId = newCardRecord.id;
+			}, [set.id], {immediate: true});
+			await loadActiveCard();
+		});
 	}
 
 	async function duplicateCard() {
@@ -878,15 +890,17 @@
 	}
 
 	async function deleteCardAction() {
-		await captureActiveCard(); var set = activeSet(); var source = activeCardRecord(); if (!set || !source) return;
-		await commit('Delete card', '', function() {
-			var ordered = Model.selectCards(cardsFor(set.id), {sort:'collector',direction:'asc'}); var index = ordered.findIndex(function(item) { return item.id === source.id; });
-			state.cards = state.cards.filter(function(item) { return item.id !== source.id; });
-			var remaining = cardsFor(set.id);
-			if (!remaining.length) {
-				var blankCard = Model.createDefaultCard(set.id, stripSetOwned(initialBlankCardData || {})); state.cards.push(blankCard); set.activeCardId = blankCard.id;
-			} else set.activeCardId = (remaining[Math.min(index, remaining.length - 1)] || remaining[0]).id;
-		}, [set.id], {immediate: true}); await loadActiveCard();
+		return runCardPreviewTransition(async function() {
+			await captureActiveCard(); var set = activeSet(); var source = activeCardRecord(); if (!set || !source) return;
+			await commit('Delete card', '', function() {
+				var ordered = Model.selectCards(cardsFor(set.id), {sort:'collector',direction:'asc'}); var index = ordered.findIndex(function(item) { return item.id === source.id; });
+				state.cards = state.cards.filter(function(item) { return item.id !== source.id; });
+				var remaining = cardsFor(set.id);
+				if (!remaining.length) {
+					var blankCard = Model.createDefaultCard(set.id, stripSetOwned(initialBlankCardData || {})); state.cards.push(blankCard); set.activeCardId = blankCard.id;
+				} else set.activeCardId = (remaining[Math.min(index, remaining.length - 1)] || remaining[0]).id;
+			}, [set.id], {immediate: true}); await loadActiveCard();
+		});
 	}
 
 	async function deleteSetAction() {
