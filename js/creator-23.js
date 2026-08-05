@@ -5895,22 +5895,23 @@ function queueLiveDraftSave(delay = 250) {
 function applyLiveDraftUi(ui) {
 	if (!ui) return false;
 	var migratedDarkPowerToughness = ui.activeFrameCustomizationPack === 'M15DarkPT' || ui.selectedFrameProfile === 'M15DarkPT';
-	var selectedProfile = migratedDarkPowerToughness ? (ui.activeFramePack || 'M15Regular-1') : ui.selectedFrameProfile;
+	var restoredFramePack = ui.activeFramePack || 'M15Regular-1';
+	var selectedProfile = migratedDarkPowerToughness ? restoredFramePack : (ui.selectedFrameProfile || restoredFramePack);
 	var autoFrameValue = migratedDarkPowerToughness && typeof FRAME_REGISTRY !== 'undefined'
 		? (FRAME_REGISTRY.engine(selectedProfile) || selectedProfile)
-		: ui.autoFrameValue;
-	if (typeof activeFramePack !== 'undefined' && ui.activeFramePack) activeFramePack = ui.activeFramePack;
+		: (ui.autoFrameValue || (typeof FRAME_REGISTRY !== 'undefined' ? FRAME_REGISTRY.engine(selectedProfile) : null) || selectedProfile);
+	if (typeof activeFramePack !== 'undefined') activeFramePack = restoredFramePack;
 	if (typeof activeFrameCustomizationPack !== 'undefined') activeFrameCustomizationPack = migratedDarkPowerToughness ? null : (ui.activeFrameCustomizationPack || null);
 	if (typeof activeFrameComponentOptions !== 'undefined') activeFrameComponentOptions = ui.activeFrameComponentOptions || {};
 	if (migratedDarkPowerToughness && typeof activeFrameComponentOptions !== 'undefined') activeFrameComponentOptions['power-toughness-variant'] = {pack:'M15DarkPT', frame:null};
 	if (typeof automaticVariantPack !== 'undefined') automaticVariantPack = ui.automaticVariantPack || null;
 	var autoFrameInput = document.querySelector('#autoFrame');
 	if (autoFrameInput) {
-		if (autoFrameValue) autoFrameInput.value = autoFrameValue;
-		if (selectedProfile) autoFrameInput.dataset.profile = selectedProfile;
+		autoFrameInput.value = autoFrameValue;
+		autoFrameInput.dataset.profile = selectedProfile;
 	}
-	if (autoFrameValue) localStorage.setItem('autoFrame', autoFrameValue);
-	if (selectedProfile) localStorage.setItem('selectedFrameProfile', selectedProfile);
+	localStorage.setItem('autoFrame', autoFrameValue);
+	localStorage.setItem('selectedFrameProfile', selectedProfile);
 	if (typeof renderFrameCustomize === 'function') renderFrameCustomize(activeFramePack);
 	document.querySelectorAll('.frame-catalog-item').forEach(item => {
 		var selected = item.dataset.pack === activeFramePack;
@@ -6078,9 +6079,11 @@ function saveCard(saveFromFile) {
 }
 async function loadCardData(cardData, uiState) {
 	clearCardSpecificTextTools();
-	// Font-size carryover belongs to frame changes on one card, not switches
-	// between cards. The incoming card will seed this cache with its own values.
+	// Text carryover belongs to frame changes on one card, not switches between
+	// cards. The incoming card will seed these caches with its own values.
+	savedTextContents = {};
 	savedTextFontSizes = {};
+	layoutOwnedTextDefaults = {};
 	//clear the draggable frames
 	document.querySelector('#frame-list').innerHTML = null;
 	//clear the existing card, then replace it with the new JSON
