@@ -3459,7 +3459,7 @@ html.desktop-booting #desktop-boot-screen { position: fixed; inset: 0; z-index: 
 	transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
 }
 
-.creator-workspace button:not(.sets-tab),
+.creator-workspace button:not(.sets-tab):not(.card-specific-advanced-toggle),
 .creator-workspace summary:not(.selectable),
 .sets-dialog button,
 .desktop-drawer button,
@@ -3489,13 +3489,13 @@ html.desktop-booting #desktop-boot-screen { position: fixed; inset: 0; z-index: 
 	border-radius: var(--workspace-radius-inner,.42rem);
 }
 
-.creator-workspace .collapsible:hover {
+.creator-workspace .collapsible:not(.frame-advanced-toggle):hover {
 	border-color: var(--workspace-control-border-hover);
 	color: var(--workspace-control-text-hover);
 	background: var(--workspace-control-hover);
 }
 
-.creator-workspace button:not(.sets-tab):not(.selected):not(:disabled):hover,
+.creator-workspace button:not(.sets-tab):not(.card-specific-advanced-toggle):not(.selected):not(:disabled):hover,
 .creator-workspace summary:not(.selectable):not(:disabled):hover,
 .creator-workspace .input:not(:disabled):not(:has(input:disabled)):hover,
 .creator-workspace :is(.frame-option,.mask-option,.text-option,.frame-element,.art-source-action):not(.selected):hover,
