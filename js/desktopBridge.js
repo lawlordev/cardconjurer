@@ -3,6 +3,7 @@
 	var api = root.setConjurerDesktop;
 	if (!api) return;
 	var drawerReturnFocus = null;
+	var settingsRequestId = 0;
 	var activePackActionId = null;
 	var selectedPaper = (function() { try { return ['US','CA'].includes(new Intl.Locale(navigator.language).region) ? 'letter' : 'a4'; } catch (error) { return 'letter'; } })();
 	var selectedBack = 'standard';
@@ -122,15 +123,40 @@
 	async function openPacks(trigger) {
 		var packs = await api.packs.list(); openDrawer('Frame Packs', packDrawerContent(packs), trigger); bindPackActions(trigger);
 	}
-	async function openSettings(trigger) {
-		var info = await api.app.info(); var channel = await api.updates.channel(); var updateState = await api.updates.state(); var packs; try { packs = await api.packs.refresh(); } catch (error) { packs = await api.packs.list(); }
-		openDrawer('Settings', '<section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>Frame Packs</h3></div>' + packDrawerContent(packs) + '</section><section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>Updates</h3></div><label class="desktop-setting-row"><span><strong>Release channel</strong><small>Stable receives finished releases. Beta also receives preview builds.</small></span><select id="desktop-channel" class="input"><option value="stable" ' + (channel === 'stable' ? 'selected' : '') + '>Stable</option><option value="beta" ' + (channel === 'beta' ? 'selected' : '') + '>Beta</option></select></label><button id="desktop-check-update" class="input" type="button">Check for Updates</button><p id="desktop-update-status" class="desktop-inline-status" aria-live="polite"></p><div id="desktop-update-details"></div></section><section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>About</h3></div><p class="desktop-about-product"><strong>Set Conjurer ' + escapeHtml(info.version) + '</strong><small>' + escapeHtml(info.platform + ' · ' + info.arch) + '</small></p><p class="desktop-about-copy">A local-first open-source desktop fork of Card Conjurer, originally created by Kyle Burton and maintained by its contributors. No account, cloud storage, or telemetry.</p><button id="desktop-report-issue" class="input" type="button">Report an Issue on GitHub</button></section>', trigger);
-		bindPackActions(trigger);
+	function settingsDrawerContent(info, channel, packs) {
+		return '<div id="desktop-settings-content"><section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>Frame Packs</h3></div>' + packDrawerContent(packs) + '</section><section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>Updates</h3></div><label class="desktop-setting-row"><span><strong>Release channel</strong><small>Stable receives finished releases. Beta also receives preview builds.</small></span><select id="desktop-channel" class="input"><option value="stable" ' + (channel === 'stable' ? 'selected' : '') + '>Stable</option><option value="beta" ' + (channel === 'beta' ? 'selected' : '') + '>Beta</option></select></label><button id="desktop-check-update" class="input" type="button">Check for Updates</button><p id="desktop-update-status" class="desktop-inline-status" aria-live="polite"></p><div id="desktop-update-details"></div></section><section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>About</h3></div><p class="desktop-about-product"><strong>Set Conjurer ' + escapeHtml(info.version) + '</strong><small>' + escapeHtml(info.platform + ' · ' + info.arch) + '</small></p><p class="desktop-about-copy">A local-first open-source desktop fork of Card Conjurer, originally created by Kyle Burton and maintained by its contributors. No account, cloud storage, or telemetry.</p><button id="desktop-report-issue" class="input" type="button">Report an Issue on GitHub</button></section></div>';
+	}
+	function activeSettingsDrawer() {
+		return document.querySelector('#desktop-drawer.opened #desktop-settings-content');
+	}
+	function bindSettingsActions(updateState) {
 		var updateButton = document.querySelector('#desktop-check-update');
 		updateSettingsStatus(updateState);
 		document.querySelector('#desktop-channel').addEventListener('change', async function(event) { await api.updates.setChannel(event.target.value); updateSettingsStatus(await api.updates.check()); });
 		updateButton.addEventListener('click', async function() { updateSettingsStatus(await api.updates.check()); });
 		document.querySelector('#desktop-report-issue').addEventListener('click', function() { void api.app.reportIssue(); });
+	}
+	async function openSettings(trigger) {
+		var requestId = ++settingsRequestId;
+		openDrawer('Settings', '<div id="desktop-settings-content" class="desktop-settings-loading"><span class="creator-loading-spinner" aria-hidden="true"></span><p class="desktop-inline-status desktop-settings-loading-copy" role="status">Loading settings…</p></div>', trigger);
+		var refreshPromise = api.packs.refresh().catch(function() { return null; });
+		var values;
+		try { values = await Promise.all([api.app.info(), api.updates.channel(), api.updates.state(), api.packs.list()]); }
+		catch (error) {
+			var loadingView = requestId === settingsRequestId && activeSettingsDrawer();
+			if (loadingView) { loadingView.classList.remove('desktop-settings-loading'); loadingView.innerHTML = '<p class="desktop-inline-status" role="alert">Could not load settings: ' + escapeHtml(error && error.message ? error.message : error) + '</p>'; }
+			return;
+		}
+		if (requestId !== settingsRequestId || !activeSettingsDrawer()) return;
+		document.querySelector('#desktop-drawer-body').innerHTML = settingsDrawerContent(values[0], values[1], values[3]);
+		bindPackActions(trigger);
+		bindSettingsActions(values[2]);
+		var refreshedPacks = await refreshPromise;
+		var settings = activeSettingsDrawer();
+		if (requestId !== settingsRequestId || !settings || !refreshedPacks) return;
+		var list = settings.querySelector('.desktop-pack-list');
+		if (list) list.outerHTML = packDrawerContent(refreshedPacks);
+		bindPackActions(trigger);
 	}
 	function selectedOnboardingIds() { return Array.from(document.querySelectorAll('#desktop-onboarding-packs [data-pack-id]:checked')).map(function(input) { return input.dataset.packId; }); }
 	function updateOnboardingTotal() {

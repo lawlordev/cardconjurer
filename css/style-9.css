@@ -3216,7 +3216,10 @@ html.desktop-booting #desktop-boot-screen { position: fixed; inset: 0; z-index: 
 .desktop-update-action.phase-downloading::before,.desktop-update-action.phase-verifying::before { content: ''; width: .9rem; height: .9rem; margin-right: .35rem; border-radius: 50%; background: conic-gradient(#0b151d var(--update-progress), rgba(11,21,29,.22) 0); -webkit-mask: radial-gradient(circle, transparent 46%, #000 49%); mask: radial-gradient(circle, transparent 46%, #000 49%); }
 .desktop-overlay { position: fixed; inset: 0; z-index: 3490; background: rgba(2,6,23,.68); }
 .desktop-drawer { z-index: 3500; display: flex; flex-direction: column; width: min(27rem, 94vw); }
-.desktop-drawer > .layout-drawer-body { min-height: 0; overflow-y: auto; }
+.desktop-drawer.opened { display: flex; }
+.desktop-drawer > .layout-drawer-body { position: relative; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.desktop-settings-loading { position: absolute; inset: 0; display: grid; grid-template-columns: auto auto; place-content: center; align-items: center; gap: .55rem; text-align: center; }
+.desktop-settings-loading .desktop-settings-loading-copy { min-height: 0; margin: 0; color: var(--workspace-text); font-weight: 700; }
 .desktop-pack-list { display: grid; gap: .5rem; margin: 0; }
 .desktop-pack-row { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: .7rem; padding: .7rem; border: 1px solid var(--workspace-border-soft); border-radius: var(--workspace-radius,.55rem); background: var(--workspace-panel-raised); }
 .desktop-pack-row > span { display: grid; gap: .22rem; min-width: 0; }

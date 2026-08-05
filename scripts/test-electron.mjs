@@ -311,8 +311,57 @@ try {
   await page.keyboard.press('Escape');
   if (await newSetDropdown.evaluate((element) => element.open)) throw new Error('New Set did not close with Escape.');
   await page.screenshot({path: path.join(evidence, '02-editor.png'), fullPage: true});
+  if (!packagedExecutable) {
+    const settingsPacks = await page.evaluate(() => window.setConjurerDesktop.packs.list());
+    await application.evaluate(({ipcMain}, packs) => {
+      ipcMain.removeHandler('desktop:packs-list');
+      ipcMain.handle('desktop:packs-list', async () => {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        return packs;
+      });
+      ipcMain.removeHandler('desktop:packs-refresh');
+      ipcMain.handle('desktop:packs-refresh', async () => {
+        await new Promise((resolve) => setTimeout(resolve, 1_200));
+        return packs;
+      });
+    }, settingsPacks);
+  }
+  const settingsClickStarted = Date.now();
   await page.click('#desktop-settings');
   await page.waitForSelector('#desktop-drawer.opened');
+  const settingsOpenMs = Date.now() - settingsClickStarted;
+  if (settingsOpenMs > 500) throw new Error(`Settings drawer waited ${settingsOpenMs}ms before opening.`);
+  if (!packagedExecutable) {
+    await page.waitForSelector('.desktop-settings-loading .creator-loading-spinner');
+    const settingsLoadingStyle = await page.locator('.desktop-settings-loading').evaluate((element) => {
+      const copy = element.querySelector('.desktop-settings-loading-copy');
+      const spinner = element.querySelector('.creator-loading-spinner');
+      const body = element.parentElement;
+      const drawer = element.closest('#desktop-drawer');
+      const style = getComputedStyle(element);
+      const copyStyle = getComputedStyle(copy);
+      const bodyRect = body.getBoundingClientRect();
+      const copyRect = copy.getBoundingClientRect();
+      const spinnerRect = spinner.getBoundingClientRect();
+      const groupRect = {left: Math.min(copyRect.left, spinnerRect.left), right: Math.max(copyRect.right, spinnerRect.right), top: Math.min(copyRect.top, spinnerRect.top), bottom: Math.max(copyRect.bottom, spinnerRect.bottom)};
+      const tokenProbe = document.createElement('span');
+      tokenProbe.style.color = 'var(--workspace-text)';
+      document.body.appendChild(tokenProbe);
+      const expectedColor = getComputedStyle(tokenProbe).color;
+      tokenProbe.remove();
+      return {
+        drawerDisplay: getComputedStyle(drawer).display,
+        position: style.position,
+        inset: [style.top, style.right, style.bottom, style.left],
+        placeContent: style.placeContent,
+        color: copyStyle.color,
+        expectedColor,
+        horizontalOffset: Math.abs(((groupRect.left + groupRect.right) / 2) - ((bodyRect.left + bodyRect.right) / 2)),
+        verticalOffset: Math.abs(((groupRect.top + groupRect.bottom) / 2) - ((bodyRect.top + bodyRect.bottom) / 2))
+      };
+    });
+    if (settingsLoadingStyle.drawerDisplay !== 'flex' || settingsLoadingStyle.position !== 'absolute' || settingsLoadingStyle.inset.some((value) => value !== '0px') || settingsLoadingStyle.placeContent !== 'center' || settingsLoadingStyle.color !== settingsLoadingStyle.expectedColor || settingsLoadingStyle.horizontalOffset > 2 || settingsLoadingStyle.verticalOffset > 2) throw new Error(`Settings loading state is not centered with workspace text: ${JSON.stringify(settingsLoadingStyle)}`);
+  }
   await page.waitForSelector('#desktop-channel', {state: 'attached'});
   await page.waitForTimeout(350);
   const packRowRadius = await page.locator('.desktop-pack-row').first().evaluate((element) => getComputedStyle(element).borderTopLeftRadius);
