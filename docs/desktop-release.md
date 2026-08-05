@@ -1,5 +1,9 @@
 # Set Conjurer release runbook
 
+## Preview the macOS installer
+
+Run `npm run preview:mac-installer` with the repository-supported Node 24 or 25 runtime on a Mac to build the same branded DMG used by the release workflow, mount it, and open its Finder window. The preview uses the current machine architecture by default; pass `--arch=x64` or `--arch=arm64` to inspect a specific build. This command creates local output only and does not sign, notarize, upload, or publish anything.
+
 ## Release gates
 
 Public release is intentionally manual. Before publishing:

@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="658" height="498" viewBox="0 0 658 498">
+  <defs>
+    <linearGradient id="background" x1="52" y1="18" x2="604" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07111F"/>
+      <stop offset="0.52" stop-color="#0B1728"/>
+      <stop offset="1" stop-color="#101A30"/>
+    </linearGradient>
+    <radialGradient id="cyanGlow" cx="0" cy="0" r="1" gradientTransform="translate(148 152) rotate(42) scale(292 232)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#61F4E8" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#61F4E8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="blueGlow" cx="0" cy="0" r="1" gradientTransform="translate(538 358) rotate(-137) scale(306 238)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#73A7FF" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#73A7FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="stroke" x1="76" y1="169" x2="581" y2="431" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#76F4E5" stop-opacity="0.38"/>
+      <stop offset="0.55" stop-color="#93B7FF" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#7B9EFF" stop-opacity="0.36"/>
+    </linearGradient>
+    <linearGradient id="arrow" x1="278" y1="326" x2="382" y2="326" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5EF0E2"/>
+      <stop offset="1" stop-color="#82A7FF"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-40%" width="160%" height="180%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+  </defs>
+
+  <rect width="658" height="498" fill="url(#background)"/>
+  <rect width="658" height="498" fill="url(#cyanGlow)"/>
+  <rect width="658" height="498" fill="url(#blueGlow)"/>
+
+  <g opacity="0.15" stroke="#BBD6F7" stroke-width="1">
+    <path d="M0 54H658M0 444H658"/>
+    <path d="M54 0V498M604 0V498"/>
+  </g>
+
+  <text x="329" y="78" fill="#F7FAFF" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="34" font-weight="700" text-anchor="middle" letter-spacing="-0.8">Set Conjurer</text>
+  <text x="329" y="108" fill="#B8C8DD" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="15" font-weight="500" text-anchor="middle">Drag Set Conjurer to Applications to install</text>
+
+  <rect x="44" y="148" width="570" height="292" rx="28" fill="#000000" stroke="url(#stroke)"/>
+  <circle cx="182" cy="326" r="86" fill="#55EBDC" fill-opacity="0.06" stroke="#6BF1E3" stroke-opacity="0.12"/>
+  <circle cx="476" cy="326" r="86" fill="#719EFF" fill-opacity="0.06" stroke="#8AACFF" stroke-opacity="0.13"/>
+
+  <path d="M279 326H378" stroke="#68DCE8" stroke-opacity="0.36" stroke-width="14" stroke-linecap="round" filter="url(#shadow)"/>
+  <path d="M279 326H370" stroke="url(#arrow)" stroke-width="5" stroke-linecap="round"/>
+  <path d="M354 310L372 326L354 342" fill="none" stroke="#82A7FF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+
+</svg>

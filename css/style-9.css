@@ -607,7 +607,7 @@ textarea.input {
 .sets-tab.selected { color: #0b151d; font-weight: 800; }
 .sets-tab-panel { min-height: 0; overflow: auto; padding: .8rem var(--workspace-panel-gutter); flex: 1; scrollbar-gutter: auto; }
 .sets-tab-panel.sets-cards-panel { display: flex; flex-direction: column; overflow: hidden; }
-.sets-card-scroll { min-height: 0; flex: 1; overflow-y: auto; scrollbar-gutter: auto; }
+.sets-card-scroll { min-width: 0; min-height: 0; flex: 1; overflow-x: hidden; overflow-y: auto; scrollbar-gutter: auto; }
 .sets-footer { display: flex; justify-content: space-between; gap: .75rem; border-top: 1px solid rgba(148,163,184,.15); padding: .65rem .85rem; color: #82909e; font-size: .72rem; }
 .sets-error { margin: .7rem .8rem 0; padding: .65rem .75rem; border: 1px solid rgba(251,113,133,.5); background: rgba(127,29,29,.22); color: #fecdd3; border-radius: var(--workspace-radius,.55rem); font-size: .78rem; }
 .sets-card-toolbar { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .45rem; margin-bottom: .65rem; }
@@ -665,8 +665,8 @@ textarea.input {
 .sets-filter-grid .input,
 .sets-field .input,
 .sets-card-detail-grid .input { margin: 0; min-width: 0; }
-.sets-card-list { display: grid; gap: .4rem; min-height: 6rem; }
-.sets-card-row { width: 100%; display: grid; grid-template-columns: 3rem minmax(0,1fr) auto; gap: .7rem; align-items: center; padding: .45rem; border: 1px solid rgba(148,163,184,.14); border-radius: var(--workspace-radius,.55rem); background: rgba(15,23,42,.48); color: #dce8f3; font: inherit; text-align: left; cursor: pointer; content-visibility: auto; contain: layout paint style; contain-intrinsic-size: auto 4.5rem; }
+.sets-card-list { display: grid; min-width: 0; max-width: 100%; gap: .4rem; min-height: 6rem; }
+.sets-card-row { box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; display: grid; grid-template-columns: 3rem minmax(0,1fr) auto; gap: .7rem; align-items: center; padding: .45rem; border: 1px solid rgba(148,163,184,.14); border-radius: var(--workspace-radius,.55rem); background: rgba(15,23,42,.48); color: #dce8f3; font: inherit; text-align: left; cursor: pointer; content-visibility: auto; contain: layout paint style; contain-intrinsic-size: auto 4.5rem; }
 .sets-card-row:hover { border-color: rgba(113,224,210,.45); background: rgba(30,41,59,.65); }
 .sets-card-row.selected { border-color: color-mix(in srgb, var(--workspace-focus) 68%, var(--workspace-border)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--workspace-focus) 14%, transparent); background: color-mix(in srgb, var(--workspace-focus) 9%, var(--workspace-panel)); }
 .sets-card-row > img,
@@ -3213,7 +3213,7 @@ html.desktop-booting #desktop-boot-screen { position: fixed; inset: 0; z-index: 
 .desktop-toolbar-actions { display: inline-flex; align-items: center; gap: .35rem; }
 .desktop-icon-action { width: 2rem; padding: 0; display: inline-grid; place-items: center; }
 .desktop-icon-action svg { width: 1.05rem; height: 1.05rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.desktop-menu-action { position: fixed; top: var(--workspace-panel-gutter); right: var(--workspace-panel-gutter); z-index: 3480; box-sizing: border-box; width: 2.35rem; height: 2.35rem; }
+.desktop-menu-action { position: fixed; top: var(--workspace-panel-gutter); right: var(--workspace-panel-gutter); z-index: 3480; box-sizing: border-box; width: 2.35rem; height: 2.35rem; -webkit-app-region: no-drag; }
 .desktop-menu-action svg { width: 1.15rem; height: 1.15rem; }
 .desktop-update-action { position: relative; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 5.7rem; height: 2.35rem; min-height: 2.35rem; padding: 0 .75rem; overflow: hidden; border-color: var(--workspace-accent); color: #0b151d; background: var(--workspace-accent); font: inherit; font-size: .7rem; font-weight: 800; white-space: nowrap; }
 .desktop-update-action[hidden] { display: none !important; }
@@ -3496,6 +3496,7 @@ html.desktop-booting #desktop-boot-screen { position: fixed; inset: 0; z-index: 
 	border-radius: var(--workspace-radius-inner,.42rem);
 }
 
+.desktop-menu-action:not(:disabled):hover,
 .creator-workspace .collapsible:not(.frame-advanced-toggle):hover {
 	border-color: var(--workspace-control-border-hover);
 	color: var(--workspace-control-text-hover);

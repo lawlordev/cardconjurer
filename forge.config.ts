@@ -94,14 +94,24 @@ const config: ForgeConfig = {
     new MakerZIP({}, ['darwin']),
     new MakerDMG({
       name: `Set-Conjurer-${process.arch}`,
+      title: 'Set Conjurer',
       overwrite: true,
       format: 'ULFO',
-      ...(signingIdentity !== '-' ? {additionalDMGOptions: {
-        'code-sign': {
+      background: path.resolve('resources/dmg/set-conjurer-background.png'),
+      icon: path.resolve('resources/icons/set-conjurer.icns'),
+      iconSize: 112,
+      contents: (options) => [
+        {x: 476, y: 326, type: 'link', path: '/Applications'},
+        {x: 182, y: 326, type: 'file', path: options.appPath}
+      ],
+      additionalDMGOptions: {
+        'background-color': '#08111f',
+        window: {size: {width: 658, height: 498}},
+        ...(signingIdentity !== '-' ? {'code-sign': {
           'signing-identity': signingIdentity,
           identifier: 'com.lawlordev.setconjurer'
-        }
-      }} : {})
+        }} : {})
+      }
     }),
     new MakerSquirrel({
       name: 'set_conjurer',
