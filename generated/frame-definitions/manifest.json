@@ -38,6 +38,10 @@
       "frameCount": 6
     },
     {
+      "pack": "M15DarkPT",
+      "frameCount": 8
+    },
+    {
       "pack": "M15HoloStamps",
       "frameCount": 15
     },

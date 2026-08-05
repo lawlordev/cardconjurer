@@ -710,15 +710,6 @@ function renderFrameCustomize(basePack = activeFramePack) {
 
 	customizations.forEach(([pack, details]) => {
 		if (details.mode !== 'checkbox') return;
-		if (pack === 'M15DarkPT') {
-			container.appendChild(renderFrameCheckboxControl(
-				details.control,
-				details.option,
-				activeFrameComponentOptions['power-toughness-variant']?.pack === pack,
-				checkbox => applyFrameComponentCustomization('power-toughness-variant', checkbox.checked ? pack + '::' : '')
-			));
-			return;
-		}
 		container.appendChild(renderFrameCheckboxControl(
 			details.control || details.label || framePackDisplayName(pack),
 			details.option || 'Enabled',

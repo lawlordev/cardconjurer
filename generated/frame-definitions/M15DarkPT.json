@@ -1,0 +1,85 @@
+{
+  "pack": "M15DarkPT",
+  "frames": [
+    {
+      "name": "White Power/Toughness",
+      "src": "/img/frames/m15/nickname/m15NicknamePTW.png",
+      "bounds": {
+        "x": 0.7573,
+        "y": 0.8848,
+        "width": 0.188,
+        "height": 0.0733
+      }
+    },
+    {
+      "name": "Blue Power/Toughness",
+      "src": "/img/frames/m15/nickname/m15NicknamePTU.png",
+      "bounds": {
+        "x": 0.7573,
+        "y": 0.8848,
+        "width": 0.188,
+        "height": 0.0733
+      }
+    },
+    {
+      "name": "Black Power/Toughness",
+      "src": "/img/frames/m15/nickname/m15NicknamePTB.png",
+      "bounds": {
+        "x": 0.7573,
+        "y": 0.8848,
+        "width": 0.188,
+        "height": 0.0733
+      }
+    },
+    {
+      "name": "Red Power/Toughness",
+      "src": "/img/frames/m15/nickname/m15NicknamePTR.png",
+      "bounds": {
+        "x": 0.7573,
+        "y": 0.8848,
+        "width": 0.188,
+        "height": 0.0733
+      }
+    },
+    {
+      "name": "Green Power/Toughness",
+      "src": "/img/frames/m15/nickname/m15NicknamePTG.png",
+      "bounds": {
+        "x": 0.7573,
+        "y": 0.8848,
+        "width": 0.188,
+        "height": 0.0733
+      }
+    },
+    {
+      "name": "Multicolored Power/Toughness",
+      "src": "/img/frames/m15/nickname/m15NicknamePTM.png",
+      "bounds": {
+        "x": 0.7573,
+        "y": 0.8848,
+        "width": 0.188,
+        "height": 0.0733
+      }
+    },
+    {
+      "name": "Artifact Power/Toughness",
+      "src": "/img/frames/m15/nickname/m15NicknamePTA.png",
+      "bounds": {
+        "x": 0.7573,
+        "y": 0.8848,
+        "width": 0.188,
+        "height": 0.0733
+      }
+    },
+    {
+      "name": "Colorless Power/Toughness",
+      "src": "/img/frames/m15/nickname/m15NicknamePTC.png",
+      "bounds": {
+        "x": 0.7573,
+        "y": 0.8848,
+        "width": 0.188,
+        "height": 0.0733
+      }
+    }
+  ]
+}
