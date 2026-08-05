@@ -2065,6 +2065,10 @@ function reminderTextOptionChanged(input) {
 	drawTextBuffer();
 }
 
+function inlineManaSymbolWouldOverflow(currentX, symbolWidth, symbolSpacing, textWidth) {
+	return currentX + symbolWidth + symbolSpacing * 2 >= textWidth;
+}
+
 function writeText(textObject, targetContext) {
 	var finalRenderedBounds = null;
 	manaSymbolsToRender = [];
@@ -2313,6 +2317,7 @@ function writeText(textObject, targetContext) {
 		//Begin looping through words/codes
 		innerloop: for (word of splitText) {
 			var wordToWrite = word;
+			var pendingManaSymbol = null;
 			if (wordToWrite.includes('{') && wordToWrite.includes('}') || textManaCost || savedFont) {
 				var possibleCode = wordToWrite.toLowerCase().replace('{', '').replace('}', '');
 				wordToWrite = null;
@@ -2651,6 +2656,7 @@ function writeText(textObject, targetContext) {
 						manaSymbolHeight *= manaLayout.size;
 						newLine = true;
 					}
+					var manaSymbolCurrentXBeforeScale = currentX;
 					if (textObject.manaImageScale) {
 						currentX -= (textObject.manaImageScale - 1) * manaSymbolWidth;
 						manaSymbolX -= (textObject.manaImageScale - 1) / 2 * manaSymbolWidth;
@@ -2662,8 +2668,7 @@ function writeText(textObject, targetContext) {
 					if (manaSymbol.backs) {
 						backImage = getManaSymbol('back' + Math.floor(Math.random() * manaSymbol.backs) + manaSymbol.back).image;
 					}
-					// Add to render queue
-					manaSymbolsToRender.push({
+					var manaSymbolRenderData = {
 						symbol: manaSymbol,
 						x: manaSymbolX,
 						y: manaSymbolY, 
@@ -2680,12 +2685,33 @@ function writeText(textObject, targetContext) {
 						shadowOffsetX: textShadowOffsetX,
 						shadowOffsetY: textShadowOffsetY,
 						shadowBlur: textShadowBlur
-					});
-					if (textOneLine && textObject.autoSizeVerticalCenter) {
-						oneLineInkTop = Math.min(oneLineInkTop, manaSymbolY - canvasMargin);
-						oneLineInkBottom = Math.max(oneLineInkBottom, manaSymbolY - canvasMargin + manaSymbolHeight);
+					};
+					var manaSymbolAdvance = manaSymbolWidth + manaSymbolSpacing * 2;
+					var manaSymbolCurrentXAdjustment = currentX - manaSymbolCurrentXBeforeScale;
+					var manaSymbolXOffset = manaSymbolX - currentX - canvasMargin;
+					var inlineManaSymbol = !textManaCost && !textObject.manaPlacement && !textObject.manaLayout && textArcRadius == 0;
+					if (inlineManaSymbol && inlineManaSymbolWouldOverflow(currentX, manaSymbolWidth, manaSymbolSpacing, textWidth)) {
+						if (textOneLine && startingTextSize > 1) {
+							manaSymbolsToRender = [];
+							startingTextSize -= 1;
+							continue outerloop;
+						}
+						newLine = true;
+						pendingManaSymbol = {
+							renderData: manaSymbolRenderData,
+							advance: manaSymbolAdvance,
+							currentXAdjustment: manaSymbolCurrentXAdjustment,
+							xOffset: manaSymbolXOffset,
+							lineY: lineY
+						};
+					} else {
+						manaSymbolsToRender.push(manaSymbolRenderData);
+						if (textOneLine && textObject.autoSizeVerticalCenter) {
+							oneLineInkTop = Math.min(oneLineInkTop, manaSymbolY - canvasMargin);
+							oneLineInkBottom = Math.max(oneLineInkBottom, manaSymbolY - canvasMargin + manaSymbolHeight);
+						}
+						currentX += manaSymbolAdvance;
 					}
-					currentX += manaSymbolWidth + manaSymbolSpacing * 2;
 
 					manaSymbolColor = origManaSymbolColor;
 				} else {
@@ -2894,6 +2920,14 @@ function writeText(textObject, targetContext) {
 				currentY += textSize + newLineSpacing;
 				newLineSpacing = (textObject.lineSpacing || 0) * textSize;
 				newLine = false;
+			}
+			if (pendingManaSymbol) {
+				currentX += pendingManaSymbol.currentXAdjustment;
+				pendingManaSymbol.renderData.x = currentX + canvasMargin + pendingManaSymbol.xOffset;
+				pendingManaSymbol.renderData.y -= pendingManaSymbol.lineY;
+				pendingManaSymbol.renderData.currentX = currentX;
+				manaSymbolsToRender.push(pendingManaSymbol.renderData);
+				currentX += pendingManaSymbol.advance;
 			}
 			//if there's a word to write, it's not a space on a new line, and it's allowed to write words, then we write the word
 			if (wordToWrite && (currentX != startingCurrentX || wordToWrite != ' ') && !textManaCost) {
