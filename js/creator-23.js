@@ -6075,6 +6075,9 @@ function saveCard(saveFromFile) {
 }
 async function loadCardData(cardData, uiState) {
 	clearCardSpecificTextTools();
+	// Font-size carryover belongs to frame changes on one card, not switches
+	// between cards. The incoming card will seed this cache with its own values.
+	savedTextFontSizes = {};
 	//clear the draggable frames
 	document.querySelector('#frame-list').innerHTML = null;
 	//clear the existing card, then replace it with the new JSON
