@@ -342,7 +342,7 @@ try {
 		width:closeRect.width,
 		height:closeRect.height,
 		insideHeading:closeRect.top >= headingRect.top && closeRect.bottom <= headingRect.bottom,
-		centerTarget:document.elementFromPoint(centerX, centerY) === close,
+		centerTarget:close.contains(document.elementFromPoint(centerX, centerY)),
 		closeBackground:getComputedStyle(close).backgroundColor,
 		drawerWidth:drawer.getBoundingClientRect().width,
 		settingsWidth:settingsRect.width,
