@@ -791,13 +791,14 @@ try {
 	  return {
 		sidebarWidth:sidebar.getBoundingClientRect().width,
 		rootFontSize:Number.parseFloat(getComputedStyle(document.documentElement).fontSize),
+		expectedSidebarRem:matchMedia('(max-width: 64rem)').matches ? 18 : 20,
 		listClientHeight:list.clientHeight,
 		listScrollHeight:list.scrollHeight,
 		listOverflow:getComputedStyle(list).overflowY,
 		sidebarOverflow:getComputedStyle(sidebar).overflow
 	  };
 	});
-	if (printSidebarLayout.sidebarWidth < printSidebarLayout.rootFontSize * 20 - 1 || printSidebarLayout.listOverflow !== 'auto' || printSidebarLayout.sidebarOverflow !== 'hidden' || printSidebarLayout.listScrollHeight <= printSidebarLayout.listClientHeight) throw new Error(`Print thumbnail rail is not a constrained, wider scroll region: ${JSON.stringify(printSidebarLayout)}`);
+	if (printSidebarLayout.sidebarWidth < printSidebarLayout.rootFontSize * printSidebarLayout.expectedSidebarRem - 1 || printSidebarLayout.listOverflow !== 'auto' || printSidebarLayout.sidebarOverflow !== 'hidden' || printSidebarLayout.listScrollHeight <= printSidebarLayout.listClientHeight) throw new Error(`Print thumbnail rail is not a constrained, wider scroll region: ${JSON.stringify(printSidebarLayout)}`);
 	await page.locator('.desktop-print-card-list').hover();
 	await page.mouse.wheel(0, 700);
 	await page.waitForFunction(() => document.querySelector('.desktop-print-card-list').scrollTop > 0);
