@@ -1509,6 +1509,34 @@ function manaEditorValue(key, textObject) {
 	return state && state.parsed === parsedText ? state.raw : parsedText;
 }
 
+function keywordReminderApi() {
+	return typeof CardConjurerKeywordReminders !== 'undefined' ? CardConjurerKeywordReminders : null;
+}
+
+function keywordReminderContext() {
+	return {
+		typeLine:card.text?.type?.text || '',
+		subType:String(card.text?.type?.text || '').split(/[—-]/)[1] || '',
+		manaCost:card.text?.mana?.text || '',
+		rulesText:card.text?.rules?.text || ''
+	};
+}
+
+function updateKeywordOccurrenceControls(input, textObject) {
+	var api = keywordReminderApi();
+	var host = input?.closest('.text-field-card')?.querySelector('.keyword-occurrence-controls');
+	if (!api || !host || !textObject) return;
+	api.renderOccurrenceControls(host, input, textObject, function() {
+		textEdited('rules', input.value);
+		updateKeywordOccurrenceControls(input, textObject);
+	});
+}
+
+function rulesTextInputEdited(input, textObject, optionalPlaceholder=false) {
+	textEdited('rules', input.value, optionalPlaceholder);
+	updateKeywordOccurrenceControls(input, textObject);
+}
+
 function createTextFieldCard(key, textObject, optionalPlaceholder) {
 	var field = document.createElement('section');
 	field.className = 'text-field-card';
@@ -1565,10 +1593,18 @@ function createTextFieldCard(key, textObject, optionalPlaceholder) {
 			manaInputState[key] = {raw:rawValue, parsed:parsedValue};
 			textEdited(key, parsedValue, optionalPlaceholder);
 		};
+	} else if (key === 'rules') {
+		input.oninput = () => rulesTextInputEdited(input, textObject, optionalPlaceholder);
 	} else {
 		input.oninput = () => textEdited(key, input.value, optionalPlaceholder);
 	}
 	field.appendChild(input);
+	if (key === 'rules' && !optionalPlaceholder) {
+		var keywordControls = document.createElement('div');
+		keywordControls.className = 'keyword-occurrence-controls hidden';
+		field.appendChild(keywordControls);
+		updateKeywordOccurrenceControls(input, textObject);
+	}
 	var accessoryHTML = activeCardSpecificTextTools?.fieldAccessories?.[key];
 	if (accessoryHTML && !optionalPlaceholder) {
 		var accessory = document.createElement('div');
@@ -6654,6 +6690,13 @@ const savedItalicizeReminderText = localStorage.getItem('italicize-reminder-text
 hideReminderTextInput.checked = savedHideReminderText === 'true';
 italicizeReminderTextInput.checked = savedItalicizeReminderText === null ? true : savedItalicizeReminderText === 'true';
 if (savedItalicizeReminderText === null) localStorage.setItem('italicize-reminder-text', 'true');
+keywordReminderApi()?.initializeManager();
+document.addEventListener('cardconjurer:keywords-changed', function() {
+	var rulesInput = document.querySelector('.text-field-input[data-text-key="rules"]');
+	var rulesTextObject = card.text?.rules;
+	if (!rulesInput || !rulesTextObject) return;
+	rulesTextInputEdited(rulesInput, rulesTextObject);
+});
 
 // auto load frame version (user defaults)
 if (!localStorage.getItem('autoLoadFrameVersion')) {
