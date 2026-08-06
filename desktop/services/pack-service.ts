@@ -8,6 +8,7 @@ import type {StagedPackTarget} from './update-transaction-store.js';
 
 const PACK_DETAILS: Record<PackId, {displayName: string; description: string; required: boolean}> = {
   'set-symbols': {displayName: 'Set Symbols', description: 'Official and bundled custom set-symbol families.', required: true},
+  keywords: {displayName: 'Keywords', description: 'Built-in keyword recognition, examples, and reminder text.', required: true},
   standard: {displayName: 'Standard', description: 'Modern frames and every linked standard variant.', required: true},
   'booster-fun': {displayName: 'Booster Fun', description: 'Showcase, borderless, and special-treatment frames.', required: false},
   tokens: {displayName: 'Tokens', description: 'Token, emblem, marker, and helper-card frames.', required: false},
@@ -15,7 +16,7 @@ const PACK_DETAILS: Record<PackId, {displayName: string; description: string; re
   legacy: {displayName: 'Legacy', description: 'Classic, old-border, and historical frame families.', required: false},
   custom: {displayName: 'Custom', description: 'Bundled experimental and future user-imported frame families.', required: false}
 };
-const REQUIRED_PACK_IDS: PackId[] = ['set-symbols', 'standard'];
+const REQUIRED_PACK_IDS: PackId[] = ['set-symbols', 'keywords', 'standard'];
 const RELEASES_URL = 'https://api.github.com/repos/lawlordev/cardconjurer/releases?per_page=30';
 // GitHub Releases accepts individual assets up to 2 GiB. Keep the client aligned
 // with that immutable-source boundary so legacy 1 GiB pack parts remain usable.
@@ -82,8 +83,8 @@ export class PackService {
   #installedPack(id: PackId): InstalledPack | null {
     const installed = this.#state.packs.find((item) => item.id === id) || null;
     if (!installed || !existsSync(installed.sourceRoot)) return null;
-    const requiredDirectory = id === 'set-symbols' ? 'img/setSymbols' : 'img/frames';
-    if (!existsSync(path.join(installed.sourceRoot, requiredDirectory))) return null;
+    const requiredPayload = id === 'set-symbols' ? 'img/setSymbols' : id === 'keywords' ? 'js/mseKeywordCatalog.js' : 'img/frames';
+    if (!existsSync(path.join(installed.sourceRoot, requiredPayload))) return null;
     const root = path.resolve(installed.sourceRoot);
     const managedRoot = path.resolve(this.#packRoot);
     if (root.startsWith(`${managedRoot}${path.sep}`)) {
@@ -143,17 +144,17 @@ export class PackService {
       });
       value = {schemaVersion: 2, packs};
     } else if (raw?.schemaVersion === 2 && Array.isArray(raw.packs)) value = raw;
-    else throw new Error('The frame-pack catalog is invalid.');
+    else throw new Error('The content-pack catalog is invalid.');
     const seen = new Set<PackId>();
     for (const pack of value.packs) {
-      if (!PACK_IDS.includes(pack.id) || seen.has(pack.id) || !Array.isArray(pack.archives) || pack.archives.length < 1) throw new Error('The frame-pack catalog contains an unsafe entry.');
+      if (!PACK_IDS.includes(pack.id) || seen.has(pack.id) || !Array.isArray(pack.archives) || pack.archives.length < 1) throw new Error('The content-pack catalog contains an unsafe entry.');
       seen.add(pack.id);
       for (const archive of pack.archives) {
-        if (!/^https:\/\//.test(archive.url) || !/^[a-f0-9]{64}$/i.test(archive.sha256)) throw new Error('The frame-pack catalog contains an unsafe entry.');
-        if (archive.archiveBytes < 1 || archive.archiveBytes > MAX_ARCHIVE_BYTES) throw new Error('A frame-pack archive exceeds the application safety limit.');
+        if (!/^https:\/\//.test(archive.url) || !/^[a-f0-9]{64}$/i.test(archive.sha256)) throw new Error('The content-pack catalog contains an unsafe entry.');
+        if (archive.archiveBytes < 1 || archive.archiveBytes > MAX_ARCHIVE_BYTES) throw new Error('A content-pack archive exceeds the application safety limit.');
       }
       const declaredArchiveBytes = pack.archives.reduce((total, archive) => total + archive.archiveBytes, 0);
-      if (pack.archiveBytes !== declaredArchiveBytes || pack.archiveBytes > MAX_PACK_BYTES || pack.installedBytes < 1 || pack.installedBytes > MAX_EXPANDED_BYTES) throw new Error('A frame pack exceeds the application safety limit.');
+      if (pack.archiveBytes !== declaredArchiveBytes || pack.archiveBytes > MAX_PACK_BYTES || pack.installedBytes < 1 || pack.installedBytes > MAX_EXPANDED_BYTES) throw new Error('A content pack exceeds the application safety limit.');
     }
     return value;
   }
@@ -161,13 +162,13 @@ export class PackService {
   async refreshCatalog(): Promise<PackStatus[]> {
     if (this.#developmentRoot || this.#seedRoot) return this.list();
     const response = await fetch(RELEASES_URL, {headers: {'Accept': 'application/vnd.github+json', 'User-Agent': 'Set-Conjurer'}});
-    if (!response.ok) throw new Error(`Could not check frame packs (${response.status}).`);
+    if (!response.ok) throw new Error(`Could not check content packs (${response.status}).`);
     const releases = await response.json() as Array<{draft?: boolean; assets?: Array<{name: string; browser_download_url: string}>}>;
     const assets = releases.filter((release) => !release.draft).flatMap((release) => release.assets || []);
     const asset = assets.find((item) => item.name === 'frame-pack-catalog-v3.json') || assets.find((item) => item.name === 'frame-packs.json');
-    if (!asset) throw new Error('No frame-pack catalog is published for this build yet.');
+    if (!asset) throw new Error('No content-pack catalog is published for this build yet.');
     const catalogResponse = await fetch(asset.browser_download_url, {headers: {'User-Agent': 'Set-Conjurer'}});
-    if (!catalogResponse.ok) throw new Error('Could not download the frame-pack catalog.');
+    if (!catalogResponse.ok) throw new Error('Could not download the content-pack catalog.');
     const value = this.#validateCatalog(await catalogResponse.json());
     this.#catalog = value;
     const destination = path.join(this.#packRoot, 'catalog.json');
@@ -209,7 +210,7 @@ export class PackService {
             const received = operation.networkDone + priorArchives + receivedBytes;
             const totalWork = operation.networkTotal + operation.expandedTotal;
             const percent = totalWork ? (received + operation.expandedDone + limits.expandedBytes) / totalWork * 99 : 99;
-            this.#emit({phase: 'downloading', percent, receivedBytes: received, totalBytes: operation.networkTotal, message: 'Downloading selected frame packs…'});
+            this.#emit({phase: 'downloading', percent, receivedBytes: received, totalBytes: operation.networkTotal, message: 'Downloading selected packs…'});
           }
         });
         await extractArchive(archivePath, temporary, limits, (expandedBytes) => {
@@ -217,7 +218,7 @@ export class PackService {
           const received = operation.networkDone + priorArchives + archive.archiveBytes;
           const totalWork = operation.networkTotal + operation.expandedTotal;
           const percent = totalWork ? (received + expanded) / totalWork * 99 : 99;
-          this.#emit({phase: 'extracting', percent, receivedBytes: received, totalBytes: operation.networkTotal, message: 'Installing selected frame packs…'});
+          this.#emit({phase: 'extracting', percent, receivedBytes: received, totalBytes: operation.networkTotal, message: 'Installing selected packs…'});
         });
       }
       if (limits.expandedBytes < 1) throw new Error(`${PACK_DETAILS[id].displayName} did not contain any files.`);
@@ -254,7 +255,7 @@ export class PackService {
       networkTotal: catalogs.reduce((total, pack) => total + pack.archiveBytes, 0),
       expandedTotal: catalogs.reduce((total, pack) => total + pack.installedBytes, 0)
     };
-    this.#emit({phase: 'preparing', percent: 0, receivedBytes: 0, totalBytes: operation.networkTotal, message: 'Preparing selected frame packs…'});
+    this.#emit({phase: 'preparing', percent: 0, receivedBytes: 0, totalBytes: operation.networkTotal, message: 'Preparing selected packs…'});
 
     for (const id of requested) {
       const existing = this.#sourceFor(id);
@@ -267,7 +268,7 @@ export class PackService {
       const root = await this.#installRemote(id, catalog, operation);
       this.#activate(id, catalog.version, root);
     }
-    this.#emit({phase: 'activating', percent: 100, receivedBytes: operation.networkTotal, totalBytes: operation.networkTotal, message: 'Frame packs are ready'});
+    this.#emit({phase: 'activating', percent: 100, receivedBytes: operation.networkTotal, totalBytes: operation.networkTotal, message: 'Packs are ready'});
     return this.list();
   }
 
@@ -330,8 +331,10 @@ export class PackService {
 
   resolvePackAsset(relativePath: string): string | null {
     const clean = relativePath.replace(/^\/+/, '');
-    if (!clean.startsWith('img/frames/') && !clean.startsWith('img/setSymbols/')) return null;
+    if (!clean.startsWith('img/frames/') && !clean.startsWith('img/setSymbols/') && clean !== 'js/mseKeywordCatalog.js') return null;
     for (const pack of this.#state.packs) {
+      if (clean === 'js/mseKeywordCatalog.js' && pack.id !== 'keywords') continue;
+      if (clean.startsWith('img/setSymbols/') && pack.id !== 'set-symbols') continue;
       const candidate = path.resolve(pack.sourceRoot, clean);
       const root = path.resolve(pack.sourceRoot);
       if ((candidate === root || candidate.startsWith(`${root}${path.sep}`)) && existsSync(candidate)) return candidate;

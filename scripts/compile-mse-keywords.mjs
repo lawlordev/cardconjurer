@@ -7,8 +7,19 @@ import {fileURLToPath} from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const vendorPath = path.join(root, 'vendor', 'mse', 'keywords_en');
 const outputPath = path.join(root, 'js', 'mseKeywordCatalog.js');
-const sourceUrl = 'https://raw.githubusercontent.com/MagicSetEditorPacks/Full-Magic-Pack/main/data/magic.mse-game/keywords_en';
-const commitsUrl = 'https://api.github.com/repos/MagicSetEditorPacks/Full-Magic-Pack/commits?path=data/magic.mse-game/keywords_en&per_page=1';
+const sourceBranch = 'develop';
+const sourceUrl = `https://raw.githubusercontent.com/MagicSetEditorPacks/Full-Magic-Pack/${sourceBranch}/data/magic.mse-game/keywords_en`;
+const commitsUrl = `https://api.github.com/repos/MagicSetEditorPacks/Full-Magic-Pack/commits?sha=${sourceBranch}&path=data/magic.mse-game/keywords_en&per_page=1`;
+
+// Full Magic Pack's develop branch removed Worthy while its printed card still
+// uses the mechanic. Retain the reviewed main-branch definition alongside the
+// develop catalog instead of modifying the vendored upstream source.
+const supplementalKeywords = [{
+	keyword: 'worthy',
+	match: 'worthy',
+	mode: 'expert',
+	reminder: "A creature is worthy if it's a legendary non-Villain that's red and/or white."
+}];
 
 function argument(name) {
 	const index = process.argv.indexOf(name);
@@ -105,7 +116,24 @@ const exampleOverrides = {
 	'junk-token': 'Junk token',
 	'becomes-plotted': 'becomes plotted',
 	'lander-token': 'Lander token',
-	'mutagen-tokens': 'Mutagen tokens'
+	'mutagen-tokens': 'Mutagen tokens',
+	disappear: 'Disappear — When this creature enters, if a permanent left the battlefield under your control this turn, create a 1/1 black Ninja creature token.',
+	recruit: 'When this creature enters, recruit.',
+	storied: 'Storied',
+	'hone-counters': 'Put a hone counter on each Equipment you control.',
+	rulebreaker: 'Rulebreaker — A deck with this commander can have any land cards.',
+	'heartwood-token': 'Create a Heartwood token.'
+};
+
+const definitionOverrides = {
+	disappear: {
+		rulesRaw: 'Disappear — [effect], if a permanent left the battlefield under your control this turn.'
+	},
+	'hone-counters': {placement:'line-end'},
+	'heartwood-token': {
+		reminderRaw: '{if param1.value == "ns" then "They’re red and green artifacts" else "It’s a red and green artifact"} with "[T]: Add [R] or [G]."',
+		placement:'line-end'
+	}
 };
 
 function displayPatternFor(match) {
@@ -129,6 +157,11 @@ function exampleFor(match) {
 
 function buildCatalog(source, metadata = {}) {
 	const parsed = parseBlocks(source);
+	const upstreamKeywordCount = parsed.keywords.length;
+	for (const supplemental of supplementalKeywords) {
+		const alreadyPresent = parsed.keywords.some((keyword) => keyword.keyword === supplemental.keyword && keyword.match === supplemental.match);
+		if (!alreadyPresent) parsed.keywords.push(supplemental);
+	}
 	const ids = new Map();
 	const keywords = parsed.keywords.map((keyword) => {
 		const base = slug(keyword.keyword);
@@ -136,7 +169,7 @@ function buildCatalog(source, metadata = {}) {
 		ids.set(base, ordinal);
 		const id = ordinal === 1 ? base : `${base}-${ordinal}`;
 		const runtimeMatch = runtimeMatchOverrides[id] || keyword.match;
-		return {
+		const definition = {
 			id,
 			name: keyword.keyword,
 			mode: keyword.mode,
@@ -149,15 +182,18 @@ function buildCatalog(source, metadata = {}) {
 			placement: keyword.mode === 'action' || String(keyword.reminder || '').includes('handle_action_rt') ? 'line-end' : 'inline',
 			builtIn: true
 		};
+		return {...definition, ...(definitionOverrides[id] || {})};
 	});
 	return {
 		source: {
 			repository: 'MagicSetEditorPacks/Full-Magic-Pack',
 			path: 'data/magic.mse-game/keywords_en',
-			branch: 'main',
-			commit: metadata.commit || '71b382d5da74efd533ae25a23ac324a80c3dfeb4',
+			branch: sourceBranch,
+			commit: metadata.commit || 'f1891ee0ed0038d233760d2f5b779923579c38bb',
 			sha256: crypto.createHash('sha256').update(source).digest('hex'),
-			syncedAt: metadata.syncedAt || '2026-08-05'
+			syncedAt: metadata.syncedAt || '2026-08-05',
+			upstreamKeywordCount,
+			supplementalDefinitions: supplementalKeywords.map((keyword) => keyword.keyword)
 		},
 		modes: parsed.modes.map((mode) => ({
 			name: mode.name,
@@ -211,8 +247,9 @@ if (sync) {
 }
 
 const catalog = buildCatalog(source, {commit});
-if (catalog.keywords.length !== 368) throw new Error(`Expected 368 MSE keywords, found ${catalog.keywords.length}.`);
-if (catalog.keywords.filter((keyword) => keyword.reminderRaw).length !== 308) throw new Error('Expected 308 non-empty MSE reminder definitions.');
+if (catalog.source.upstreamKeywordCount !== 373) throw new Error(`Expected 373 upstream MSE keywords, found ${catalog.source.upstreamKeywordCount}.`);
+if (catalog.keywords.length !== 374) throw new Error(`Expected 374 built-in keywords, found ${catalog.keywords.length}.`);
+if (catalog.keywords.filter((keyword) => keyword.reminderRaw).length !== 312) throw new Error('Expected 312 non-empty reminder definitions.');
 const output = serialize(catalog);
 if (check) {
 	const existing = await fs.readFile(outputPath, 'utf8');

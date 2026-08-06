@@ -145,7 +145,7 @@ async function registerApplicationProtocol(appRoot: string): Promise<void> {
     const url = new URL(request.url);
     if (url.hostname === 'app') {
       const relative = decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname);
-      const isPackAsset = relative.startsWith('/img/frames/') || relative.startsWith('/img/setSymbols/');
+      const isPackAsset = relative.startsWith('/img/frames/') || relative.startsWith('/img/setSymbols/') || relative === '/js/mseKeywordCatalog.js';
       let target = isPackAsset ? packs?.resolvePackAsset(relative) || null : null;
       if (!target) target = containedPath(appRoot, relative);
       if (!target || !existsSync(target) || statSync(target).isDirectory()) return new Response('Not found', {status: 404});
@@ -259,7 +259,7 @@ function registerIPC(): void {
 
   ipcMain.handle(IPC.appInfo, trusted(() => ({name: 'Set Conjurer', version: app.getVersion(), platform: process.platform, arch: process.arch, channel: updates?.channel() || 'stable'})));
   ipcMain.handle(IPC.onboardingStatus, trusted(() => readOnboardingComplete()));
-  ipcMain.handle(IPC.onboardingComplete, trusted(() => { if (!packs?.hasRequiredPacks()) throw new Error('Install Set Symbols and Standard before continuing.'); writeOnboardingComplete(); }));
+  ipcMain.handle(IPC.onboardingComplete, trusted(() => { if (!packs?.hasRequiredPacks()) throw new Error('Install Set Symbols, Keywords, and Standard before continuing.'); writeOnboardingComplete(); }));
   ipcMain.handle(IPC.storageLoad, trusted(() => storage!.load()));
   ipcMain.handle(IPC.storageSave, trusted((_event, value) => storage!.save(saveStateSchema.parse(value))));
 	ipcMain.handle(IPC.storageApplyMutation, trusted((_event, value) => storage!.applyMutation(workspaceMutationSchema.parse(value))));
@@ -289,8 +289,8 @@ function registerIPC(): void {
   ipcMain.handle(IPC.updateSetChannel, trusted((_event, channel: unknown) => updates!.setChannel(channelSchema.parse(channel))));
   ipcMain.handle(IPC.externalOpen, trusted(async (_event, value: unknown) => { await shell.openExternal(externalUrlSchema.parse(value)); }));
   ipcMain.handle(IPC.reportIssue, trusted(async () => {
-    const packSummary = packs!.list().filter((pack) => pack.installed).map((pack) => `${pack.displayName} ${pack.installedVersion}`).join(', ') || 'Standard not installed';
-    const body = [`App: ${app.getVersion()}`, `OS: ${process.platform} ${process.arch}`, `Frame packs: ${packSummary}`, '', 'What happened?', ''].join('\n');
+    const packSummary = packs!.list().filter((pack) => pack.installed).map((pack) => `${pack.displayName} ${pack.installedVersion}`).join(', ') || 'Required packs not installed';
+    const body = [`App: ${app.getVersion()}`, `OS: ${process.platform} ${process.arch}`, `Content packs: ${packSummary}`, '', 'What happened?', ''].join('\n');
     const url = `https://github.com/lawlordev/cardconjurer/issues/new?title=${encodeURIComponent('[Set Conjurer] ')}&body=${encodeURIComponent(body)}`;
     await shell.openExternal(url);
   }));

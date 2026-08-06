@@ -84,7 +84,7 @@ export class UpdateCoordinator {
     const includesApp = appItems.length > 0;
     const totalBytes = items.reduce((total, item) => total + item.bytes, 0);
     return this.#emit({
-      phase: 'available', progress: 0, message: includesApp && packItems.length ? 'App and frame-pack updates are available' : includesApp ? appState.message : `${packItems.length} installed frame-pack update${packItems.length === 1 ? '' : 's'} available`,
+      phase: 'available', progress: 0, message: includesApp && packItems.length ? 'App and content-pack updates are available' : includesApp ? appState.message : `${packItems.length} installed content-pack update${packItems.length === 1 ? '' : 's'} available`,
       availableVersion: appState.availableVersion, includesApp, packIds: packUpdates.map((pack) => pack.id),
       transactionId: null, totalBytes, completedBytes: 0, lastCheckedAt: checkedAt, recoverable: false, items
     });
@@ -101,7 +101,7 @@ export class UpdateCoordinator {
       packIds: [...plan.packIds],
       snapshotPath
     });
-    this.#emit({...plan, phase: 'downloading', transactionId: transaction.id, message: 'Downloading app and installed frame-pack updates…', items: plan.items.map((item) => ({...item, phase: 'downloading'}))});
+    this.#emit({...plan, phase: 'downloading', transactionId: transaction.id, message: 'Downloading app and installed content-pack updates…', items: plan.items.map((item) => ({...item, phase: 'downloading'}))});
     try {
       const [appState, stagedPacks] = await Promise.all([
         plan.includesApp ? this.#appUpdates.begin() : Promise.resolve(null),

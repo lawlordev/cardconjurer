@@ -86,16 +86,20 @@ const packContractPatterns = [
 export function classifyPaths(inputPaths, graph = buildOwnershipGraph()) {
   const paths = [...new Set(inputPaths.map(normalize).filter(Boolean))];
   const packs = new Set();
+  const assetPacks = new Set();
   const reasons = [];
   let app = false;
   let packageLane = false;
   let packContract = false;
-  let materializePackAssets = false;
   let unknownPackPath = false;
 
   const selectPacks = (ids, reason) => {
     ids.forEach((id) => packs.add(id));
     reasons.push(reason);
+  };
+  const selectAssetPacks = (ids, reason) => {
+    ids.forEach((id) => assetPacks.add(id));
+    selectPacks(ids, reason);
   };
 
   for (const file of paths) {
@@ -105,19 +109,21 @@ export function classifyPaths(inputPaths, graph = buildOwnershipGraph()) {
       continue;
     }
     if (file.startsWith('img/setSymbols/')) {
-      materializePackAssets = true;
-      selectPacks(['set-symbols'], `${file}: set-symbol payload`);
+      selectAssetPacks(['set-symbols'], `${file}: set-symbol payload`);
+      continue;
+    }
+    if (file === 'js/mseKeywordCatalog.js') {
+      selectAssetPacks(['keywords'], `${file}: keyword payload`);
       continue;
     }
     if (file.startsWith('img/frames/')) {
-      materializePackAssets = true;
       const matching = Object.entries(graph.prefixConsumers)
         .filter(([prefix]) => file.startsWith(prefix))
         .flatMap(([, ids]) => ids);
-      if (matching.length) selectPacks(matching, `${file}: owned frame payload`);
+      if (matching.length) selectAssetPacks(matching, `${file}: owned frame payload`);
       else {
         unknownPackPath = true;
-        selectPacks(graph.packIds, `${file}: unmapped frame payload; fail closed`);
+        selectAssetPacks(graph.packIds, `${file}: unmapped frame payload; fail closed`);
       }
       continue;
     }
@@ -131,6 +137,9 @@ export function classifyPaths(inputPaths, graph = buildOwnershipGraph()) {
       app = true;
       selectPacks(graph.packIds, `${file}: shared frame metadata/runtime`);
     }
+    if (file === 'scripts/compile-mse-keywords.mjs' || file.startsWith('vendor/mse/')) {
+      selectPacks(['keywords'], `${file}: keyword source/tooling`);
+    }
     if (packContractPatterns.some((pattern) => pattern.test(file))) {
       packContract = true;
       selectPacks(graph.packIds, `${file}: pack contract/tooling`);
@@ -143,7 +152,8 @@ export function classifyPaths(inputPaths, graph = buildOwnershipGraph()) {
     app,
     package: packageLane,
     packContract,
-    materializePackAssets,
+    materializePackAssets: assetPacks.size > 0,
+    assetPacks: [...assetPacks].sort(),
     allPacks: packs.size === graph.packIds.length,
     unknownPackPath,
     packs: [...packs].sort(),
@@ -157,9 +167,10 @@ export function sparsePatternsForPacks(packIds, graph = buildOwnershipGraph()) {
   const patterns = new Set();
   for (const pack of graph.packs) if (selected.has(pack.id)) {
     pack.sources.forEach((source) => patterns.add(`/${source}`));
-    pack.prefixes.forEach((prefix) => patterns.add(`/${prefix}**`));
+    pack.prefixes.forEach((prefix) => patterns.add(prefix.endsWith('/') ? `/${prefix}**` : `/${prefix}`));
   }
   if (selected.has('set-symbols')) patterns.add('/img/setSymbols/**');
+  if (selected.has('keywords')) patterns.add('/js/mseKeywordCatalog.js');
   graph.baseRuntimeAssets.forEach((asset) => patterns.delete(`/${asset}`));
   return [...patterns].sort();
 }

@@ -75,7 +75,9 @@ const packFiles = new Map();
 for (const [id, directories] of groups) {
   const files = id === 'set-symbols'
     ? walk(path.join(root, 'img', 'setSymbols'))
-    : [...directories].flatMap((directory) => { const target = path.join(root, 'img', 'frames', directory); return statSafe(target) ? [path.relative(root, target)] : (() => { try { return walk(target); } catch { return []; } })(); });
+    : id === 'keywords'
+      ? ['js/mseKeywordCatalog.js']
+      : [...directories].flatMap((directory) => { const target = path.join(root, 'img', 'frames', directory); return statSafe(target) ? [path.relative(root, target)] : (() => { try { return walk(target); } catch { return []; } })(); });
   packFiles.set(id, new Set(files.filter((file) => !BASE_RUNTIME_ASSETS.has(file.replace(/\\/g, '/')))));
 }
 
@@ -139,4 +141,4 @@ catalogV3.packs.sort((left, right) => left.id.localeCompare(right.id));
 writeFileSync(path.join(output, 'frame-packs.json'), `${JSON.stringify(catalog, null, 2)}\n`);
 writeFileSync(path.join(output, 'frame-pack-catalog-v3.json'), `${JSON.stringify(catalogV3, null, 2)}\n`);
 writeFileSync(path.join(output, 'SHA256SUMS'), `${checksums.join('\n')}\n`);
-console.log(`Built ${archiveCount} immutable archives for ${catalog.packs.length} frame packs.`);
+console.log(`Built ${archiveCount} immutable archives for ${catalog.packs.length} content packs.`);

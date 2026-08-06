@@ -75,8 +75,8 @@
 		<div id='textbox-editor' class='textbox-editor layout-drawer'>
 			<div class='textbox-editor-heading'>
 				<h2 id='textbox-editor-title' class='textbox-editor-title'>Text Layout</h2>
+				<button type='button' class='textbox-editor-close' aria-label='Close text layout'>×</button>
 			</div>
-			<button type='button' class='textbox-editor-close' aria-label='Close text layout' onclick='this.parentElement.classList.remove("opened");'>×</button>
 			<div class='layout-drawer-body'>
 				<section class='layout-control-group'>
 					<div class='layout-control-heading'>
@@ -125,15 +125,15 @@
 		<div id='card-specific-layout-drawer' class='textbox-editor layout-drawer' role='dialog' aria-modal='true' aria-labelledby='card-specific-layout-title'>
 			<div class='textbox-editor-heading'>
 				<h2 id='card-specific-layout-title' class='textbox-editor-title'>Card Layout</h2>
+				<button type='button' class='textbox-editor-close' aria-label='Close card layout'>×</button>
 			</div>
-			<button type='button' class='textbox-editor-close' aria-label='Close card layout' onclick='closeCardSpecificLayoutDrawer();'>×</button>
 			<div id='card-specific-layout-body' class='layout-drawer-body'></div>
 		</div>
 		<div id='art-layout-drawer' class='textbox-editor layout-drawer art-layout-drawer' role='dialog' aria-modal='true' aria-labelledby='art-layout-title' aria-hidden='true'>
 			<div class='textbox-editor-heading'>
 				<h2 id='art-layout-title' class='textbox-editor-title'>Art Layout</h2>
+				<button type='button' class='textbox-editor-close' aria-label='Close art layout'>×</button>
 			</div>
-			<button type='button' class='textbox-editor-close' aria-label='Close art layout' onclick='closeArtLayoutDrawer();'>×</button>
 			<div class='layout-drawer-body'>
 				<section class='layout-control-group'>
 					<div class='layout-control-heading'>
@@ -168,8 +168,8 @@
 		<div id='watermark-layout-drawer' class='textbox-editor layout-drawer watermark-layout-drawer' role='dialog' aria-modal='true' aria-labelledby='watermark-layout-title' aria-hidden='true'>
 			<div class='textbox-editor-heading'>
 				<h2 id='watermark-layout-title' class='textbox-editor-title'>Watermark Layout</h2>
+				<button type='button' class='textbox-editor-close' aria-label='Close watermark layout'>×</button>
 			</div>
-			<button type='button' class='textbox-editor-close' aria-label='Close watermark layout' onclick='closeWatermarkLayoutDrawer();'>×</button>
 			<div class='layout-drawer-body'>
 				<section class='layout-control-group'>
 					<div class='layout-control-heading'>
@@ -196,8 +196,8 @@
 		<div id='serial-layout-drawer' class='textbox-editor layout-drawer serial-layout-drawer' role='dialog' aria-modal='true' aria-labelledby='serial-layout-title' aria-hidden='true'>
 			<div class='textbox-editor-heading'>
 				<h2 id='serial-layout-title' class='textbox-editor-title'>Serialized Card Layout</h2>
+				<button type='button' class='textbox-editor-close' aria-label='Close serialized card layout'>×</button>
 			</div>
-			<button type='button' class='textbox-editor-close' aria-label='Close serialized card layout' onclick='closeSerialLayoutDrawer();'>×</button>
 			<div class='layout-drawer-body'>
 				<section class='layout-control-group'>
 					<div class='layout-control-heading'>
@@ -420,8 +420,8 @@
 						<div id='formatting-help-drawer' class='textbox-editor formatting-help-drawer' role='dialog' aria-labelledby='formatting-help-title'>
 							<div class='textbox-editor-heading'>
 								<h2 id='formatting-help-title' class='textbox-editor-title'>Formatting Help</h2>
+								<button type='button' class='textbox-editor-close' aria-label='Close formatting help'>×</button>
 							</div>
-							<button type='button' class='textbox-editor-close' aria-label='Close formatting help' onclick='this.parentElement.classList.remove("opened");'>×</button>
 							<div class='formatting-help-body'>
 								<h5 class='margin-top'>Text Codes:</h5>
 								<div class='text-codes margin-bottom padding'>
@@ -487,8 +487,8 @@
 						<div id='keyword-manager-drawer' class='textbox-editor layout-drawer keyword-manager-drawer' role='dialog' aria-modal='true' aria-labelledby='keyword-manager-title' aria-hidden='true'>
 							<div class='textbox-editor-heading'>
 								<h2 id='keyword-manager-title' class='textbox-editor-title'>Keywords</h2>
+								<button type='button' class='textbox-editor-close' aria-label='Close keyword manager'>×</button>
 							</div>
-							<button type='button' class='textbox-editor-close' aria-label='Close keyword manager'>×</button>
 							<div class='layout-drawer-body keyword-manager-body'>
 								<section class='keyword-library-section'>
 									<div class='keyword-library-heading'>
@@ -521,8 +521,8 @@
 						<div id='keyword-help-drawer' class='textbox-editor formatting-help-drawer markdown-help-drawer keyword-help-drawer' role='dialog' aria-modal='true' aria-labelledby='keyword-help-title' aria-hidden='true'>
 							<div class='textbox-editor-heading'>
 								<h2 id='keyword-help-title' class='textbox-editor-title'>Keyword Help</h2>
+								<button type='button' class='textbox-editor-close' aria-label='Close keyword help'>×</button>
 							</div>
-							<button type='button' class='textbox-editor-close' aria-label='Close keyword help'>×</button>
 							<div class='formatting-help-body keyword-help-body'>
 								<section class='keyword-help-section'>
 									<h3>Build a custom keyword</h3>
@@ -884,8 +884,8 @@
 			<div id='art-search-drawer' class='textbox-editor layout-drawer card-search-drawer art-search-drawer' role='dialog' aria-modal='true' aria-labelledby='art-search-title' aria-hidden='true'>
 				<div class='textbox-editor-heading'>
 					<h2 id='art-search-title' class='textbox-editor-title'>Search Card Art</h2>
+					<button type='button' class='textbox-editor-close' aria-label='Close art search'>×</button>
 				</div>
-				<button type='button' class='textbox-editor-close' aria-label='Close art search' onclick='closeArtSearchDrawer();'>×</button>
 				<form class='layout-drawer-body card-search-drawer-body' onsubmit='event.preventDefault(); searchScryfallArt();'>
 					<label class='sets-search card-search-query'>
 						<span class='sr-only'>Search Scryfall by card name</span>
@@ -912,8 +912,8 @@
 				<div id='markdown-help-drawer' class='textbox-editor formatting-help-drawer markdown-help-drawer' role='dialog' aria-labelledby='markdown-help-title'>
 					<div class='textbox-editor-heading'>
 						<h2 id='markdown-help-title' class='textbox-editor-title'>Markdown Help</h2>
+						<button type='button' class='textbox-editor-close' aria-label='Close markdown help'>×</button>
 					</div>
-					<button type='button' class='textbox-editor-close' aria-label='Close markdown help' onclick='this.parentElement.classList.remove("opened");'>×</button>
 					<div class='formatting-help-body'>
 						<h5 class='margin-top'>Story Formatting</h5>
 						<div class='text-codes padding'>
@@ -934,8 +934,8 @@
 				<div id='card-search-drawer' class='textbox-editor layout-drawer card-search-drawer' role='dialog' aria-modal='true' aria-labelledby='card-search-title' aria-hidden='true'>
 				<div class='textbox-editor-heading'>
 					<h2 id='card-search-title' class='textbox-editor-title'>Import Card</h2>
+					<button type='button' class='textbox-editor-close' aria-label='Close card search'>×</button>
 				</div>
-				<button type='button' class='textbox-editor-close' aria-label='Close card search' onclick='CardConjurerSets.closeCardSearch();'>×</button>
 				<form class='layout-drawer-body card-search-drawer-body' onsubmit='event.preventDefault(); CardConjurerSets.searchScryfallCards();'>
 					<label class='sets-search card-search-query'>
 						<span class='sr-only'>Search Scryfall by card name</span>
@@ -1148,5 +1148,5 @@
 	-->
 
 	</div>
-	<div id='creator-script-manifest' hidden data-scripts='/js/frameRegistry.js?v=20260803-sets-7,/js/setModel.js?v=20260803-sets-7,/js/setStorage.js?v=20260803-sets-7,/js/setFiles.js?v=20260803-sets-7,/js/printModel.js?v=20260803-desktop-1,/js/autoFrame.js?v=20260803-sets-7,/js/artBounds.js?v=20260804-issue-12-1,/js/layoutNumberControls.js?v=20260805-issue-43-2,/js/mseKeywordCatalog.js?v=20260805-issue-17-2,/js/mseKeywordRuntime.js?v=20260805-issue-17-2,/js/keywordReminders.js?v=20260805-issue-17-2,/js/creator-23.js?v=20260805-issue-17-2,/js/frameSearch.js?v=20260803-sets-7,/js/setWorkspace.js?v=20260804-issue-15-2'></div>
+	<div id='creator-script-manifest' hidden data-scripts='/js/frameRegistry.js?v=20260803-sets-7,/js/setModel.js?v=20260803-sets-7,/js/setStorage.js?v=20260803-sets-7,/js/setFiles.js?v=20260803-sets-7,/js/printModel.js?v=20260803-desktop-1,/js/autoFrame.js?v=20260803-sets-7,/js/artBounds.js?v=20260804-issue-12-1,/js/layoutNumberControls.js?v=20260805-issue-43-2,/js/mseKeywordCatalog.js?v=20260805-issue-17-2,/js/mseKeywordRuntime.js?v=20260805-issue-17-2,/js/keywordReminders.js?v=20260805-issue-17-3,/js/creator-23.js?v=20260805-issue-17-3,/js/frameSearch.js?v=20260803-sets-7,/js/setWorkspace.js?v=20260804-issue-15-2'></div>
 <!-- END OF CONTENT -->

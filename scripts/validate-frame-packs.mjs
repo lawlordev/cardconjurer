@@ -11,7 +11,7 @@ const graph = buildOwnershipGraph();
 const errors = [];
 const literalAssets = new Map();
 for (const pack of graph.packs.filter((item) => selected.includes(item.id))) {
-  if (!pack.sources.length && pack.id !== 'set-symbols') errors.push(`${pack.id}: no frame definition sources were resolved`);
+  if (!pack.sources.length && !['set-symbols', 'keywords'].includes(pack.id)) errors.push(`${pack.id}: no frame definition sources were resolved`);
   for (const source of pack.sources) {
     if (!existsSync(source)) {
       errors.push(`${pack.id}: missing definition source ${source}`);
@@ -44,6 +44,7 @@ if (validateAssets) for (const [asset, consumers] of literalAssets) {
 }
 
 const ownershipPrefixes = graph.packs.filter((item) => selected.includes(item.id)).flatMap((item) => item.prefixes);
-if (validateAssets && !ownershipPrefixes.length && !selected.includes('set-symbols')) errors.push('No ownership-derived asset prefixes were selected.');
-if (errors.length) throw new Error(`Frame-pack validation failed:\n${errors.join('\n')}`);
+if (validateAssets && selected.includes('keywords') && (!exactCaseExists('js/mseKeywordCatalog.js') || statSync('js/mseKeywordCatalog.js').size < 1)) errors.push('keywords: missing or empty js/mseKeywordCatalog.js');
+if (validateAssets && !ownershipPrefixes.length && !selected.some((id) => ['set-symbols', 'keywords'].includes(id))) errors.push('No ownership-derived asset prefixes were selected.');
+if (errors.length) throw new Error(`Content-pack validation failed:\n${errors.join('\n')}`);
 console.log(`Validated ${selected.join(', ')} (${literalAssets.size} literal asset references${validateAssets ? ', assets checked' : ', metadata only'}).`);

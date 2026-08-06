@@ -82,6 +82,7 @@ const config: ForgeConfig = {
       /^\/data\/images(?:\/|$)/,
       excludedFramePayload,
       /^\/img\/setSymbols(?:\/|$)/,
+      /^\/js\/mseKeywordCatalog\.js$/,
       /^\/build(?:\/|$)/,
       /^\/out(?:\/|$)/,
       /^\/launcher(?:-linux|-macos|\.exe|\.sh|\.bat)?$/,

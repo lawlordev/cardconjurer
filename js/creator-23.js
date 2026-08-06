@@ -1513,28 +1513,24 @@ function keywordReminderApi() {
 	return typeof CardConjurerKeywordReminders !== 'undefined' ? CardConjurerKeywordReminders : null;
 }
 
-function keywordReminderContext() {
-	return {
-		typeLine:card.text?.type?.text || '',
-		subType:String(card.text?.type?.text || '').split(/[—-]/)[1] || '',
-		manaCost:card.text?.mana?.text || '',
-		rulesText:card.text?.rules?.text || ''
-	};
+function textFieldSupportsKeywordReminders(key, textObject, optionalPlaceholder=false) {
+	if (optionalPlaceholder || !textObject || textObject.oneLine === true) return false;
+	return !/flavou?r/i.test(String(key || '') + ' ' + String(textObject.name || ''));
 }
 
-function updateKeywordOccurrenceControls(input, textObject) {
+function updateKeywordOccurrenceControls(key, input, textObject) {
 	var api = keywordReminderApi();
 	var host = input?.closest('.text-field-card')?.querySelector('.keyword-occurrence-controls');
 	if (!api || !host || !textObject) return;
 	api.renderOccurrenceControls(host, input, textObject, function() {
-		textEdited('rules', input.value);
-		updateKeywordOccurrenceControls(input, textObject);
+		textEdited(key, input.value);
+		updateKeywordOccurrenceControls(key, input, textObject);
 	});
 }
 
-function rulesTextInputEdited(input, textObject, optionalPlaceholder=false) {
-	textEdited('rules', input.value, optionalPlaceholder);
-	updateKeywordOccurrenceControls(input, textObject);
+function keywordTextInputEdited(key, input, textObject, optionalPlaceholder=false) {
+	textEdited(key, input.value, optionalPlaceholder);
+	updateKeywordOccurrenceControls(key, input, textObject);
 }
 
 function createTextFieldCard(key, textObject, optionalPlaceholder) {
@@ -1593,24 +1589,24 @@ function createTextFieldCard(key, textObject, optionalPlaceholder) {
 			manaInputState[key] = {raw:rawValue, parsed:parsedValue};
 			textEdited(key, parsedValue, optionalPlaceholder);
 		};
-	} else if (key === 'rules') {
-		input.oninput = () => rulesTextInputEdited(input, textObject, optionalPlaceholder);
+	} else if (textFieldSupportsKeywordReminders(key, textObject, optionalPlaceholder)) {
+		input.oninput = () => keywordTextInputEdited(key, input, textObject, optionalPlaceholder);
 	} else {
 		input.oninput = () => textEdited(key, input.value, optionalPlaceholder);
 	}
 	field.appendChild(input);
-	if (key === 'rules' && !optionalPlaceholder) {
-		var keywordControls = document.createElement('div');
-		keywordControls.className = 'keyword-occurrence-controls hidden';
-		field.appendChild(keywordControls);
-		updateKeywordOccurrenceControls(input, textObject);
-	}
 	var accessoryHTML = activeCardSpecificTextTools?.fieldAccessories?.[key];
 	if (accessoryHTML && !optionalPlaceholder) {
 		var accessory = document.createElement('div');
 		accessory.className = 'card-specific-field-accessory';
 		accessory.innerHTML = typeof accessoryHTML === 'function' ? accessoryHTML(key, textObject) : accessoryHTML;
 		field.appendChild(accessory);
+	}
+	if (textFieldSupportsKeywordReminders(key, textObject, optionalPlaceholder)) {
+		var keywordControls = document.createElement('div');
+		keywordControls.className = 'keyword-occurrence-controls hidden';
+		field.appendChild(keywordControls);
+		updateKeywordOccurrenceControls(key, input, textObject);
 	}
 
 	return field;
@@ -6681,7 +6677,25 @@ function toggleHighRes() {
 	drawCard();
 }
 
+function closeTextboxEditorFromControl(button) {
+	var drawer = button?.closest('.textbox-editor');
+	if (!drawer || ['desktop-drawer', 'keyword-manager-drawer', 'keyword-help-drawer'].includes(drawer.id)) return;
+	if (drawer.id === 'card-specific-layout-drawer') return closeCardSpecificLayoutDrawer();
+	if (drawer.id === 'art-layout-drawer') return closeArtLayoutDrawer();
+	if (drawer.id === 'watermark-layout-drawer') return closeWatermarkLayoutDrawer();
+	if (drawer.id === 'serial-layout-drawer') return closeSerialLayoutDrawer();
+	if (drawer.id === 'art-search-drawer') return closeArtSearchDrawer();
+	if (drawer.id === 'card-search-drawer') return CardConjurerSets.closeCardSearch();
+	drawer.classList.remove('opened');
+	if (drawer.hasAttribute('aria-hidden')) drawer.setAttribute('aria-hidden', 'true');
+}
+
 // INITIALIZATION
+
+document.addEventListener('click', function(event) {
+	var closeButton = event.target.closest('.textbox-editor-close');
+	if (closeButton) closeTextboxEditorFromControl(closeButton);
+});
 
 const hideReminderTextInput = document.querySelector('#hide-reminder-text');
 const italicizeReminderTextInput = document.querySelector('#italicize-reminder-text');
@@ -6692,10 +6706,13 @@ italicizeReminderTextInput.checked = savedItalicizeReminderText === null ? true 
 if (savedItalicizeReminderText === null) localStorage.setItem('italicize-reminder-text', 'true');
 keywordReminderApi()?.initializeManager();
 document.addEventListener('cardconjurer:keywords-changed', function() {
-	var rulesInput = document.querySelector('.text-field-input[data-text-key="rules"]');
-	var rulesTextObject = card.text?.rules;
-	if (!rulesInput || !rulesTextObject) return;
-	rulesTextInputEdited(rulesInput, rulesTextObject);
+	document.querySelectorAll('.text-field-card .keyword-occurrence-controls').forEach(function(host) {
+		var field = host.closest('.text-field-card');
+		var key = field?.dataset.textKey;
+		var input = field?.querySelector('.text-field-input');
+		var textObject = key && card.text?.[key];
+		if (key && input && textObject) updateKeywordOccurrenceControls(key, input, textObject);
+	});
 });
 
 // auto load frame version (user defaults)

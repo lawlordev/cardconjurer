@@ -41,6 +41,7 @@ jobs:
       package: ${{ steps.changes.outputs.package }}
       pack_contract: ${{ steps.changes.outputs.pack_contract }}
       materialize_pack_assets: ${{ steps.changes.outputs.materialize_pack_assets }}
+      asset_packs: ${{ steps.changes.outputs.asset_packs }}
       packs: ${{ steps.changes.outputs.packs }}
       unknown_pack_path: ${{ steps.changes.outputs.unknown_pack_path }}
     steps:
@@ -96,10 +97,12 @@ jobs:
       - uses: actions/setup-node@v5
         with: {node-version: 24, cache: npm}
       - if: needs.classify.outputs.materialize_pack_assets == 'true'
-        run: node scripts/materialize-ci-pack-assets.mjs "${{ needs.classify.outputs.packs }}"
+        run: node scripts/materialize-ci-pack-assets.mjs "${{ needs.classify.outputs.asset_packs }}"
       - run: npm ci
       - run: npm run test:packs
-      - run: node scripts/validate-frame-packs.mjs --packs "${{ needs.classify.outputs.packs }}" ${{ needs.classify.outputs.materialize_pack_assets == 'true' && '--assets' || '' }}
+      - run: node scripts/validate-frame-packs.mjs --packs "${{ needs.classify.outputs.packs }}"
+      - if: needs.classify.outputs.materialize_pack_assets == 'true'
+        run: node scripts/validate-frame-packs.mjs --packs "${{ needs.classify.outputs.asset_packs }}" --assets
 
   package:
     needs: classify

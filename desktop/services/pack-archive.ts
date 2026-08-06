@@ -79,34 +79,34 @@ export async function downloadArchive(
       const headers: Record<string, string> = {'User-Agent': USER_AGENT};
       if (offset) headers.Range = `bytes=${offset}-`;
       const response = await fetch(archive.url, {headers});
-      if (!response.body) throw new Error('The frame-pack server returned an empty response.');
+      if (!response.body) throw new Error('The content-pack server returned an empty response.');
 
       if (offset && response.status !== 206) {
         // A server or proxy ignored Range. Restart cleanly so bytes are never duplicated.
         truncateSync(partial, 0);
         offset = 0;
-        if (!response.ok) throw new Error(`Frame-pack download failed (${response.status}).`);
+        if (!response.ok) throw new Error(`Content-pack download failed (${response.status}).`);
       } else if (!response.ok) {
-        throw new Error(`Frame-pack download failed (${response.status}).`);
+        throw new Error(`Content-pack download failed (${response.status}).`);
       }
       if (offset) {
         const contentRange = response.headers.get('content-range');
-        if (!contentRange?.startsWith(`bytes ${offset}-`)) throw new Error('The frame-pack server returned an invalid resume range.');
+        if (!contentRange?.startsWith(`bytes ${offset}-`)) throw new Error('The content-pack server returned an invalid resume range.');
       }
 
       let received = offset;
       const source = Readable.fromWeb(response.body as never);
       source.on('data', (chunk: Buffer) => {
         received += chunk.length;
-        if (received > archive.archiveBytes || received >= options.maxBytes) source.destroy(new Error('The frame-pack download exceeded its safety limit.'));
+        if (received > archive.archiveBytes || received >= options.maxBytes) source.destroy(new Error('The content-pack download exceeded its safety limit.'));
         else options.onProgress({receivedBytes: received, resumedBytes: offset});
       });
       await pipeline(source, createWriteStream(partial, {flags: offset ? 'a' : 'w', mode: 0o600}));
-      if (received !== archive.archiveBytes) throw new Error('The frame pack did not match its declared download size.');
+      if (received !== archive.archiveBytes) throw new Error('The content pack did not match its declared download size.');
       const actual = await hashFile(partial);
       if (actual.toLowerCase() !== archive.sha256.toLowerCase()) {
         truncateSync(partial, 0);
-        throw new Error('The frame pack failed checksum verification.');
+        throw new Error('The content pack failed checksum verification.');
       }
       renameSync(partial, destination);
       return;
@@ -115,13 +115,13 @@ export async function downloadArchive(
       if (!retryable(error) || attempt === RETRY_DELAYS_MS.length - 1) break;
     }
   }
-  throw lastError instanceof Error ? lastError : new Error('The frame-pack download failed.');
+  throw lastError instanceof Error ? lastError : new Error('The content-pack download failed.');
 }
 
 function openZip(filePath: string): Promise<ZipFile> {
   return new Promise((resolve, reject) => {
     yauzl.open(filePath, {lazyEntries: true, validateEntrySizes: true, autoClose: true}, (error, zip) => {
-      if (error || !zip) reject(error || new Error('The frame-pack archive could not be opened.'));
+      if (error || !zip) reject(error || new Error('The content-pack archive could not be opened.'));
       else resolve(zip);
     });
   });
@@ -130,7 +130,7 @@ function openZip(filePath: string): Promise<ZipFile> {
 function entryStream(zip: ZipFile, entry: Entry): Promise<NodeJS.ReadableStream> {
   return new Promise((resolve, reject) => {
     zip.openReadStream(entry, (error, stream) => {
-      if (error || !stream) reject(error || new Error('A frame-pack file could not be read.'));
+      if (error || !stream) reject(error || new Error('A content-pack file could not be read.'));
       else resolve(stream);
     });
   });
@@ -139,7 +139,7 @@ function entryStream(zip: ZipFile, entry: Entry): Promise<NodeJS.ReadableStream>
 function safeEntryName(name: string): string {
   const normalized = name.replace(/\\/g, '/');
   if (!normalized || normalized.startsWith('/') || /^[a-z]:/i.test(normalized) || normalized.split('/').includes('..')) {
-    throw new Error('A frame pack attempted to write outside its install directory.');
+    throw new Error('A content pack attempted to write outside its install directory.');
   }
   return normalized;
 }
@@ -166,10 +166,10 @@ export async function extractArchive(
       void (async () => {
         const normalized = safeEntryName(entry.fileName);
         const unixMode = entry.externalFileAttributes >>> 16;
-        if ((unixMode & 0o170000) === 0o120000) throw new Error('Frame-pack symbolic links are not allowed.');
+        if ((unixMode & 0o170000) === 0o120000) throw new Error('Content-pack symbolic links are not allowed.');
         const target = path.resolve(destinationRoot, normalized);
         const root = path.resolve(destinationRoot);
-        if (target !== root && !target.startsWith(`${root}${path.sep}`)) throw new Error('A frame pack attempted to write outside its install directory.');
+        if (target !== root && !target.startsWith(`${root}${path.sep}`)) throw new Error('A content pack attempted to write outside its install directory.');
         if (/\/$/.test(normalized)) {
           mkdirSync(target, {recursive: true});
           zip.readEntry();
@@ -177,7 +177,7 @@ export async function extractArchive(
         }
         limits.files += 1;
         limits.expandedBytes += entry.uncompressedSize;
-        if (limits.files > limits.maxFiles || limits.expandedBytes > limits.maxExpandedBytes) throw new Error('The frame pack expanded beyond its declared safety limits.');
+        if (limits.files > limits.maxFiles || limits.expandedBytes > limits.maxExpandedBytes) throw new Error('The content pack expanded beyond its declared safety limits.');
         mkdirSync(path.dirname(target), {recursive: true});
         const source = await entryStream(zip, entry);
         await pipeline(source, createWriteStream(target, {flags: 'wx', mode: 0o600}));

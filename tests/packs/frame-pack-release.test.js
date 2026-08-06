@@ -5,12 +5,16 @@ const path = require('node:path');
 
 test('frame-pack releases build from the requested immutable tag', () => {
   const workflow = fs.readFileSync(path.join(__dirname, '../../.github/workflows/release-frame-packs.yaml'), 'utf8');
+  const materializer = fs.readFileSync(path.join(__dirname, '../../scripts/materialize-ci-pack-assets.mjs'), 'utf8');
   assert.match(workflow, /actions\/checkout@v5[\s\S]*?ref: \$\{\{ inputs\.tag \}\}/);
   assert.match(workflow, /materialize-ci-pack-assets\.mjs/);
+  assert.match(materializer, /sparse-checkout', 'add', '--stdin'/);
+  assert.doesNotMatch(materializer, /--no-cone/);
   assert.match(workflow, /validate-frame-packs\.mjs[\s\S]*?--assets/);
   assert.match(workflow, /test -n "\$PREVIOUS_V2"/);
   assert.match(workflow, /test -n "\$PREVIOUS_V3"/);
   assert.match(workflow, /default: false/);
+  assert.match(workflow, /set-symbols,keywords,standard/);
 });
 
 test('frame-pack release archives are split and checked below GitHub limits', () => {
@@ -26,6 +30,7 @@ test('frame-pack release archives are split and checked below GitHub limits', ()
   assert.match(builder, /selectedPackIds/);
   assert.match(builder, /fileMetadata/);
   assert.match(builder, /archives\.push/);
+  assert.match(builder, /id === 'keywords'[\s\S]{0,100}\['js\/mseKeywordCatalog\.js'\]/);
   assert.match(service, /interface CatalogPack .*archives: CatalogArchive\[\]/);
   assert.match(service, /MAX_ARCHIVE_BYTES = 2 \* 1024 \* 1024 \* 1024/);
   assert.match(service, /archive\.archiveBytes > MAX_ARCHIVE_BYTES/);

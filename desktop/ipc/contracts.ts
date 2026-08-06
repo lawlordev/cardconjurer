@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const PACK_IDS = ['set-symbols', 'standard', 'booster-fun', 'tokens', 'basics', 'legacy', 'custom'] as const;
+export const PACK_IDS = ['set-symbols', 'keywords', 'standard', 'booster-fun', 'tokens', 'basics', 'legacy', 'custom'] as const;
 export type PackId = typeof PACK_IDS[number];
 export type ReleaseChannel = 'stable' | 'beta';
 
