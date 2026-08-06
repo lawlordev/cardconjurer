@@ -117,6 +117,160 @@ try {
 
   await page.locator('#creator-menu-tabs .selectable').filter({hasText: /^Text$/}).click();
   const rulesField = page.locator('.text-field-card[data-text-key="rules"]');
+  if (process.env.SET_CONJURER_KEYWORD_E2E === '1') {
+    const defaultWorkflow = await page.evaluate(() => {
+	  const api = window.CardConjurerKeywordReminders;
+	  const source = api.DEFAULT_KEYWORDS.map((item) => item.example).join('\n');
+	  const first = api.applyAll(source);
+	  const second = api.applyAll(first.text);
+	  return {
+		count: api.DEFAULT_KEYWORDS.length,
+		reminderCount: api.DEFAULT_KEYWORDS.filter((item) => item.reminderRaw).length,
+		pseudoCount: api.DEFAULT_KEYWORDS.filter((item) => item.mode === 'pseudo').length,
+		occurrenceCount: first.occurrences.length,
+		changeCount: first.changes.length,
+		formattedCount: first.occurrences.filter((item) => item.hasGeneratedFormatting).length,
+		idempotent: second.text === first.text && second.changes.length === 0
+	  };
+	});
+	if (defaultWorkflow.occurrenceCount !== defaultWorkflow.count || defaultWorkflow.changeCount !== defaultWorkflow.count || defaultWorkflow.formattedCount !== defaultWorkflow.pseudoCount || !defaultWorkflow.idempotent) throw new Error(`Complete MSE catalog workflow failed: ${JSON.stringify(defaultWorkflow)}`);
+    const rulesInput = rulesField.locator('.text-field-input');
+	await rulesInput.fill('Flying\nScry 2\nEquip Knight {2}\nInvestigate\nWard {2}');
+	await page.waitForFunction(() => document.querySelectorAll('.keyword-occurrence-row').length === 5);
+	if ((await rulesInput.inputValue()).includes('{i}(')) throw new Error('Typing a recognized keyword inserted reminder text without an explicit checkbox click.');
+	if (await page.locator('.keyword-occurrence-row input:checked').count()) throw new Error('Recognized keyword checkboxes must start unchecked.');
+
+    await page.click('#keyword-manager-open');
+    await page.waitForSelector('#keyword-manager-drawer.opened');
+	if (await page.locator('#keyword-auto-reminders').count()) throw new Error('The removed automatic reminder option is still rendered.');
+	if (await page.locator('#keyword-default-count, .keyword-defaults, #keyword-custom-placement, .keyword-empty-state').count()) throw new Error('Legacy keyword manager controls are still rendered.');
+	if ((await page.locator('.keyword-library-row').count()) !== defaultWorkflow.count) throw new Error('Keyword manager did not show the complete MSE catalog.');
+	const keywordLayout = await page.evaluate(() => {
+	  const drawer = document.querySelector('#keyword-manager-drawer');
+	  const heading = drawer.querySelector('.textbox-editor-heading');
+	  const toolbar = drawer.querySelector('.keyword-library-heading');
+	  const search = drawer.querySelector('#keyword-search');
+	  const list = drawer.querySelector('#keyword-library-list');
+	  const initial = [heading, toolbar, search].map((item) => item.getBoundingClientRect().top);
+	  list.scrollTop = Math.min(600, list.scrollHeight);
+	  const after = [heading, toolbar, search].map((item) => item.getBoundingClientRect().top);
+	  return {
+		drawerOverflow: getComputedStyle(drawer).overflowY,
+		listOverflow: getComputedStyle(list).overflowY,
+		rowHeight: list.querySelector('.keyword-library-row').getBoundingClientRect().height,
+		fixed: initial.every((value, index) => Math.abs(value - after[index]) < 1),
+		names: [...list.querySelectorAll('.keyword-library-summary strong')].map((item) => item.textContent.trim())
+	  };
+	});
+	if (keywordLayout.drawerOverflow !== 'hidden' || keywordLayout.listOverflow !== 'auto' || keywordLayout.rowHeight < 30 || !keywordLayout.fixed) throw new Error(`Keyword drawer chrome or rows rendered incorrectly: ${JSON.stringify(keywordLayout)}`);
+	const sortedKeywordNames = [...keywordLayout.names].sort((left, right) => left.localeCompare(right, undefined, {sensitivity:'base'}));
+	if (keywordLayout.names.some((name, index) => name !== sortedKeywordNames[index])) throw new Error('Keyword library is not alphabetized.');
+	await page.fill('#keyword-search', 'blocked except');
+	if (!(await page.locator('.keyword-library-row').count())) throw new Error('Reminder-text keyword search returned no results.');
+	await page.fill('#keyword-search', 'Vigilance');
+	if (!(await page.locator('.keyword-library-row').count())) throw new Error('Name keyword search returned no results.');
+	await page.fill('#keyword-search', 'one_word');
+	if (!(await page.locator('.keyword-library-row').count())) throw new Error('Recognition-pattern keyword search returned no results.');
+	await page.click('#keyword-search-clear');
+	const initialSelection = page.locator('.keyword-library-row').nth(0);
+	const nextSelection = page.locator('.keyword-library-row').nth(1);
+	await initialSelection.locator('.keyword-library-summary').click();
+	if (!(await initialSelection.locator('.keyword-library-details').isVisible())) throw new Error('Selecting a keyword did not reveal its recognition and reminder text.');
+	if ((await page.locator('.keyword-library-row.selected .keyword-library-details dt').allTextContents()).join('|') !== 'Recognition pattern|Reminder text|Example') throw new Error('Expanded keyword details did not include recognition, reminder, and example fields.');
+	await nextSelection.locator('.keyword-library-summary').click();
+	if ((await page.locator('.keyword-library-row.selected').count()) !== 1 || await initialSelection.locator('.keyword-library-details').isVisible()) throw new Error('Selecting a keyword did not deselect the previous keyword.');
+	await page.fill('#keyword-search', 'Detain');
+	const detainRow = page.locator('.keyword-library-row[data-keyword-id="detain"]');
+	await detainRow.locator('.keyword-library-summary').click();
+	const detainDetails = await detainRow.locator('.keyword-library-details').innerText();
+	if (!/Detain <english_number> target <nonland> <one_word>/.test(detainDetails) || !/those creatures can't attack or block/.test(detainDetails) || !/detain two target nonland creatures/.test(detainDetails) || /<atom-param>|\{if |param1/.test(detainDetails)) throw new Error(`Detain exposed malformed MSE internals: ${detainDetails}`);
+	await page.locator('#keyword-search-clear').hover();
+	const searchClearLayout = await page.evaluate(() => {
+	  const search = document.querySelector('.keyword-search').getBoundingClientRect();
+	  const clear = document.querySelector('#keyword-search-clear').getBoundingClientRect();
+	  return {inside:clear.top >= search.top && clear.bottom <= search.bottom, centerDelta:Math.abs((search.top + search.height / 2) - (clear.top + clear.height / 2)), transform:getComputedStyle(document.querySelector('#keyword-search-clear')).transform};
+	});
+	if (!searchClearLayout.inside || searchClearLayout.centerDelta > 1 || searchClearLayout.transform === 'none') throw new Error(`Keyword search clear hover escaped its field: ${JSON.stringify(searchClearLayout)}`);
+	await page.click('#keyword-search-clear');
+	await page.click('#keyword-custom-toggle');
+	if ((await page.locator('#keyword-custom-toggle').innerText()) !== 'Cancel' || !(await page.locator('#keyword-custom-form').isVisible())) throw new Error('Add did not become Cancel and reveal the custom keyword form.');
+	if (await page.locator('.keyword-pattern-help').count()) throw new Error('The removed inline custom-pattern help paragraph is still rendered.');
+	if (await page.locator('#keyword-custom-preview-status').count() || await page.locator('.keyword-occurrence-heading small').count()) throw new Error('Removed keyword helper copy is still rendered.');
+    await page.fill('#keyword-custom-name', 'Ward');
+    await page.fill('#keyword-custom-pattern', 'Ward {cost}');
+    await page.fill('#keyword-custom-reminder', 'Whenever this permanent becomes the target of a spell or ability an opponent controls, counter it unless that player pays {cost}.');
+	await page.fill('#keyword-custom-example', 'Ward {2}');
+	await page.waitForFunction(() => document.querySelector('#keyword-custom-preview')?.dataset.state === 'match');
+	const previewReminder = page.locator('#keyword-custom-preview-output em');
+	if (!/Ward/.test(await page.locator('#keyword-custom-preview-output').innerText()) || !/Whenever/.test(await page.locator('#keyword-custom-preview-output').innerText()) || (await page.locator('#keyword-custom-preview-output .keyword-preview-mana').count()) < 2 || (await previewReminder.count()) !== 1 || (await previewReminder.evaluate((element) => getComputedStyle(element).fontStyle)) !== 'italic') throw new Error('The live test example did not render expanded card text, italic reminder text, and mana symbols.');
+	const formActionLayout = await page.evaluate(() => {
+	  const help = document.querySelector('#keyword-help-open').getBoundingClientRect();
+	  const save = document.querySelector('#keyword-custom-save').getBoundingClientRect();
+	  return {helpLeft:help.left, saveLeft:save.left, centerDelta:Math.abs((help.top + help.height / 2) - (save.top + save.height / 2))};
+	});
+	if (formActionLayout.helpLeft >= formActionLayout.saveLeft || formActionLayout.centerDelta > 1) throw new Error(`Keyword Help is not aligned left of Save Keyword: ${JSON.stringify(formActionLayout)}`);
+	await page.click('#keyword-help-open');
+	await page.waitForSelector('#keyword-help-drawer.opened');
+	await page.waitForFunction(() => Math.abs(innerWidth - document.querySelector('#keyword-help-drawer').getBoundingClientRect().right) < 1);
+	await page.screenshot({path: path.join(evidence, '02-keyword-preview-help.png'), fullPage: true});
+	const helpLayout = await page.evaluate(() => {
+	  const drawer = document.querySelector('#keyword-help-drawer').getBoundingClientRect();
+	  return {right:Math.abs(innerWidth - drawer.right), left:drawer.left, viewportWidth:innerWidth, placeholders:document.querySelectorAll('.keyword-help-reference > div').length};
+	});
+	if (helpLayout.right > 1 || helpLayout.left < helpLayout.viewportWidth / 2 || helpLayout.placeholders !== 8 || !/dedication to/.test(await page.locator('#keyword-help-drawer').innerText())) throw new Error(`Keyword Help did not use the complete right-side drawer pattern: ${JSON.stringify(helpLayout)}`);
+	await page.keyboard.press('Escape');
+	if (await page.locator('#keyword-help-drawer.opened').count() || !(await page.locator('#keyword-manager-drawer.opened').count()) || !(await page.locator('#keyword-custom-form').isVisible())) throw new Error('Escape did not close only Keyword Help and return to the custom form.');
+    await page.click('#keyword-custom-save');
+	await page.fill('#keyword-search', 'opponent controls');
+    await page.waitForSelector('#keyword-library-list [data-keyword-source="custom"][data-keyword-id="custom-ward"]');
+	if ((await page.evaluate(() => JSON.parse(localStorage.getItem('set-conjurer-custom-keywords-v1'))[0].placement)) !== 'line-end') throw new Error('New custom keywords do not default to end-of-line reminder placement.');
+	await page.click('#keyword-search-clear');
+
+    await page.locator('#keyword-import-file').setInputFiles({
+      name: 'keyword-import.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify({
+        format: 'set-conjurer-keywords', schemaVersion: 1, keywords: [
+		  {id:'custom-astral', name:'Astral', pattern:'Astral {number}', reminder:'This enters with {number} astral counters.', example:'Astral 2'},
+		  {id:'custom-dedication', name:'Dedication', pattern:'dedication to <atom-param>one_word</atom-param>', reminder:'Each {color_to_mana(param1)} in the mana cost of a card counts toward its dedication to {param1}.', example:'dedication to white'}
+        ]
+      }))
+    });
+	await page.waitForSelector('#keyword-library-list [data-keyword-source="custom"][data-keyword-id="custom-astral"]');
+	if (await page.locator('#keyword-manager-status:not([hidden])').count()) throw new Error('Import displayed a success verification message.');
+	await page.locator('#keyword-manager-drawer .textbox-editor-close').click();
+
+	await rulesInput.fill('Tap an untapped white creature you control: Until end of turn, creatures you control get +X/+X, where X is that creature’s dedication to white. (Each {W} in the mana cost of a card counts toward its dedication to white.)');
+	await page.waitForFunction(() => document.querySelectorAll('.keyword-occurrence-row').length === 1);
+	if (!(await page.locator('.keyword-occurrence-row input').isChecked()) || !/Dedication/i.test(await page.locator('.keyword-occurrence-row strong').innerText())) throw new Error('An existing MSE-style custom reminder was not recognized and pre-checked.');
+
+	await rulesInput.fill('Hellbent — This creature gets +1/+1.');
+	await page.waitForFunction(() => document.querySelectorAll('.keyword-occurrence-row').length === 1);
+	await page.locator('.keyword-occurrence-row .checkmark').click();
+	if ((await rulesInput.inputValue()) !== '{i}Hellbent{/i} — This creature gets +1/+1.') throw new Error('Pseudo keyword checkbox did not apply only MSE ability-word italics.');
+
+	await rulesInput.fill('Flying, vigilance, lifelink');
+	await page.waitForFunction(() => document.querySelectorAll('.keyword-occurrence-row').length === 3);
+	await page.locator('.keyword-occurrence-row .checkmark').nth(1).click();
+	if (!/^Flying, vigilance, lifelink \{i\}\(Attacking/.test(await rulesInput.inputValue())) throw new Error('Comma-separated keyword reminder did not move after the full sequence.');
+
+    await rulesInput.fill('Flying\nWard {2}\nFlying\nAstral 3');
+    await page.waitForFunction(() => document.querySelectorAll('.keyword-occurrence-row').length === 4);
+	if ((await rulesInput.inputValue()).includes('{i}(')) throw new Error('Custom keyword recognition inserted reminder text automatically.');
+	for (const index of [1, 3, 0, 2]) await page.locator('.keyword-occurrence-row .checkmark').nth(index).click();
+	const expandedCustomText = await rulesInput.inputValue();
+	if (!expandedCustomText.includes('pays {2}') || !expandedCustomText.includes('3 astral counters')) throw new Error('Custom keyword creation/import did not participate in live recognition.');
+	await page.locator('.keyword-occurrence-row .checkmark').nth(2).click();
+	const suppressedText = await rulesInput.inputValue();
+	if ((suppressedText.match(/\{i\}\(/g) || []).length !== 3) throw new Error('Explicit per-occurrence removal did not remove exactly one reminder.');
+	const suppressionState = await page.evaluate(() => ({
+	  custom: JSON.parse(localStorage.getItem('set-conjurer-custom-keywords-v1') || '[]').map((item) => item.id),
+	  suppressions: card.text.rules.keywordReminderSuppressions
+	}));
+	if (!suppressionState.custom.includes('custom-ward') || !suppressionState.custom.includes('custom-astral') || !suppressionState.custom.includes('custom-dedication')) throw new Error(`Custom keyword persistence failed: ${JSON.stringify(suppressionState)}`);
+	if (suppressionState.suppressions !== undefined) throw new Error(`Removed automatic-suppression metadata was persisted: ${JSON.stringify(suppressionState)}`);
+    await page.screenshot({path: path.join(evidence, '02-keyword-workflow.png'), fullPage: true});
+  }
   await rulesField.getByRole('button', {name: 'Layout', exact: true}).click();
   const typographyInput = page.locator('#textbox-editor-font-size');
   const typographyIncrease = page.getByRole('button', {name: 'Increase Text field font size adjustment', exact: true});
