@@ -770,7 +770,9 @@ try {
 	});
 	if (!printSearchLayout.isFirstRow || Math.abs(printSearchLayout.inputHeight - printSearchLayout.mainInputHeight) > 1 || printSearchLayout.inputRadius !== printSearchLayout.mainInputRadius || printSearchLayout.placeholder !== 'Search title, type, rules, artist…' || printSearchLayout.searchTop >= printSearchLayout.listTop) throw new Error(`Print search does not reuse the pinned main-card search pattern: ${JSON.stringify(printSearchLayout)}`);
 	const printPagesBeforeSearch = await page.locator('.desktop-print-page').count();
-	await page.fill('#desktop-print-search', 'sentinel');
+	const printableCardTitle = (await page.locator('.desktop-print-card strong').first().innerText()).trim();
+	if (!printableCardTitle) throw new Error('Print search acceptance card has no displayed title.');
+	await page.fill('#desktop-print-search', printableCardTitle);
 	if ((await page.locator('.desktop-print-card').count()) !== 1) throw new Error('Print search did not match the card title.');
 	await page.fill('#desktop-print-search', 'not a printable card');
 	if (await page.locator('.desktop-print-card').count() || !(await page.locator('.desktop-print-card-list .sets-empty-list').isVisible())) throw new Error('Print search did not show the shared no-results state.');

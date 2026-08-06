@@ -17,7 +17,7 @@ const changedPaths = output.trim().split(/\r?\n/).filter(Boolean).flatMap((line)
 });
 const graph = buildOwnershipGraph();
 const result = classifyPaths(changedPaths, graph);
-result.sparsePatterns = result.materializePackAssets ? sparsePatternsForPacks(result.packs, graph) : [];
+result.sparsePatterns = result.materializePackAssets ? sparsePatternsForPacks(result.assetPacks, graph) : [];
 
 mkdirSync('build', {recursive: true});
 writeFileSync('build/ci-classification.json', `${JSON.stringify(result, null, 2)}\n`);
@@ -31,6 +31,7 @@ if (process.env.GITHUB_OUTPUT) {
     materialize_pack_assets: result.materializePackAssets,
     all_packs: result.allPacks,
     unknown_pack_path: result.unknownPackPath,
+    asset_packs: result.assetPacks.join(','),
     packs: result.packs.join(',')
   };
   for (const [key, value] of Object.entries(values)) appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
