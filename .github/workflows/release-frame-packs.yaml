@@ -1,4 +1,4 @@
-name: Release Frame Packs
+name: Release Content Packs
 
 on:
   workflow_dispatch:
@@ -25,7 +25,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: frame-packs-${{ inputs.tag }}
+  group: content-packs-${{ inputs.tag }}
   cancel-in-progress: false
 
 jobs:
@@ -66,7 +66,7 @@ jobs:
           PREVIOUS_V3: ${{ inputs.previous_catalog_v3_url }}
         run: |
           if [ "$REQUESTED_PACKS" = all ]; then
-            echo 'packs=set-symbols,standard,booster-fun,tokens,basics,legacy,custom' >> "$GITHUB_OUTPUT"
+            echo 'packs=set-symbols,keywords,standard,booster-fun,tokens,basics,legacy,custom' >> "$GITHUB_OUTPUT"
           else
             test -n "$PREVIOUS_V2"
             test -n "$PREVIOUS_V3"

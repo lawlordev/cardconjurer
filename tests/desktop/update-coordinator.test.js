@@ -25,8 +25,12 @@ class FakePacks {
   constructor() { this.activated = []; this.listener = () => {}; }
   onProgress(listener) { this.listener = listener; }
   async refreshCatalog() { return []; }
-  installedUpdates() { return [{id:'standard', displayName:'Standard', installed:true, installedVersion:'1.0.0', availableVersion:'2.0.0', archiveBytes:50, updateAvailable:true}]; }
-  async stageUpdates() { this.listener({phase:'downloading', percent:100, message:'Pack staged', receivedBytes:50, totalBytes:50}); return [{id:'standard', version:'2.0.0', sourceRoot:'inactive-standard-2', previousVersion:'1.0.0', previousSourceRoot:'active-standard-1'}]; }
+  installedUpdates() { return [
+    {id:'set-symbols', displayName:'Set Symbols', installed:true, installedVersion:'1.0.0', availableVersion:'2.0.0', archiveBytes:10, updateAvailable:true},
+    {id:'keywords', displayName:'Keywords', installed:true, installedVersion:'1.0.0', availableVersion:'2.0.0', archiveBytes:5, updateAvailable:true},
+    {id:'standard', displayName:'Standard', installed:true, installedVersion:'1.0.0', availableVersion:'2.0.0', archiveBytes:50, updateAvailable:true}
+  ]; }
+  async stageUpdates(ids) { this.listener({phase:'downloading', percent:100, message:'Packs staged', receivedBytes:65, totalBytes:65}); return ids.map((id) => ({id, version:'2.0.0', sourceRoot:`inactive-${id}-2`, previousVersion:'1.0.0', previousSourceRoot:`active-${id}-1`})); }
   activateStaged(targets) { this.activated.push(...targets); }
 }
 
@@ -39,8 +43,8 @@ test('coordinator exposes one installed-only plan and activates it only at start
     const coordinator = new UpdateCoordinator({userDataPath:root, currentVersion:'1.0.0', packs, appUpdates:new FakeAppUpdates('1.0.0','2.0.0'), storage});
     const available = await coordinator.check();
     assert.equal(available.includesApp, true);
-    assert.deepEqual(available.packIds, ['standard']);
-    assert.equal(available.items.length, 2);
+    assert.deepEqual(available.packIds, ['set-symbols', 'keywords', 'standard']);
+    assert.equal(available.items.length, 4);
     const staged = await coordinator.begin('snapshot-path');
     assert.equal(staged.phase, 'staged');
     assert.equal(packs.activated.length, 0);
@@ -48,6 +52,7 @@ test('coordinator exposes one installed-only plan and activates it only at start
     const startup = new UpdateCoordinator({userDataPath:root, currentVersion:'2.0.0', packs, appUpdates:new FakeAppUpdates('2.0.0',null), storage});
     const committed = await startup.recoverAtStartup();
     assert.equal(committed.phase, 'idle');
-    assert.equal(packs.activated.length, 1);
+    assert.equal(packs.activated.length, 3);
+    assert.deepEqual(packs.activated.map((pack) => pack.id), ['set-symbols', 'keywords', 'standard']);
   } finally { await rm(root, {recursive: true, force: true}); }
 });

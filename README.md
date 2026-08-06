@@ -1,6 +1,6 @@
 # Set Conjurer
 
-Set Conjurer is a local-first desktop app for creating custom cards and complete custom sets. Your cards, sets, images, and frame packs stay on your computer—there are no accounts, cloud storage, or telemetry.
+Set Conjurer is a local-first desktop app for creating custom cards and complete custom sets. Your cards, sets, images, and content packs stay on your computer—there are no accounts, cloud storage, or telemetry. Frames, set symbols, and built-in keyword definitions update independently from the application.
 
 ## Download
 
@@ -18,7 +18,7 @@ Not sure which Mac you have? Open the Apple menu, choose **About This Mac**, and
 
 On Windows, run the downloaded Setup file once. After installation, launch **Set Conjurer** from the Start menu or desktop shortcut; you do not need to reopen the copy in Downloads. Windows Installed Apps is also the normal place to uninstall it.
 
-First launch shows the download size of every frame pack and the combined size of your selection before downloading. Set Symbols and Standard are required; the other packs are optional. Downloads are written directly to disk, resume after a connection interruption or restart, and use one overall progress indicator. Keep enough free space for both the shown download and the installed files. Application data and packs remain under your Windows user profile when the app is upgraded.
+First launch shows the download size of every content pack and the combined size of your selection before downloading. Set Symbols, Keywords, and Standard are required; the frame-treatment packs are optional. Downloads are written directly to disk, resume after a connection interruption or restart, and use one overall progress indicator. Keep enough free space for both the shown download and the installed files. Application data and packs remain under your Windows user profile when the app is upgraded.
 
 ## Developer setup
 

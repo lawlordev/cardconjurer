@@ -4,11 +4,11 @@ const test = require('node:test');
 const ownership = import('../../scripts/lib/pack-ownership.mjs');
 
 const graph = {
-  packIds: ['set-symbols', 'standard', 'booster-fun', 'tokens', 'basics', 'legacy', 'custom'],
+  packIds: ['set-symbols', 'keywords', 'standard', 'booster-fun', 'tokens', 'basics', 'legacy', 'custom'],
   baseRuntimeAssets: ['img/frames/cornerCutout.png'],
   packs: [],
   sourceConsumers: {'js/frames/packM15Regular-1.js': ['standard']},
-  prefixConsumers: {'img/frames/m15/': ['standard'], 'img/frames/shared/': ['standard', 'tokens'], 'img/setSymbols/': ['set-symbols']}
+  prefixConsumers: {'img/frames/m15/': ['standard'], 'img/frames/shared/': ['standard', 'tokens'], 'img/setSymbols/': ['set-symbols'], 'js/mseKeywordCatalog.js': ['keywords']}
 };
 
 test('classifies ordinary application and packaging-sensitive changes', async () => {
@@ -23,6 +23,15 @@ test('routes frame definitions and payloads through logical ownership', async ()
   assert.deepEqual(classifyPaths(['js/frames/packM15Regular-1.js'], graph).packs, ['standard']);
   assert.deepEqual(classifyPaths(['img/frames/shared/file.png'], graph).packs, ['standard', 'tokens']);
   assert.deepEqual(classifyPaths(['img/setSymbols/ABC/common.svg'], graph).packs, ['set-symbols']);
+  const keywords = classifyPaths(['js/mseKeywordCatalog.js'], graph);
+  assert.deepEqual(keywords.packs, ['keywords']);
+  assert.equal(keywords.materializePackAssets, true);
+});
+
+test('routes MSE keyword sources and compiler changes to the keyword pack', async () => {
+  const {classifyPaths} = await ownership;
+  assert.deepEqual(classifyPaths(['vendor/mse/keywords_en'], graph).packs, ['keywords']);
+  assert.deepEqual(classifyPaths(['scripts/compile-mse-keywords.mjs'], graph).packs, ['keywords']);
 });
 
 test('keeps base runtime assets in the application lane and fails unknown payloads closed', async () => {

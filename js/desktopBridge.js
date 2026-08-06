@@ -32,9 +32,9 @@
 		document.body.insertAdjacentHTML('beforeend',
 			'<button type="button" class="creator-app-action desktop-icon-action desktop-menu-action" id="desktop-settings" title="Settings" aria-label="Settings">' + icon('settings') + '</button>' +
 			'<div id="desktop-overlay" class="desktop-overlay" hidden></div>' +
-			'<aside id="desktop-drawer" class="textbox-editor layout-drawer desktop-drawer" role="dialog" aria-modal="true" aria-labelledby="desktop-drawer-title" aria-hidden="true"><div class="textbox-editor-heading"><h2 id="desktop-drawer-title" class="textbox-editor-title">Set Conjurer</h2></div><button type="button" class="textbox-editor-close" aria-label="Close drawer">×</button><div id="desktop-drawer-body" class="layout-drawer-body"></div></aside>' +
-			'<dialog id="desktop-onboarding" class="sets-dialog desktop-onboarding"><form method="dialog"><header class="desktop-onboarding-header"><img class="desktop-onboarding-mark" src="/resources/icons/set-conjurer.png" alt="Set Conjurer"><h2>Welcome to Set Conjurer</h2><p>Choose the frame packs you want available offline. Pack sizes are shown before anything downloads.</p></header><div id="desktop-onboarding-packs" class="desktop-pack-list desktop-onboarding-pack-list"></div><div class="desktop-onboarding-download"><strong id="desktop-onboarding-total">Calculating download…</strong><button id="desktop-onboarding-retry" type="button" class="input" hidden>Retry pack list</button></div><div id="desktop-onboarding-progress" class="desktop-pack-progress desktop-onboarding-progress" hidden aria-live="polite"><span class="desktop-pack-progress-label"></span><span class="desktop-pack-progress-track" aria-hidden="true"><i></i></span></div><footer class="desktop-onboarding-footer"><small class="desktop-onboarding-credit">Set Conjurer is an open-source desktop fork of Kyle Burton\'s Card Conjurer, adapted for local set creation. <a href="https://github.com/lawlordev/cardconjurer" target="_blank" rel="noreferrer">View repository</a></small><button id="desktop-onboarding-start" type="button" class="sets-confirm" disabled>Download &amp; Continue</button></footer></form></dialog>' +
-			'<section id="desktop-print" class="desktop-print" hidden aria-label="Print cards"><header class="desktop-print-toolbar"><button type="button" class="creator-app-action desktop-print-back" id="desktop-print-close">' + icon('back') + '<span>Back</span></button><div class="desktop-print-toolbar-actions"><select id="desktop-print-paper" class="input desktop-print-select" aria-label="Paper size"><option value="letter">US Letter</option><option value="a4">A4</option></select><select id="desktop-print-backs" class="input desktop-print-select desktop-print-back-select" aria-label="Card backs"><option value="standard">Standard card back</option><option value="none">No backs</option></select><button type="button" class="creator-app-action desktop-print-run" id="desktop-print-run" disabled>' + icon('print') + '<span>Print</span></button></div></header><div class="desktop-print-content"><aside class="desktop-print-sidebar"><div id="desktop-print-cards" class="desktop-print-card-list"></div></aside><main class="desktop-print-preview"><div id="desktop-print-pages" class="desktop-print-pages"></div></main></div></section>' +
+			'<aside id="desktop-drawer" class="textbox-editor layout-drawer desktop-drawer" role="dialog" aria-modal="true" aria-labelledby="desktop-drawer-title" aria-hidden="true"><div class="textbox-editor-heading"><h2 id="desktop-drawer-title" class="textbox-editor-title">Set Conjurer</h2><button type="button" class="textbox-editor-close" aria-label="Close drawer">×</button></div><div id="desktop-drawer-body" class="layout-drawer-body"></div></aside>' +
+			'<dialog id="desktop-onboarding" class="sets-dialog desktop-onboarding"><form method="dialog"><header class="desktop-onboarding-header"><img class="desktop-onboarding-mark" src="/resources/icons/set-conjurer.png" alt="Set Conjurer"><h2>Welcome to Set Conjurer</h2><p>Choose the content packs you want available offline. Required packs include frames, set symbols, and keywords. Pack sizes are shown before anything downloads.</p></header><div id="desktop-onboarding-packs" class="desktop-pack-list desktop-onboarding-pack-list"></div><div class="desktop-onboarding-download"><strong id="desktop-onboarding-total">Calculating download…</strong><button id="desktop-onboarding-retry" type="button" class="input" hidden>Retry pack list</button></div><div id="desktop-onboarding-progress" class="desktop-pack-progress desktop-onboarding-progress" hidden aria-live="polite"><span class="desktop-pack-progress-label"></span><span class="desktop-pack-progress-track" aria-hidden="true"><i></i></span></div><footer class="desktop-onboarding-footer"><small class="desktop-onboarding-credit">Set Conjurer is an open-source desktop fork of Kyle Burton\'s Card Conjurer, adapted for local set creation. <a href="https://github.com/lawlordev/cardconjurer" target="_blank" rel="noreferrer">View repository</a></small><button id="desktop-onboarding-start" type="button" class="sets-confirm" disabled>Download &amp; Continue</button></footer></form></dialog>' +
+			'<section id="desktop-print" class="desktop-print" hidden aria-label="Print cards"><header class="desktop-print-toolbar"><button type="button" class="creator-app-action desktop-print-back" id="desktop-print-close">' + icon('back') + '<span>Back</span></button><div class="desktop-print-toolbar-actions"><select id="desktop-print-paper" class="input desktop-print-select" aria-label="Paper size"><option value="letter">US Letter</option><option value="a4">A4</option></select><select id="desktop-print-backs" class="input desktop-print-select desktop-print-back-select" aria-label="Card backs"><option value="standard">Standard card back</option><option value="none">No backs</option></select><button type="button" class="creator-app-action desktop-print-run" id="desktop-print-run" disabled>' + icon('print') + '<span>Print</span></button></div></header><div class="desktop-print-content"><aside class="desktop-print-sidebar"><label class="sets-search desktop-print-search"><span class="sr-only">Search print cards</span><svg class="sets-search-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg><input id="desktop-print-search" type="search" class="input" placeholder="Search title, type, rules, artist…" autocomplete="off"><button id="desktop-print-search-clear" type="button" class="sets-search-clear" aria-label="Clear print search"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"></path></svg></button></label><div id="desktop-print-cards" class="desktop-print-card-list"></div></aside><main class="desktop-print-preview"><div id="desktop-print-pages" class="desktop-print-pages"></div></main></div></section>' +
 			'<dialog id="desktop-print-loading" class="sets-dialog sets-zip-dialog desktop-print-loading" aria-labelledby="desktop-print-loading-copy"><form method="dialog"><div class="desktop-settings-loading"><span class="creator-loading-spinner" aria-hidden="true"></span><p id="desktop-print-loading-copy" class="desktop-inline-status desktop-settings-loading-copy" role="status">Loading Pages...</p></div></form></dialog>'
 		);
 		document.querySelector('#desktop-settings').addEventListener('click', function(event) { void openSettings(event.currentTarget); });
@@ -44,6 +44,8 @@
 		document.querySelector('#desktop-onboarding-retry').addEventListener('click', function() { void loadOnboardingCatalog(); });
 		document.querySelector('#desktop-print-close').addEventListener('click', closePrint);
 		document.querySelector('#desktop-print-run').addEventListener('click', runPrint);
+		document.querySelector('#desktop-print-search').addEventListener('input', renderPrintList);
+		document.querySelector('#desktop-print-search-clear').addEventListener('click', function() { var search = document.querySelector('#desktop-print-search'); search.value = ''; renderPrintList(); search.focus(); });
 		document.querySelector('#desktop-print-paper').addEventListener('change', function(event) { selectedPaper = event.target.value; renderPrintPages(); });
 		document.querySelector('#desktop-print-paper').value = selectedPaper;
 		document.querySelector('#desktop-print-backs').addEventListener('change', function(event) { selectedBack = event.target.value; renderPrintPages(); });
@@ -70,9 +72,9 @@
 		if (drawerReturnFocus && drawerReturnFocus.isConnected) drawerReturnFocus.focus();
 	}
 	function packCard(pack, selectable) {
-		var required = pack.required || pack.id === 'standard';
+		var required = pack.required;
 		var checked = required || pack.installed;
-		var disabled = pack.required || !pack.available || pack.id === 'standard';
+		var disabled = pack.required || !pack.available;
 		if (!selectable) return '<label class="checkbox-container input workspace-checkbox desktop-onboarding-pack"><span><strong>' + escapeHtml(pack.displayName) + '</strong><small>' + escapeHtml(pack.archiveBytes ? formatBytes(pack.archiveBytes) : 'Size unavailable') + '</small></span><input type="checkbox" data-pack-id="' + pack.id + '" ' + (checked ? 'checked ' : '') + (disabled ? 'disabled ' : '') + '><span class="checkmark"></span></label>';
 		var version = pack.installedVersion || pack.availableVersion || '';
 		var status = pack.installed ? 'Installed' + (version ? ' · ' + escapeHtml(version) : '') + (pack.updateAvailable ? ' · Update available in the consolidated updater' : '') : pack.available ? 'Version ' + escapeHtml(version) : 'Not available in this build yet';
@@ -123,10 +125,10 @@
 		}); });
 	}
 	async function openPacks(trigger) {
-		var packs = await api.packs.list(); openDrawer('Frame Packs', packDrawerContent(packs), trigger); bindPackActions(trigger);
+		var packs = await api.packs.list(); openDrawer('Content Packs', packDrawerContent(packs), trigger); bindPackActions(trigger);
 	}
 	function settingsDrawerContent(info, channel, packs) {
-		return '<div id="desktop-settings-content"><section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>Frame Packs</h3></div>' + packDrawerContent(packs) + '</section><section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>Updates</h3></div><label class="desktop-setting-row"><span><strong>Release channel</strong><small>Stable receives finished releases. Beta also receives preview builds.</small></span><select id="desktop-channel" class="input"><option value="stable" ' + (channel === 'stable' ? 'selected' : '') + '>Stable</option><option value="beta" ' + (channel === 'beta' ? 'selected' : '') + '>Beta</option></select></label><button id="desktop-check-update" class="input" type="button">Check for Updates</button><p id="desktop-update-status" class="desktop-inline-status" aria-live="polite"></p><div id="desktop-update-details"></div></section><section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>About</h3></div><p class="desktop-about-product"><strong>Set Conjurer ' + escapeHtml(info.version) + '</strong><small>' + escapeHtml(info.platform + ' · ' + info.arch) + '</small></p><p class="desktop-about-copy">A local-first open-source desktop fork of Card Conjurer, originally created by Kyle Burton and maintained by its contributors. No account, cloud storage, or telemetry.</p><button id="desktop-report-issue" class="input" type="button">Report an Issue on GitHub</button></section></div>';
+		return '<div id="desktop-settings-content"><section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>Content Packs</h3></div>' + packDrawerContent(packs) + '</section><section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>Updates</h3></div><label class="desktop-setting-row"><span><strong>Release channel</strong><small>Stable receives finished releases. Beta also receives preview builds.</small></span><select id="desktop-channel" class="input"><option value="stable" ' + (channel === 'stable' ? 'selected' : '') + '>Stable</option><option value="beta" ' + (channel === 'beta' ? 'selected' : '') + '>Beta</option></select></label><button id="desktop-check-update" class="input" type="button">Check for Updates</button><p id="desktop-update-status" class="desktop-inline-status" aria-live="polite"></p><div id="desktop-update-details"></div></section><section class="layout-control-group desktop-settings-section"><div class="layout-control-heading"><h3>About</h3></div><p class="desktop-about-product"><strong>Set Conjurer ' + escapeHtml(info.version) + '</strong><small>' + escapeHtml(info.platform + ' · ' + info.arch) + '</small></p><p class="desktop-about-copy">A local-first open-source desktop fork of Card Conjurer, originally created by Kyle Burton and maintained by its contributors. No account, cloud storage, or telemetry.</p><button id="desktop-report-issue" class="input" type="button">Report an Issue on GitHub</button></section></div>';
 	}
 	function activeSettingsDrawer() {
 		return document.querySelector('#desktop-drawer.opened #desktop-settings-content');
@@ -155,10 +157,13 @@
 		bindSettingsActions(values[2]);
 		var refreshedPacks = await refreshPromise;
 		var settings = activeSettingsDrawer();
-		if (requestId !== settingsRequestId || !settings || !refreshedPacks) return;
-		var list = settings.querySelector('.desktop-pack-list');
-		if (list) list.outerHTML = packDrawerContent(refreshedPacks);
-		bindPackActions(trigger);
+		if (requestId !== settingsRequestId || !settings) return;
+		if (refreshedPacks) {
+			var list = settings.querySelector('.desktop-pack-list');
+			if (list) list.outerHTML = packDrawerContent(refreshedPacks);
+			bindPackActions(trigger);
+		}
+		settings.dataset.packRefreshComplete = 'true';
 	}
 	function selectedOnboardingIds() { return Array.from(document.querySelectorAll('#desktop-onboarding-packs [data-pack-id]:checked')).map(function(input) { return input.dataset.packId; }); }
 	function updateOnboardingTotal() {
@@ -172,7 +177,7 @@
 	}
 	async function loadOnboardingCatalog() {
 		var progress = document.querySelector('#desktop-onboarding-progress'); var retry = document.querySelector('#desktop-onboarding-retry'); var button = document.querySelector('#desktop-onboarding-start');
-		progress.hidden = false; progress.classList.remove('is-error'); progress.querySelector('.desktop-pack-progress-label').textContent = 'Loading available frame packs…'; progress.querySelector('i').style.width = '0%'; retry.hidden = true; button.disabled = true;
+		progress.hidden = false; progress.classList.remove('is-error'); progress.querySelector('.desktop-pack-progress-label').textContent = 'Loading available content packs…'; progress.querySelector('i').style.width = '0%'; retry.hidden = true; button.disabled = true;
 		try { var packs = await api.packs.refresh(); renderOnboardingPacks(packs); progress.hidden = true; button.disabled = !packs.filter(function(pack) { return pack.required; }).every(function(pack) { return pack.available; }); }
 		catch (error) { renderOnboardingPacks(await api.packs.list()); progress.classList.add('is-error'); progress.querySelector('.desktop-pack-progress-label').textContent = error.message || String(error); retry.hidden = false; }
 	}
@@ -182,7 +187,7 @@
 	}
 	async function completeOnboarding() {
 		var progress = document.querySelector('#desktop-onboarding-progress'); var button = document.querySelector('#desktop-onboarding-start');
-		button.disabled = true; progress.hidden = false; progress.classList.remove('is-error'); progress.querySelector('.desktop-pack-progress-label').textContent = 'Preparing selected frame packs…'; progress.querySelector('i').style.width = '0%';
+		button.disabled = true; progress.hidden = false; progress.classList.remove('is-error'); progress.querySelector('.desktop-pack-progress-label').textContent = 'Preparing selected packs…'; progress.querySelector('i').style.width = '0%';
 		try { await api.packs.install(selectedOnboardingIds()); await api.app.completeOnboarding(); location.reload(); }
 		catch (error) { progress.classList.add('is-error'); progress.querySelector('.desktop-pack-progress-label').textContent = error.message || String(error); button.disabled = false; }
 	}
@@ -214,7 +219,7 @@
 		if (!ids.length) return;
 		var installed = await api.packs.list(); var missing = ids.filter(function(id) { var pack = installed.find(function(item) { return item.id === id; }); return !pack || !pack.installed; });
 		if (!missing.length) return;
-		if (!confirm('This file needs the ' + missing.join(', ') + ' frame pack' + (missing.length === 1 ? '' : 's') + ' to match the sender. Download now?')) throw new Error('Import canceled because required frame packs are missing.');
+		if (!confirm('This file needs the ' + missing.join(', ') + ' content pack' + (missing.length === 1 ? '' : 's') + ' to match the sender. Download now?')) throw new Error('Import canceled because required content packs are missing.');
 		await api.packs.install(missing);
 	}
 	var printCards = [];
@@ -238,6 +243,7 @@
 		var token = ++printJobToken;
 		releasePrintSources();
 		var view = document.querySelector('#desktop-print'); var printButton = document.querySelector('#desktop-print-run');
+		document.querySelector('#desktop-print-search').value = '';
 		view.hidden = false; view.classList.add('is-rendering'); document.body.classList.add('desktop-printing'); printButton.disabled = true; showPrintLoading();
 		try {
 			await new Promise(function(resolve) { requestAnimationFrame(function() { requestAnimationFrame(resolve); }); });
@@ -258,8 +264,19 @@
 			if (token === printJobToken) hidePrintLoading();
 		}
 	}
+	function printCardMatchesSearch(card, query) {
+		if (!query) return true;
+		var model = root.CardConjurerSetModel;
+		var normalize = model && model.normalizeText ? model.normalizeText : function(value) { return String(value || '').toLowerCase(); };
+		var derived = card.derived || {};
+		return [derived.normalizedTitle || normalize(derived.title || 'Untitled Card'), derived.normalizedType || normalize(derived.typeLine), derived.normalizedRules || normalize(derived.rulesText), derived.normalizedArtist || normalize(derived.artist)].some(function(value) { return String(value || '').includes(query); });
+	}
 	function renderPrintList() {
-		document.querySelector('#desktop-print-cards').innerHTML = printCards.map(function(card, index) { var title = card.derived && card.derived.title || 'Untitled Card'; var quantity = card.printQuantity == null ? 1 : card.printQuantity; return '<article class="desktop-print-card"><span class="sets-card-thumbnail">' + (card.thumbnail ? '<img src="' + card.thumbnail + '" alt="">' : '') + '</span><span><strong>' + escapeHtml(title) + '</strong><small>' + escapeHtml(card.collectorNumber || '') + '</small></span><span class="desktop-print-quantity" aria-label="Quantity for ' + escapeHtml(title) + '"><button type="button" data-print-index="' + index + '" data-print-delta="-1" aria-label="Decrease quantity" ' + (quantity <= 0 ? 'disabled' : '') + '>−</button><output>' + quantity + '</output><button type="button" data-print-index="' + index + '" data-print-delta="1" aria-label="Increase quantity" ' + (quantity >= 99 ? 'disabled' : '') + '>+</button></span></article>'; }).join('');
+		var model = root.CardConjurerSetModel;
+		var query = (model && model.normalizeText ? model.normalizeText : function(value) { return String(value || '').toLowerCase().trim(); })(document.querySelector('#desktop-print-search').value);
+		var visibleCards = printCards.map(function(card, index) { return {card:card, index:index}; }).filter(function(entry) { return printCardMatchesSearch(entry.card, query); });
+		var host = document.querySelector('#desktop-print-cards');
+		host.innerHTML = visibleCards.length ? visibleCards.map(function(entry) { var card = entry.card; var index = entry.index; var title = card.derived && card.derived.title || 'Untitled Card'; var quantity = card.printQuantity == null ? 1 : card.printQuantity; return '<article class="desktop-print-card"><span class="sets-card-thumbnail">' + (card.thumbnail ? '<img src="' + card.thumbnail + '" alt="">' : '') + '</span><span><strong>' + escapeHtml(title) + '</strong><small>' + escapeHtml(card.collectorNumber || '') + '</small></span><span class="desktop-print-quantity" aria-label="Quantity for ' + escapeHtml(title) + '"><button type="button" data-print-index="' + index + '" data-print-delta="-1" aria-label="Decrease quantity" ' + (quantity <= 0 ? 'disabled' : '') + '>−</button><output>' + quantity + '</output><button type="button" data-print-index="' + index + '" data-print-delta="1" aria-label="Increase quantity" ' + (quantity >= 99 ? 'disabled' : '') + '>+</button></span></article>'; }).join('') : '<div class="sets-empty-list"><strong>No matching cards</strong><span>Clear the search to see this print job.</span></div>';
 		document.querySelectorAll('[data-print-delta]').forEach(function(button) { button.addEventListener('click', function(event) { var index = Number(event.currentTarget.dataset.printIndex); var card = printCards[index]; card.printQuantity = root.SetConjurerPrint.quantity(Number(card.printQuantity == null ? 1 : card.printQuantity) + Number(event.currentTarget.dataset.printDelta)); void root.CardConjurerSets.updatePrintQuantity(card.id, card.printQuantity); renderPrintList(); renderPrintPages(); }); });
 	}
 	function cardPrintHtml(card) { var source = root.SetConjurerPrint.source(card); return '<article class="desktop-print-slot">' + (source ? '<img src="' + source + '" alt="">' : '') + '<i class="trim-tick trim-top"></i><i class="trim-tick trim-bottom"></i><i class="trim-tick trim-left"></i><i class="trim-tick trim-right"></i></article>'; }

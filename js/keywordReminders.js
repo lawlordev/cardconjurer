@@ -395,19 +395,19 @@
 		return Array.from(byId.values());
 	}
 
-	function activeCardContext() {
+	function activeCardContext(rulesText) {
 		var activeCard = root && root.card ? root.card : {};
 		return {
 			typeLine:activeCard.text && activeCard.text.type ? activeCard.text.type.text : '',
 			subType:activeCard.text && activeCard.text.type ? String(activeCard.text.type.text || '').split(/[—-]/)[1] || '' : '',
 			manaCost:activeCard.text && activeCard.text.mana ? activeCard.text.mana.text : '',
-			rulesText:activeCard.text && activeCard.text.rules ? activeCard.text.rules.text : ''
+			rulesText:rulesText === undefined ? (activeCard.text && activeCard.text.rules ? activeCard.text.rules.text : '') : String(rulesText || '')
 		};
 	}
 
 	function renderOccurrenceControls(container, input, textObject, onChange) {
 		if (!container || !input || !textObject) return;
-		var context = activeCardContext();
+		var context = activeCardContext(input.value);
 		var occurrences = findOccurrences(input.value, undefined, context).filter(function(item) { return Boolean(item.effect); });
 		container.replaceChildren();
 		container.classList.toggle('hidden', occurrences.length === 0);

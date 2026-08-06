@@ -22,7 +22,10 @@ test('macOS folds the workspace app bar into hover-revealed native window contro
 	assert.match(preload, /document\.documentElement\.dataset\.desktopPlatform = desktopPlatform/);
 	assert.match(styles, /grid-template-rows: 3\.65rem minmax\(0, 1fr\)/);
 	assert.match(styles, /html\[data-desktop-platform='darwin'\] \.creator-app-bar\s*\{[\s\S]{0,120}padding-left: 6\.75rem;[\s\S]{0,120}-webkit-app-region: drag;/);
-	assert.match(styles, /html\[data-desktop-platform='darwin'\] \.creator-app-bar::before[\s\S]{0,140}top: 22px;[\s\S]{0,180}box-shadow: 23px 0 #4a4a4d, 46px 0 #4a4a4d;/);
+	assert.match(styles, /html\[data-desktop-platform='darwin'\] \.desktop-print-toolbar\s*\{[\s\S]{0,120}padding-left: 6\.75rem;[\s\S]{0,120}-webkit-app-region: drag;/);
+	assert.match(styles, /html\[data-desktop-platform='darwin'\] \.desktop-print-toolbar :is\([^)]+\)\s*\{\s*-webkit-app-region: no-drag;/);
+	assert.match(styles, /html\[data-desktop-platform='darwin'\] \.textbox-editor\s*\{\s*padding-top: 2\.5rem;/);
+	assert.match(styles, /html\[data-desktop-platform='darwin'\]::before[\s\S]{0,120}position: fixed;[\s\S]{0,120}top: 22px;[\s\S]{0,120}z-index: 6000;[\s\S]{0,180}box-shadow: 23px 0 #4a4a4d, 46px 0 #4a4a4d;/);
 	assert.match(styles, /html\[data-desktop-platform='darwin'\] \.creator-app-bar :is\([^)]+\)\s*\{\s*-webkit-app-region: no-drag;/);
 	assert.match(styles, /\.desktop-menu-action \{[^}]*top: var\(--workspace-panel-gutter\);[^}]*right: var\(--workspace-panel-gutter\);/);
 });
@@ -43,6 +46,9 @@ test('desktop binary exports use validated native save bridges', () => {
 	assert.match(creator, /setConjurerDesktop\.files\.saveExport/);
 	assert.doesNotMatch(workspace, /Open in new tab/);
 	assert.match(workspace, /<summary><span aria-hidden='true'>↑<\/span>Import Card/);
+	assert.doesNotMatch(workspace, /class='textbox-editor-close'[^>]*onclick=/);
+	assert.match(creator, /function closeTextboxEditorFromControl\(button\)/);
+	assert.match(creator, /document\.addEventListener\('click',[\s\S]{0,180}closest\('\.textbox-editor-close'\)/);
 	assert.match(workspace, /data-card-import-action='file'/);
 	assert.match(workspace, /data-card-import-action='search'/);
 	assert.doesNotMatch(workspace, /onclick=["'][^"']*(?:sets-card-import|openCardSearch)/);
@@ -99,25 +105,29 @@ test('set and card workspace controls do not rely on CSP-blocked inline handlers
 	assert.doesNotMatch(workspace, /on(?:click|change|input|blur|submit|keydown|keyup|load|error)=["']/);
 });
 
-test('local developer packages seed every selectable frame pack', () => {
+test('local developer packages seed every selectable content pack', () => {
 	const seed = fs.readFileSync(path.join(__dirname, '../../scripts/build-local-pack-seed.mjs'), 'utf8');
-	for (const id of ['set-symbols', 'standard', 'booster-fun', 'tokens', 'basics', 'legacy', 'custom']) assert.match(seed, new RegExp(`['\"]${id}['\"]`));
+	for (const id of ['set-symbols', 'keywords', 'standard', 'booster-fun', 'tokens', 'basics', 'legacy', 'custom']) assert.match(seed, new RegExp(`['\"]${id}['\"]`));
 	assert.match(seed, /requested === 'all'/);
 });
 
-test('set symbols are a required independently released asset pack', () => {
+test('set symbols and keywords are required independently released content packs', () => {
 	const contracts = fs.readFileSync(path.join(__dirname, '../../desktop/ipc/contracts.ts'), 'utf8');
 	const service = fs.readFileSync(path.join(__dirname, '../../desktop/services/pack-service.ts'), 'utf8');
 	const main = fs.readFileSync(path.join(__dirname, '../../desktop/main.ts'), 'utf8');
 	const release = fs.readFileSync(path.join(__dirname, '../../scripts/build-frame-pack-release.mjs'), 'utf8');
 	const forge = fs.readFileSync(path.join(__dirname, '../../forge.config.ts'), 'utf8');
-	assert.match(contracts, /PACK_IDS = \['set-symbols', 'standard'/);
+	assert.match(contracts, /PACK_IDS = \['set-symbols', 'keywords', 'standard'/);
 	assert.match(service, /'set-symbols': \{displayName: 'Set Symbols'.*required: true/);
-	assert.match(service, /REQUIRED_PACK_IDS: PackId\[\] = \['set-symbols', 'standard'\]/);
+	assert.match(service, /keywords: \{displayName: 'Keywords'.*required: true/);
+	assert.match(service, /REQUIRED_PACK_IDS: PackId\[\] = \['set-symbols', 'keywords', 'standard'\]/);
 	assert.match(main, /relative\.startsWith\('\/img\/setSymbols\/'\)/);
+	assert.match(main, /relative === '\/js\/mseKeywordCatalog\.js'/);
 	assert.match(release, /id === 'set-symbols'/);
 	assert.match(release, /path\.join\(root, 'img', 'setSymbols'\)/);
+	assert.match(release, /id === 'keywords'[\s\S]{0,100}\['js\/mseKeywordCatalog\.js'\]/);
 	assert.match(forge, /img\\\/setSymbols/);
+	assert.match(forge, /mseKeywordCatalog/);
 });
 
 test('set-symbol controls use CSP-safe delegated handlers', () => {

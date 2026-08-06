@@ -6,7 +6,7 @@ const descriptor = JSON.parse(readFileSync('resources/pack-compatibility.json', 
 const releaseChannel = process.argv[2] || null;
 if (descriptor.schemaVersion !== 1) throw new Error('Unsupported pack compatibility descriptor schema.');
 if (!Array.isArray(descriptor.supportedPackSchemas) || !descriptor.supportedPackSchemas.includes(2) || !descriptor.supportedPackSchemas.includes(3)) throw new Error('The application must declare its supported pack schemas.');
-for (const id of ['set-symbols', 'standard']) {
+for (const id of ['set-symbols', 'keywords', 'standard']) {
   if (!PACK_IDS.includes(id) || !/^\d+\.\d+\.\d+/.test(descriptor.requiredPacks?.[id] || '')) throw new Error(`Missing required-pack compatibility floor for ${id}.`);
 }
 const pin = descriptor.catalog || {};

@@ -109,6 +109,11 @@ export function classifyPaths(inputPaths, graph = buildOwnershipGraph()) {
       selectPacks(['set-symbols'], `${file}: set-symbol payload`);
       continue;
     }
+    if (file === 'js/mseKeywordCatalog.js') {
+      materializePackAssets = true;
+      selectPacks(['keywords'], `${file}: keyword payload`);
+      continue;
+    }
     if (file.startsWith('img/frames/')) {
       materializePackAssets = true;
       const matching = Object.entries(graph.prefixConsumers)
@@ -130,6 +135,9 @@ export function classifyPaths(inputPaths, graph = buildOwnershipGraph()) {
     if (/^js\/(?:frameRegistry|frameSearch)\.js$/.test(file) || /^js\/frames\/(?:version|group|mana)/i.test(file)) {
       app = true;
       selectPacks(graph.packIds, `${file}: shared frame metadata/runtime`);
+    }
+    if (file === 'scripts/compile-mse-keywords.mjs' || file.startsWith('vendor/mse/')) {
+      selectPacks(['keywords'], `${file}: keyword source/tooling`);
     }
     if (packContractPatterns.some((pattern) => pattern.test(file))) {
       packContract = true;
@@ -157,9 +165,10 @@ export function sparsePatternsForPacks(packIds, graph = buildOwnershipGraph()) {
   const patterns = new Set();
   for (const pack of graph.packs) if (selected.has(pack.id)) {
     pack.sources.forEach((source) => patterns.add(`/${source}`));
-    pack.prefixes.forEach((prefix) => patterns.add(`/${prefix}**`));
+    pack.prefixes.forEach((prefix) => patterns.add(prefix.endsWith('/') ? `/${prefix}**` : `/${prefix}`));
   }
   if (selected.has('set-symbols')) patterns.add('/img/setSymbols/**');
+  if (selected.has('keywords')) patterns.add('/js/mseKeywordCatalog.js');
   graph.baseRuntimeAssets.forEach((asset) => patterns.delete(`/${asset}`));
   return [...patterns].sort();
 }

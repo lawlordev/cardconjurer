@@ -7,6 +7,7 @@ import {fileURLToPath} from 'node:url';
 import { _electron as electron, chromium } from 'playwright';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const packIds = JSON.parse(await readFile(path.join(root, 'packs', 'config.json'), 'utf8')).packIds;
 const userData = await mkdtemp(path.join(os.tmpdir(), 'set-conjurer-e2e-'));
 const packFixture = await mkdtemp(path.join(os.tmpdir(), 'set-conjurer-pack-fixture-'));
 const evidence = process.env.SET_CONJURER_EVIDENCE_DIR || path.join(os.tmpdir(), 'set-conjurer-evidence');
@@ -38,6 +39,9 @@ async function buildMinimalPackFixture() {
   const symbol = path.join(packFixture, 'img', 'setSymbols', 'custom', 'test-c.png');
   await mkdir(path.dirname(symbol), {recursive: true});
   await copyFile(placeholder, symbol);
+  const keywordCatalog = path.join(packFixture, 'js', 'mseKeywordCatalog.js');
+  await mkdir(path.dirname(keywordCatalog), {recursive: true});
+  await copyFile(path.join(root, 'js', 'mseKeywordCatalog.js'), keywordCatalog);
 }
 
 await buildMinimalPackFixture();
@@ -97,7 +101,9 @@ try {
   await page.screenshot({path: path.join(evidence, '01-onboarding.png'), fullPage: true});
   const standard = page.locator('#desktop-onboarding-packs [data-pack-id="standard"]');
   if (!(await standard.isChecked()) || !(await standard.isDisabled())) throw new Error('Standard pack is not required and locked on.');
-  if (await page.locator('#desktop-onboarding-packs .desktop-onboarding-pack small').count() !== 7) throw new Error('Onboarding does not show a size for every pack.');
+  const keywords = page.locator('#desktop-onboarding-packs [data-pack-id="keywords"]');
+  if (!(await keywords.isChecked()) || !(await keywords.isDisabled())) throw new Error('Keywords pack is not required and locked on.');
+  if (await page.locator('#desktop-onboarding-packs .desktop-onboarding-pack small').count() !== packIds.length) throw new Error('Onboarding does not show a size for every pack.');
   if (!(await page.locator('#desktop-onboarding-total').innerText()).startsWith('Total download:')) throw new Error('Onboarding does not show the selected total.');
   if (await page.locator('#desktop-onboarding-progress').count() !== 1) throw new Error('Onboarding does not have exactly one aggregate progress indicator.');
   if (await page.locator('#desktop-onboarding-packs [data-pack-id="tokens"]').isDisabled()) throw new Error('Published optional packs are not selectable on first launch.');
@@ -269,9 +275,94 @@ try {
 	}));
 	if (!suppressionState.custom.includes('custom-ward') || !suppressionState.custom.includes('custom-astral') || !suppressionState.custom.includes('custom-dedication')) throw new Error(`Custom keyword persistence failed: ${JSON.stringify(suppressionState)}`);
 	if (suppressionState.suppressions !== undefined) throw new Error(`Removed automatic-suppression metadata was persisted: ${JSON.stringify(suppressionState)}`);
+
+	await page.evaluate(() => {
+	  window.__keywordAbilityRestore = {text: card.text, version: card.version, tools: activeCardSpecificTextTools};
+	  card.version = 'packPlaneswalkerRegular';
+	  card.text = {
+		title: {name:'Title', text:'Keyword Field Test', x:0.0867, y:0.0372, width:0.8267, height:0.0548, oneLine:true, size:0.0381},
+		ability0: {name:'Ability 1', text:'', x:0.18, y:0.6239, width:0.7467, height:0.0972, size:0.0353},
+		flavor: {name:'Flavor Text', text:'Flying', x:0.18, y:0.76, width:0.7467, height:0.08, size:0.03}
+	  };
+	  registerCardSpecificTextTools({
+		key:'planeswalker-test',
+		title:'Planeswalker',
+		fieldAccessories:{ability0:'<label><span>Loyalty cost</span><input type="text" class="input" value="+1" aria-label="Ability 1 loyalty cost"></label><label><span>Badge offset</span><input type="number" class="input" value="0" aria-label="Ability 1 badge offset"></label>'}
+	  });
+	});
+	const abilityField = page.locator('.text-field-card[data-text-key="ability0"]');
+	await abilityField.locator('.text-field-input').fill('Flying');
+	await abilityField.locator('.keyword-occurrence-row').waitFor();
+	const abilityKeywordLayout = await abilityField.evaluate((field) => {
+	  const children = [...field.children];
+	  const input = field.querySelector('.text-field-input');
+	  const accessory = field.querySelector('.card-specific-field-accessory');
+	  const keywords = field.querySelector('.keyword-occurrence-controls');
+	  return {
+		inputIndex:children.indexOf(input),
+		accessoryIndex:children.indexOf(accessory),
+		keywordIndex:children.indexOf(keywords),
+		accessoryInputs:accessory?.querySelectorAll('input').length || 0,
+		flavorControls:document.querySelectorAll('.text-field-card[data-text-key="flavor"] .keyword-occurrence-controls').length
+	  };
+	});
+	if (!(abilityKeywordLayout.inputIndex < abilityKeywordLayout.accessoryIndex && abilityKeywordLayout.accessoryIndex < abilityKeywordLayout.keywordIndex) || abilityKeywordLayout.accessoryInputs !== 2 || abilityKeywordLayout.flavorControls !== 0) throw new Error(`Ability keyword options did not follow the final frame-specific control: ${JSON.stringify(abilityKeywordLayout)}`);
+	await abilityField.locator('.keyword-occurrence-row .checkmark').click();
+	const abilityKeywordResult = await page.evaluate(() => ({ability:card.text.ability0.text, flavor:card.text.flavor.text}));
+	if (!/^Flying \{i\}\(/.test(abilityKeywordResult.ability) || abilityKeywordResult.flavor !== 'Flying') throw new Error(`Ability keyword reminder was not field-local: ${JSON.stringify(abilityKeywordResult)}`);
+	await page.screenshot({path: path.join(evidence, '02-planeswalker-ability-keyword-order.png'), fullPage: true});
+	await page.evaluate(() => {
+	  const restore = window.__keywordAbilityRestore;
+	  card.text = restore.text;
+	  card.version = restore.version;
+	  activeCardSpecificTextTools = restore.tools;
+	  renderTextFieldForm();
+	  delete window.__keywordAbilityRestore;
+	});
+	await rulesField.waitFor();
     await page.screenshot({path: path.join(evidence, '02-keyword-workflow.png'), fullPage: true});
   }
   await rulesField.getByRole('button', {name: 'Layout', exact: true}).click();
+	await page.waitForTimeout(250); // Verify hit-testing only after the drawer's opening transition completes.
+	const drawerCloseLayout = await page.evaluate(() => {
+	  const drawer = document.querySelector('#textbox-editor');
+	  const heading = drawer.querySelector('.textbox-editor-heading');
+	  const title = heading.querySelector('.textbox-editor-title');
+	  const close = heading.querySelector(':scope > .textbox-editor-close');
+	  const headingRect = heading.getBoundingClientRect();
+	  const titleRect = title.getBoundingClientRect();
+	  const closeRect = close.getBoundingClientRect();
+	  const settingsRect = document.querySelector('#desktop-drawer').getBoundingClientRect();
+	  const rightDrawerRect = document.querySelector('#keyword-help-drawer').getBoundingClientRect();
+	  const centerX = closeRect.left + closeRect.width / 2;
+	  const centerY = closeRect.top + closeRect.height / 2;
+	  const macOverlay = getComputedStyle(document.documentElement, '::before');
+	  return {
+		isHeadingChild:close?.parentElement === heading,
+		width:closeRect.width,
+		height:closeRect.height,
+		insideHeading:closeRect.top >= headingRect.top && closeRect.bottom <= headingRect.bottom,
+		centerTarget:document.elementFromPoint(centerX, centerY) === close,
+		closeBackground:getComputedStyle(close).backgroundColor,
+		drawerWidth:drawer.getBoundingClientRect().width,
+		settingsWidth:settingsRect.width,
+		rightDrawerWidth:rightDrawerRect.width,
+		macOverlay:document.documentElement.dataset.desktopPlatform === 'darwin' ? {
+		  content:macOverlay.content,
+		  position:macOverlay.position,
+		  zIndex:Number(macOverlay.zIndex),
+		  drawerZIndex:Number(getComputedStyle(drawer).zIndex),
+		  titleClearance:titleRect.top - (Number.parseFloat(macOverlay.top) + Number.parseFloat(macOverlay.height))
+		} : null
+	  };
+	});
+	if (!drawerCloseLayout.isHeadingChild || drawerCloseLayout.width < 36 || drawerCloseLayout.height < 36 || !drawerCloseLayout.insideHeading || !drawerCloseLayout.centerTarget) throw new Error(`Text drawer close control does not have a reliable header hit target: ${JSON.stringify(drawerCloseLayout)}`);
+	if (Math.abs(drawerCloseLayout.drawerWidth - drawerCloseLayout.settingsWidth) > 1 || Math.abs(drawerCloseLayout.rightDrawerWidth - drawerCloseLayout.settingsWidth) > 1) throw new Error(`Drawers do not share the Settings drawer reach: ${JSON.stringify(drawerCloseLayout)}`);
+	if (drawerCloseLayout.macOverlay && (drawerCloseLayout.macOverlay.content === 'none' || drawerCloseLayout.macOverlay.position !== 'fixed' || drawerCloseLayout.macOverlay.zIndex <= drawerCloseLayout.macOverlay.drawerZIndex || drawerCloseLayout.macOverlay.titleClearance < 8)) throw new Error(`macOS placeholder controls do not stay above and clear of drawer titles: ${JSON.stringify(drawerCloseLayout.macOverlay)}`);
+	await page.locator('#textbox-editor .textbox-editor-close').hover();
+	await page.waitForTimeout(160);
+	const drawerCloseHover = await page.locator('#textbox-editor .textbox-editor-close').evaluate((close) => getComputedStyle(close).backgroundColor);
+	if (drawerCloseHover === drawerCloseLayout.closeBackground) throw new Error('Text drawer close control has no visible hover state.');
   const typographyInput = page.locator('#textbox-editor-font-size');
   const typographyIncrease = page.getByRole('button', {name: 'Increase Text field font size adjustment', exact: true});
   const typographyBefore = Number(await typographyInput.inputValue());
@@ -285,7 +376,6 @@ try {
       window.__setConjurerHeldTypographyRenders.push(document.querySelector('#textbox-editor-font-size')?.value);
     });
   });
-  await page.waitForTimeout(250); // Let the layout drawer finish sliding before targeting its control.
   const typographyButton = await typographyIncrease.boundingBox();
   if (!typographyButton) throw new Error('Typography increase control is not visible.');
   await page.mouse.move(typographyButton.x + typographyButton.width / 2, typographyButton.y + typographyButton.height / 2);
@@ -308,6 +398,16 @@ try {
     throw new Error(`Held Typography skipped displayed values: ${JSON.stringify({typographyBefore, heldTypography})}`);
   }
   await page.locator('#textbox-editor .textbox-editor-close').click();
+	await page.waitForFunction(() => !document.querySelector('#textbox-editor').classList.contains('opened'));
+	for (const drawerId of ['card-specific-layout-drawer', 'art-layout-drawer', 'watermark-layout-drawer', 'serial-layout-drawer', 'formatting-help-drawer', 'art-search-drawer', 'markdown-help-drawer', 'card-search-drawer']) {
+	  await page.evaluate((id) => {
+		const drawer = document.getElementById(id);
+		drawer.classList.add('opened');
+		if (drawer.hasAttribute('aria-hidden')) drawer.setAttribute('aria-hidden', 'false');
+	  }, drawerId);
+	  await page.locator(`#${drawerId} .textbox-editor-close`).click();
+	  await page.waitForFunction((id) => !document.getElementById(id).classList.contains('opened'), drawerId);
+	}
 
   if (!packagedExecutable) {
     await application.evaluate(({ipcMain}) => {
@@ -593,14 +693,16 @@ try {
     if (settingsLoadingStyle.drawerDisplay !== 'flex' || settingsLoadingStyle.position !== 'absolute' || settingsLoadingStyle.inset.some((value) => value !== '0px') || settingsLoadingStyle.placeContent !== 'center' || settingsLoadingStyle.color !== settingsLoadingStyle.expectedColor || settingsLoadingStyle.horizontalOffset > 2 || settingsLoadingStyle.verticalOffset > 2) throw new Error(`Settings loading state is not centered with workspace text: ${JSON.stringify(settingsLoadingStyle)}`);
   }
   await page.waitForSelector('#desktop-channel', {state: 'attached'});
-  await page.waitForTimeout(350);
+  await page.waitForSelector('#desktop-settings-content[data-pack-refresh-complete="true"]');
   const packRowRadius = await page.locator('.desktop-pack-row').first().evaluate((element) => getComputedStyle(element).borderTopLeftRadius);
   if (packRowRadius !== sharedRadius) throw new Error(`settings drawer card does not use the shared ${sharedRadius} radius: ${packRowRadius}`);
-  await page.screenshot({path: path.join(evidence, '03-settings-and-frame-packs.png'), fullPage: true});
+  await page.screenshot({path: path.join(evidence, '03-settings-and-content-packs.png'), fullPage: true});
   await page.click('#desktop-drawer .textbox-editor-close');
+	await page.waitForFunction(() => !document.querySelector('#desktop-drawer').classList.contains('opened'));
   await page.click('#desktop-settings');
   await page.waitForSelector('#desktop-drawer.opened');
   await page.click('#desktop-drawer .textbox-editor-close');
+	await page.waitForFunction(() => !document.querySelector('#desktop-drawer').classList.contains('opened'));
   await page.evaluate(() => {
     const renderPrintImages = window.CardConjurerSets.renderPrintImages;
     window.CardConjurerSets.renderPrintImages = async function(...args) {
@@ -622,6 +724,23 @@ try {
   });
   if (!printLoadingStyle.fontFamily.includes('Montserrat') || printLoadingStyle.fontSize !== '11.52px' || printLoadingStyle.fontWeight !== '700' || Math.abs(printLoadingStyle.spinnerWidth - 18.4) > 0.1 || Math.abs(printLoadingStyle.spinnerHeight - 18.4) > 0.1 || printLoadingStyle.spinnerAnimation !== 'creator-loading-spin') throw new Error(`Print preview does not reuse the Settings loading treatment: ${JSON.stringify(printLoadingStyle)}`);
   await page.locator('#desktop-print-loading').waitFor({state: 'hidden'});
+	const printToolbarLayout = await page.evaluate(() => {
+	  const back = document.querySelector('#desktop-print-close').getBoundingClientRect();
+	  const setControls = document.querySelector('.creator-app-set-controls').getBoundingClientRect();
+	  const toolbarStyle = getComputedStyle(document.querySelector('.desktop-print-toolbar'));
+	  const backStyle = getComputedStyle(document.querySelector('#desktop-print-close'));
+	  const macOverlay = getComputedStyle(document.documentElement, '::before');
+	  return {
+		backLeft:back.left,
+		setControlsLeft:setControls.left,
+		toolbarDrag:toolbarStyle.webkitAppRegion,
+		backDrag:backStyle.webkitAppRegion,
+		macClearance:document.documentElement.dataset.desktopPlatform === 'darwin'
+		  ? back.left - (Number.parseFloat(macOverlay.left) + Number.parseFloat(macOverlay.width) + 46)
+		  : null
+	  };
+	});
+	if (printToolbarLayout.macClearance !== null && (Math.abs(printToolbarLayout.backLeft - printToolbarLayout.setControlsLeft) > 1 || printToolbarLayout.macClearance < 12 || printToolbarLayout.toolbarDrag !== 'drag' || printToolbarLayout.backDrag !== 'no-drag')) throw new Error(`Print Back does not reuse the main app bar's macOS-safe control position: ${JSON.stringify(printToolbarLayout)}`);
   for (const [selector, label] of [
     ['.desktop-print-toolbar-actions > button', 'print toolbar button'],
     ['.desktop-print .workspace-select-trigger', 'print dropdown'],
@@ -632,6 +751,61 @@ try {
   }
   const printQuantityRadius = await page.locator('.desktop-print-quantity').first().evaluate((element) => Number.parseFloat(getComputedStyle(element).borderTopLeftRadius));
   if (!(printQuantityRadius < outerRadiusValue)) throw new Error(`print quantity control is not concentric within its card: ${printQuantityRadius}px`);
+	const printSearchLayout = await page.evaluate(() => {
+	  const sidebar = document.querySelector('.desktop-print-sidebar');
+	  const search = document.querySelector('.desktop-print-search');
+	  const input = document.querySelector('#desktop-print-search');
+	  const mainInput = document.querySelector('[data-card-search]');
+	  const list = document.querySelector('.desktop-print-card-list');
+	  return {
+		isFirstRow:sidebar.firstElementChild === search && search.nextElementSibling === list,
+		inputHeight:input.getBoundingClientRect().height,
+		mainInputHeight:mainInput.getBoundingClientRect().height,
+		inputRadius:getComputedStyle(input).borderTopLeftRadius,
+		mainInputRadius:getComputedStyle(mainInput).borderTopLeftRadius,
+		placeholder:input.placeholder,
+		searchTop:search.getBoundingClientRect().top,
+		listTop:list.getBoundingClientRect().top
+	  };
+	});
+	if (!printSearchLayout.isFirstRow || Math.abs(printSearchLayout.inputHeight - printSearchLayout.mainInputHeight) > 1 || printSearchLayout.inputRadius !== printSearchLayout.mainInputRadius || printSearchLayout.placeholder !== 'Search title, type, rules, artist…' || printSearchLayout.searchTop >= printSearchLayout.listTop) throw new Error(`Print search does not reuse the pinned main-card search pattern: ${JSON.stringify(printSearchLayout)}`);
+	const printPagesBeforeSearch = await page.locator('.desktop-print-page').count();
+	await page.fill('#desktop-print-search', 'sentinel');
+	if ((await page.locator('.desktop-print-card').count()) !== 1) throw new Error('Print search did not match the card title.');
+	await page.fill('#desktop-print-search', 'not a printable card');
+	if (await page.locator('.desktop-print-card').count() || !(await page.locator('.desktop-print-card-list .sets-empty-list').isVisible())) throw new Error('Print search did not show the shared no-results state.');
+	if ((await page.locator('.desktop-print-page').count()) !== printPagesBeforeSearch) throw new Error('Searching the print rail changed which cards will print.');
+	await page.click('#desktop-print-search-clear');
+	if ((await page.locator('.desktop-print-card').count()) !== 1 || await page.locator('#desktop-print-search').inputValue()) throw new Error('Clearing print search did not restore the full thumbnail rail.');
+	const printSidebarLayout = await page.evaluate(() => {
+	  const sidebar = document.querySelector('.desktop-print-sidebar');
+	  const list = document.querySelector('.desktop-print-card-list');
+	  const firstCard = list.querySelector('.desktop-print-card');
+	  for (let index = 0; index < 30; index += 1) {
+		const copy = firstCard.cloneNode(true);
+		copy.dataset.scrollTestCopy = '';
+		list.appendChild(copy);
+	  }
+	  return {
+		sidebarWidth:sidebar.getBoundingClientRect().width,
+		rootFontSize:Number.parseFloat(getComputedStyle(document.documentElement).fontSize),
+		listClientHeight:list.clientHeight,
+		listScrollHeight:list.scrollHeight,
+		listOverflow:getComputedStyle(list).overflowY,
+		sidebarOverflow:getComputedStyle(sidebar).overflow
+	  };
+	});
+	if (printSidebarLayout.sidebarWidth < printSidebarLayout.rootFontSize * 20 - 1 || printSidebarLayout.listOverflow !== 'auto' || printSidebarLayout.sidebarOverflow !== 'hidden' || printSidebarLayout.listScrollHeight <= printSidebarLayout.listClientHeight) throw new Error(`Print thumbnail rail is not a constrained, wider scroll region: ${JSON.stringify(printSidebarLayout)}`);
+	await page.locator('.desktop-print-card-list').hover();
+	await page.mouse.wheel(0, 700);
+	await page.waitForFunction(() => document.querySelector('.desktop-print-card-list').scrollTop > 0);
+	const printSidebarScroll = await page.evaluate(() => ({scrollTop:document.querySelector('.desktop-print-card-list').scrollTop, searchTop:document.querySelector('.desktop-print-search').getBoundingClientRect().top}));
+	if (printSidebarScroll.scrollTop <= 0 || Math.abs(printSidebarScroll.searchTop - printSearchLayout.searchTop) > 1) throw new Error(`Print thumbnail rail did not scroll independently beneath its pinned search: ${JSON.stringify(printSidebarScroll)}`);
+	await page.evaluate(() => {
+	  const list = document.querySelector('.desktop-print-card-list');
+	  list.querySelectorAll('[data-scroll-test-copy]').forEach((copy) => copy.remove());
+	  list.scrollTop = 0;
+	});
   for (const selectId of ['#desktop-print-paper', '#desktop-print-backs']) {
     const trigger = page.locator(`${selectId} + .workspace-select > .workspace-select-trigger`);
     const chevron = trigger.locator('.card-specific-chevron');

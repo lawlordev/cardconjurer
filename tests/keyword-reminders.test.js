@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const Keywords = require('../js/keywordReminders.js');
 
 function memoryStorage(initial = {}) {
@@ -326,4 +328,15 @@ test('one selected reminder follows an entire comma-separated keyword sequence',
 	const result = Keywords.toggleOccurrence(source, [], occurrence.signature, true);
 	assert.match(result.text, /^Flying, vigilance, lifelink \{i\}\(Attacking/);
 	assert.doesNotMatch(result.text, /vigilance \{i\}\(/);
+});
+
+test('every multiline rules-style card field receives field-local keyword controls', () => {
+	const creator = fs.readFileSync(path.join(__dirname, '../js/creator-23.js'), 'utf8');
+	assert.match(creator, /function textFieldSupportsKeywordReminders\(key, textObject, optionalPlaceholder=false\)/);
+	assert.match(creator, /textObject\.oneLine === true/);
+	assert.match(creator, /!\/flavou\?r\/i\.test/);
+	assert.match(creator, /textEdited\(key, input\.value\)/);
+	assert.match(creator, /updateKeywordOccurrenceControls\(key, input, textObject\)/);
+	assert.ok(creator.indexOf("field.appendChild(accessory);") < creator.indexOf("field.appendChild(keywordControls);"), 'frame-specific ability controls must appear before keyword options');
+	assert.doesNotMatch(creator, /key === 'rules' && !optionalPlaceholder/);
 });

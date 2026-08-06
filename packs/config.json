@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "packIds": [
     "set-symbols",
+    "keywords",
     "standard",
     "booster-fun",
     "tokens",
@@ -27,6 +28,7 @@
   ],
   "dynamicAssetPrefixes": {
     "set-symbols": ["img/setSymbols/"],
+    "keywords": ["js/mseKeywordCatalog.js"],
     "standard": [],
     "booster-fun": [],
     "tokens": [],
