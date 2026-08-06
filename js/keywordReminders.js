@@ -19,7 +19,7 @@
 	var selectedKeywordId = '';
 
 	if (!mseCatalog || !mseRuntime) throw new Error('The MSE keyword catalog must load before keyword reminders.');
-	// Generated exactly from Full Magic Pack's data/magic.mse-game/keywords_en.
+	// Generated from Full Magic Pack's develop catalog plus reviewed retained definitions.
 	var DEFAULT_KEYWORDS = mseCatalog.keywords;
 
 	function definition(id, name, pattern, reminder, example, priority, placement) {

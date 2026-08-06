@@ -8,10 +8,14 @@
 	"source": {
 		"repository": "MagicSetEditorPacks/Full-Magic-Pack",
 		"path": "data/magic.mse-game/keywords_en",
-		"branch": "main",
-		"commit": "71b382d5da74efd533ae25a23ac324a80c3dfeb4",
-		"sha256": "cd538a61db2cf51f2d9f73d3fe60c51e4d8c746c04cca6ec763c0a6bbd141b54",
-		"syncedAt": "2026-08-05"
+		"branch": "develop",
+		"commit": "f1891ee0ed0038d233760d2f5b779923579c38bb",
+		"sha256": "1994bc064453038efe7e0b2cab03b4b2b3162aa3d753b0a86b1b6f7e5a8f10e6",
+		"syncedAt": "2026-08-05",
+		"upstreamKeywordCount": 373,
+		"supplementalDefinitions": [
+			"worthy"
+		]
 	},
 	"modes": [
 		{
@@ -4836,6 +4840,19 @@
 			"builtIn": true
 		},
 		{
+			"id": "disappear",
+			"name": "Disappear",
+			"mode": "pseudo",
+			"mseMatch": "Disappear",
+			"runtimeMatch": "Disappear",
+			"displayPattern": "Disappear",
+			"reminderRaw": "",
+			"rulesRaw": "Disappear — [effect], if a permanent left the battlefield under your control this turn.",
+			"example": "Disappear — When this creature enters, if a permanent left the battlefield under your control this turn, create a 1/1 black Ninja creature token.",
+			"placement": "inline",
+			"builtIn": true
+		},
+		{
 			"id": "paradigm",
 			"name": "Paradigm",
 			"mode": "expert",
@@ -4937,6 +4954,71 @@
 			"rulesRaw": "",
 			"example": "Teamwork 2",
 			"placement": "inline",
+			"builtIn": true
+		},
+		{
+			"id": "recruit",
+			"name": "Recruit",
+			"mode": "action",
+			"mseMatch": "recruit",
+			"runtimeMatch": "recruit",
+			"displayPattern": "recruit",
+			"reminderRaw": "{handle_action_rt(to:\"recruit\", \"Draw\")} a card, then discard a card. If you discarded a nonland card, create a 1/1 white Human Soldier creature token.",
+			"rulesRaw": "",
+			"example": "When this creature enters, recruit.",
+			"placement": "line-end",
+			"builtIn": true
+		},
+		{
+			"id": "storied",
+			"name": "Storied",
+			"mode": "expert",
+			"mseMatch": "Storied",
+			"runtimeMatch": "Storied",
+			"displayPattern": "Storied",
+			"reminderRaw": "If you control three or more artifacts, legendaries, and/or Sagas, you have an enduring story for the rest of the game.",
+			"rulesRaw": "",
+			"example": "Storied",
+			"placement": "inline",
+			"builtIn": true
+		},
+		{
+			"id": "hone-counters",
+			"name": "Hone counters",
+			"mode": "expert",
+			"mseMatch": "hone counte<atom-param>*s</atom-param>",
+			"runtimeMatch": "hone counte<atom-param>*s</atom-param>",
+			"displayPattern": "hone counter(s)",
+			"reminderRaw": "Each hone counter on an Equipment grants +1/+0 to equipped creature.",
+			"rulesRaw": "",
+			"example": "Put a hone counter on each Equipment you control.",
+			"placement": "line-end",
+			"builtIn": true
+		},
+		{
+			"id": "rulebreaker",
+			"name": "Rulebreaker",
+			"mode": "pseudo",
+			"mseMatch": "Rulebreaker",
+			"runtimeMatch": "Rulebreaker",
+			"displayPattern": "Rulebreaker",
+			"reminderRaw": "",
+			"rulesRaw": "Rulebreaker — A deck with this commander [effect].",
+			"example": "Rulebreaker — A deck with this commander can have any land cards.",
+			"placement": "inline",
+			"builtIn": true
+		},
+		{
+			"id": "heartwood-token",
+			"name": "Heartwood token",
+			"mode": "expert",
+			"mseMatch": "Heartwood toke<atom-param>*s</atom-param>",
+			"runtimeMatch": "Heartwood toke<atom-param>*s</atom-param>",
+			"displayPattern": "Heartwood token(s)",
+			"reminderRaw": "{if param1.value == \"ns\" then \"They’re red and green artifacts\" else \"It’s a red and green artifact\"} with \"[T]: Add [R] or [G].\"",
+			"rulesRaw": "",
+			"example": "Create a Heartwood token.",
+			"placement": "line-end",
 			"builtIn": true
 		},
 		{

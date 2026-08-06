@@ -11,18 +11,47 @@ function memoryStorage(initial = {}) {
 	};
 }
 
-test('the generated catalog exactly maps the current MSE English keyword source', () => {
-	assert.equal(Keywords.DEFAULT_KEYWORDS.length, 368);
+test('the generated catalog maps MSE develop plus the retained worthy definition', () => {
+	assert.equal(Keywords.DEFAULT_KEYWORDS.length, 374);
 	assert.equal(new Set(Keywords.DEFAULT_KEYWORDS.map((item) => item.id)).size, Keywords.DEFAULT_KEYWORDS.length);
 	assert.deepEqual(
 		Object.fromEntries(Object.entries(Keywords.MSE_CATALOG_MODE_COUNTS)),
-		{old:10, core:28, expert:216, pseudo:60, action:54},
+		{old:10, core:28, expert:219, pseudo:62, action:55},
 	);
-	assert.equal(Keywords.MSE_CATALOG_SOURCE.commit, '71b382d5da74efd533ae25a23ac324a80c3dfeb4');
-	assert.equal(Keywords.MSE_CATALOG_SOURCE.sha256, 'cd538a61db2cf51f2d9f73d3fe60c51e4d8c746c04cca6ec763c0a6bbd141b54');
-	assert.equal(Keywords.DEFAULT_KEYWORDS.filter((item) => item.reminderRaw).length, 308);
-	assert.equal(Keywords.DEFAULT_KEYWORDS.filter((item) => !item.reminderRaw).length, 60);
-	assert.equal(Keywords.DEFAULT_KEYWORDS.filter((item) => item.mode === 'pseudo' && !item.reminderRaw).length, 60);
+	assert.equal(Keywords.MSE_CATALOG_SOURCE.branch, 'develop');
+	assert.equal(Keywords.MSE_CATALOG_SOURCE.commit, 'f1891ee0ed0038d233760d2f5b779923579c38bb');
+	assert.equal(Keywords.MSE_CATALOG_SOURCE.sha256, '1994bc064453038efe7e0b2cab03b4b2b3162aa3d753b0a86b1b6f7e5a8f10e6');
+	assert.equal(Keywords.MSE_CATALOG_SOURCE.upstreamKeywordCount, 373);
+	assert.deepEqual(Array.from(Keywords.MSE_CATALOG_SOURCE.supplementalDefinitions), ['worthy']);
+	assert.equal(Keywords.DEFAULT_KEYWORDS.filter((item) => item.reminderRaw).length, 312);
+	assert.equal(Keywords.DEFAULT_KEYWORDS.filter((item) => !item.reminderRaw).length, 62);
+	assert.equal(Keywords.DEFAULT_KEYWORDS.filter((item) => item.mode === 'pseudo' && !item.reminderRaw).length, 62);
+});
+
+test('reviewed develop definitions match real card wording and retain worthy', () => {
+	const byId = Object.fromEntries(Keywords.DEFAULT_KEYWORDS.map((keyword) => [keyword.id, keyword]));
+	assert.equal(byId.disappear.mseMatch, 'Disappear');
+	assert.equal(byId.disappear.reminderRaw, '');
+	assert.equal(byId.disappear.rulesRaw, 'Disappear — [effect], if a permanent left the battlefield under your control this turn.');
+	assert.match(byId.disappear.example, /^Disappear — When this creature enters,/);
+	assert.equal(byId.recruit.mseMatch, 'recruit');
+	assert.equal(byId.recruit.reminderRaw, '{handle_action_rt(to:"recruit", "Draw")} a card, then discard a card. If you discarded a nonland card, create a 1/1 white Human Soldier creature token.');
+	assert.equal(byId.storied.reminderRaw, 'If you control three or more artifacts, legendaries, and/or Sagas, you have an enduring story for the rest of the game.');
+	assert.equal(byId['hone-counters'].reminderRaw, 'Each hone counter on an Equipment grants +1/+0 to equipped creature.');
+	assert.equal(byId.rulebreaker.mode, 'pseudo');
+	assert.equal(byId['heartwood-token'].reminderRaw, '{if param1.value == "ns" then "They’re red and green artifacts" else "It’s a red and green artifact"} with "[T]: Add [R] or [G]."');
+	assert.equal(byId.worthy.reminderRaw, "A creature is worthy if it's a legendary non-Villain that's red and/or white.");
+});
+
+test('reviewed develop examples reproduce printed formatting and reminder placement', () => {
+	const byId = Object.fromEntries(Keywords.DEFAULT_KEYWORDS.map((keyword) => [keyword.id, keyword]));
+	const apply = (id) => Keywords.applyAll(byId[id].example, [byId[id]]).text;
+	assert.match(apply('disappear'), /^\{i\}Disappear\{\/i\} — When this creature enters,/);
+	assert.equal(apply('recruit'), 'When this creature enters, recruit. {i}(Draw a card, then discard a card. If you discarded a nonland card, create a 1/1 white Human Soldier creature token.){/i}');
+	assert.equal(apply('storied'), 'Storied {i}(If you control three or more artifacts, legendaries, and/or Sagas, you have an enduring story for the rest of the game.){/i}');
+	assert.equal(apply('hone-counters'), 'Put a hone counter on each Equipment you control. {i}(Each hone counter on an Equipment grants +1/+0 to equipped creature.){/i}');
+	assert.match(apply('rulebreaker'), /^\{i\}Rulebreaker\{\/i\} — A deck with this commander/);
+	assert.equal(apply('heartwood-token'), 'Create a Heartwood token. {i}(It’s a red and green artifact with "{t}: Add {R} or {G}."){/i}');
 });
 
 test('every MSE definition recognizes its generated example and exposes its explicit effect', () => {
@@ -38,8 +67,8 @@ test('every MSE definition recognizes its generated example and exposes its expl
 			assert.equal(result.occurrences[0].hasGeneratedReminder, true, `${keyword.id} did not recognize its generated reminder`);
 			assert.doesNotMatch(result.occurrences[0].renderedReminder, /<atom-param>|\bparam\d+\b/, `${keyword.id} leaked MSE implementation syntax`);
 		} else {
-			assert.match(result.text, /^\{i\}.+\{\/i\}$/, `${keyword.id} did not apply MSE pseudo-keyword italics`);
 			assert.equal(result.occurrences[0].hasGeneratedFormatting, true, `${keyword.id} did not recognize its MSE italics`);
+			assert.match(result.text, /\{i\}.+\{\/i\}/, `${keyword.id} did not apply MSE pseudo-keyword italics`);
 		}
 	}
 });
@@ -64,10 +93,10 @@ test('the complete default catalog applies in one explicit workflow without dupl
 	const source = Keywords.DEFAULT_KEYWORDS.map((item) => item.example).join('\n');
 	const first = Keywords.applyAll(source);
 	assert.equal(first.occurrences.length, Keywords.DEFAULT_KEYWORDS.length);
-	assert.equal(first.occurrences.filter((item) => item.hasGeneratedReminder).length, 308);
-	assert.equal(first.occurrences.filter((item) => item.hasGeneratedFormatting).length, 60);
-	assert.equal((first.text.match(/\{i\}\(/g) || []).length, 308);
-	assert.equal(first.changes.length, 368);
+	assert.equal(first.occurrences.filter((item) => item.hasGeneratedReminder).length, 312);
+	assert.equal(first.occurrences.filter((item) => item.hasGeneratedFormatting).length, 62);
+	assert.equal((first.text.match(/\{i\}\(/g) || []).length, 312);
+	assert.equal(first.changes.length, 374);
 
 	const second = Keywords.applyAll(first.text);
 	assert.equal(second.text, first.text);
