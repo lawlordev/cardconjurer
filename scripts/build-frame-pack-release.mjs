@@ -4,6 +4,7 @@ import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import vm from 'node:vm';
 import {BASE_RUNTIME_ASSETS as BASE_RUNTIME_ASSET_LIST, PACK_IDS} from './lib/pack-ownership.mjs';
+import {bootstrapCatalogV3FromV2, minimumAppVersionForPack} from './lib/pack-catalog.mjs';
 
 const GITHUB_RELEASE_ASSET_LIMIT_BYTES = 2 * 1024 * 1024 * 1024;
 const ARCHIVE_SOURCE_TARGET_BYTES = 256 * 1024 * 1024;
@@ -15,6 +16,7 @@ const selectedPackIds = new Set((argument('--packs') || PACK_IDS.join(',')).spli
 for (const id of selectedPackIds) if (!PACK_IDS.includes(id)) throw new Error(`Unknown logical pack: ${id}`);
 const previousCatalogPath = argument('--previous-catalog');
 const previousCatalogV3Path = argument('--previous-catalog-v3');
+const bootstrapCatalogV3 = process.argv.includes('--bootstrap-v3-from-v2');
 const root = process.cwd();
 const output = path.join(root, 'build', 'frame-pack-release');
 rmSync(output, {recursive: true, force: true}); mkdirSync(output, {recursive: true});
@@ -65,9 +67,14 @@ const catalog = previousCatalogPath && existsSync(previousCatalogPath)
   ? JSON.parse(readFileSync(previousCatalogPath, 'utf8'))
   : {schemaVersion: 2, packs: []};
 if (catalog.schemaVersion !== 2 || !Array.isArray(catalog.packs)) throw new Error('The previous frame-pack catalog is invalid.');
+if (bootstrapCatalogV3 && (!previousCatalogPath || previousCatalogV3Path)) {
+  throw new Error('Schema-3 bootstrap requires a previous schema-2 catalog and no previous schema-3 catalog.');
+}
 const catalogV3 = previousCatalogV3Path && existsSync(previousCatalogV3Path)
   ? JSON.parse(readFileSync(previousCatalogV3Path, 'utf8'))
-  : {schemaVersion: 3, generatedAt: new Date().toISOString(), rendererApiVersion: 1, packs: []};
+  : bootstrapCatalogV3
+    ? bootstrapCatalogV3FromV2(catalog)
+    : {schemaVersion: 3, generatedAt: new Date().toISOString(), rendererApiVersion: 1, packs: []};
 if (catalogV3.schemaVersion !== 3 || !Array.isArray(catalogV3.packs)) throw new Error('The previous schema-3 frame-pack catalog is invalid.');
 const checksums = [];
 let archiveCount = 0;
@@ -130,7 +137,7 @@ for (const [id, files] of packFiles) {
   if (!history) { history = {id, versions: []}; catalogV3.packs.push(history); }
   history.versions = history.versions.filter((version) => version.version !== tag.replace(/^packs-v/,''));
   history.versions.push({
-    version: tag.replace(/^packs-v/,''), packSchema: 3, rendererApiVersion: 1, minimumAppVersion: '0.1.0-beta.1',
+    version: tag.replace(/^packs-v/,''), packSchema: 3, rendererApiVersion: 1, minimumAppVersion: minimumAppVersionForPack(id),
     revoked: false, archives, archiveBytes: archives.reduce((total, archive) => total + archive.archiveBytes, 0), installedBytes: expanded,
     manifest: {url:`https://github.com/lawlordev/cardconjurer/releases/download/${tag}/${manifestName}`, sha256:manifestSha256}
   });
@@ -138,6 +145,9 @@ for (const [id, files] of packFiles) {
 catalog.packs.sort((left, right) => left.id.localeCompare(right.id));
 catalogV3.generatedAt = new Date().toISOString();
 catalogV3.packs.sort((left, right) => left.id.localeCompare(right.id));
+if (catalog.packs.some((pack) => !catalogV3.packs.some((history) => history.id === pack.id && Array.isArray(history.versions) && history.versions.length))) {
+  throw new Error('The schema-3 catalog does not carry every schema-2 pack history.');
+}
 writeFileSync(path.join(output, 'frame-packs.json'), `${JSON.stringify(catalog, null, 2)}\n`);
 writeFileSync(path.join(output, 'frame-pack-catalog-v3.json'), `${JSON.stringify(catalogV3, null, 2)}\n`);
 writeFileSync(path.join(output, 'SHA256SUMS'), `${checksums.join('\n')}\n`);
