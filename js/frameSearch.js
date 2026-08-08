@@ -1548,6 +1548,9 @@ async function updateAutomaticFrameFromCatalog(pack) {
 	}
 	autoFramePack = engine;
 	await autoFrame();
+	if (window.CardConjurerSets && typeof window.CardConjurerSets.frameProfileSelected === 'function') {
+		await window.CardConjurerSets.frameProfileSelected(pack);
+	}
 }
 
 function filterFrameCatalog(value) {

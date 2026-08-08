@@ -280,7 +280,15 @@
 									<button type='button' data-card-import-action='search'>Card search</button>
 								</div>
 							</details>
-							<button type='button' class='danger' onclick='CardConjurerSets.deleteCard();'><span aria-hidden='true'>×</span>Delete Card</button>
+							<button id='card-editor-delete-single' type='button' class='danger' onclick='CardConjurerSets.deleteCard();'><span aria-hidden='true'>×</span>Delete Card</button>
+							<details id='card-editor-delete-faces' class='creator-action-dropdown creator-card-action-dropdown' hidden>
+								<summary class='danger'><span aria-hidden='true'>×</span>Delete Card <span class='card-specific-chevron' aria-hidden='true'></span></summary>
+								<div class='creator-action-dropdown-menu creator-card-action-dropdown-menu'>
+									<button type='button' class='danger' onclick="this.closest('details').removeAttribute('open'); CardConjurerSets.deleteSide();">Delete This Side</button>
+									<button type='button' class='danger' onclick="this.closest('details').removeAttribute('open'); CardConjurerSets.deleteCard();">Delete Both Sides</button>
+								</div>
+							</details>
+							<button id='card-editor-flip' type='button' onclick='CardConjurerSets.flipCard();' hidden><span aria-hidden='true'>↻</span><span data-flip-label>Flip to Back</span></button>
 						</div>
 					</section>
 					<div class='creator-canvas-well'>
@@ -1148,5 +1156,5 @@
 	-->
 
 	</div>
-	<div id='creator-script-manifest' hidden data-scripts='/js/frameRegistry.js?v=20260803-sets-7,/js/setModel.js?v=20260803-sets-7,/js/setStorage.js?v=20260803-sets-7,/js/setFiles.js?v=20260803-sets-7,/js/printModel.js?v=20260803-desktop-1,/js/autoFrame.js?v=20260803-sets-7,/js/artBounds.js?v=20260804-issue-12-1,/js/layoutNumberControls.js?v=20260805-issue-43-2,/js/mseKeywordCatalog.js?v=20260805-issue-17-2,/js/mseKeywordRuntime.js?v=20260805-issue-17-2,/js/keywordReminders.js?v=20260805-issue-17-3,/js/creator-23.js?v=20260805-issue-17-3,/js/frameSearch.js?v=20260803-sets-7,/js/setWorkspace.js?v=20260804-issue-15-2'></div>
+	<div id='creator-script-manifest' hidden data-scripts='/js/frameRegistry.js?v=20260807-issue-35-3,/js/setModel.js?v=20260803-sets-7,/js/setStorage.js?v=20260803-sets-7,/js/setFiles.js?v=20260807-issue-35-1,/js/printModel.js?v=20260807-issue-35-1,/js/autoFrame.js?v=20260807-issue-35-3,/js/artBounds.js?v=20260804-issue-12-1,/js/layoutNumberControls.js?v=20260805-issue-43-2,/js/mseKeywordCatalog.js?v=20260805-issue-17-2,/js/mseKeywordRuntime.js?v=20260805-issue-17-2,/js/keywordReminders.js?v=20260805-issue-17-3,/js/creator-23.js?v=20260805-issue-17-3,/js/frameSearch.js?v=20260807-issue-35-1,/js/setWorkspace.js?v=20260807-issue-35-1'></div>
 <!-- END OF CONTENT -->

@@ -1317,10 +1317,14 @@ function automaticHoloStampColors(properties, typeLine) {
 }
 
 function automaticHoloStampColorForFrame(desiredColor, selectedVariant, typeLine) {
-	if (!String(typeLine || '').toLowerCase().includes('land')) return desiredColor;
 	const frameName = String(selectedVariant?.item?.name || selectedVariant?.name || '');
-	return ['White', 'Blue', 'Black', 'Red', 'Green', 'Multicolored', 'Artifact', 'Colorless']
-		.find(color => new RegExp('\\b' + color + '\\b', 'i').test(frameName)) || desiredColor;
+	const renderedColor = ['White', 'Blue', 'Black', 'Red', 'Green', 'Multicolored', 'Artifact', 'Land', 'Vehicle', 'Colorless']
+		.find(color => new RegExp('\\b' + color + '\\b', 'i').test(frameName));
+	// Lands can render a colored land frame, while neutral cards and Vehicles
+	// frequently fall back to an Artifact or White frame. Use that rendered
+	// frame color so its pack-specific stamp artwork and bounds are selected.
+	const usesRenderedFallback = String(typeLine || '').toLowerCase().includes('land') || ['Colorless', 'Vehicle'].includes(desiredColor);
+	return usesRenderedFallback && renderedColor ? renderedColor : desiredColor;
 }
 
 function automaticFrameLayerAllowed(layer) {
@@ -2034,13 +2038,17 @@ async function autoFrameFromAvailableFrames(colors, typeLine, selectedProfile, f
 	if (!selectedVariant) return;
 
 	const rarity = (card.infoRarity || document.querySelector('#info-rarity')?.value || '').trim().toUpperCase();
-	let profileStamp = null;
-	if (['R', 'M', 'S'].includes(rarity) && automaticHoloStampAllowed()) {
+	const profileRarityAllowsStamp = typeof FRAME_REGISTRY == 'undefined' || typeof FRAME_REGISTRY.automaticHoloStampAllowedForRarity !== 'function'
+		? ['R', 'M', 'S'].includes(rarity)
+		: FRAME_REGISTRY.automaticHoloStampAllowedForRarity(selectedProfile, rarity);
+	let profileStamps = [];
+	if (profileRarityAllowsStamp && automaticHoloStampAllowed()) {
 		const stampColor = automaticHoloStampColorForFrame(desiredColor, selectedVariant, typeLine);
-		profileStamp = selectAutomaticHoloStamp(frameOptions, selectedProfile, stampColor);
+		profileStamps = selectAutomaticHoloStampLayers(frameOptions, selectedProfile, stampColor, rarity);
 	}
 
 	const family = typeof FRAME_REGISTRY == 'undefined' ? selectedProfile : FRAME_REGISTRY.family(selectedProfile);
+	const semanticHoloStampAllowed = typeof FRAME_REGISTRY == 'undefined' || typeof FRAME_REGISTRY.defaultHoloStampAllowed !== 'function' || FRAME_REGISTRY.defaultHoloStampAllowed(selectedProfile);
 	const familyEngine = {
 		regular: 'M15Regular-1',
 		borderless: 'Borderless',
@@ -2053,12 +2061,12 @@ async function autoFrameFromAvailableFrames(colors, typeLine, selectedProfile, f
 		const generatedFrames = buildAutoFrames(familyEngine, componentColors, card.text.mana.text, typeLine, card.text.pt ? card.text.pt.text : '', card.text.mana2 ? card.text.mana2.text : '');
 		semanticComponents = generatedFrames.filter(frame => {
 			const name = frame.name || '';
-			return name.includes('Legend Crown') || name.includes('Inner Crown') || name.includes('Nickname') || name.includes('Power/Toughness') || (!profileStamp && name.includes('Holo Stamp'));
+			return name.includes('Legend Crown') || name.includes('Inner Crown') || name.includes('Nickname') || name.includes('Power/Toughness') || (!profileStamps.length && semanticHoloStampAllowed && name.includes('Holo Stamp'));
 		});
 	}
-	if (profileStamp) {
+	if (profileStamps.length) {
 		const ptIndex = semanticComponents.findIndex(frame => (frame.name || '').includes('Power/Toughness'));
-		semanticComponents.splice(ptIndex < 0 ? semanticComponents.length : ptIndex, 0, profileStamp);
+		semanticComponents.splice(ptIndex < 0 ? semanticComponents.length : ptIndex, 0, ...profileStamps);
 	}
 
 	if (profileDetails?.powerToughnessPattern) {
@@ -2125,17 +2133,51 @@ async function autoFrameFromAvailableFrames(colors, typeLine, selectedProfile, f
 	card.frames.reverse();
 }
 
-function selectAutomaticHoloStamp(frameOptions, selectedProfile, desiredColor) {
+function selectAutomaticHoloStamp(frameOptions, selectedProfile, desiredColor, rarity = 'R') {
 	const desiredName = String(desiredColor || '').toLowerCase();
-	const availableStamps = (frameOptions || []).filter(item => (item.name || '').toLowerCase().includes('holo stamp'));
-	const matchingStamp = availableStamps.find(item => item.name.toLowerCase() === desiredName + ' holo stamp') ||
-		availableStamps.find(item => item.name.toLowerCase() === 'holo stamp');
-	const registryStamp = typeof FRAME_REGISTRY == 'undefined' ? null : FRAME_REGISTRY.stampFor(selectedProfile, desiredColor);
+	const normalizedName = item => String(item?.name || '').toLowerCase().replace(/\s+/g, '');
+	const availableStamps = (frameOptions || []).filter(item => /stamp/i.test(item.name || ''));
+	const preferredName = typeof FRAME_REGISTRY == 'undefined' || typeof FRAME_REGISTRY.automaticStampPreference !== 'function'
+		? null
+		: FRAME_REGISTRY.automaticStampPreference(selectedProfile);
+	const usesUniversesBeyondStamp = typeof FRAME_REGISTRY != 'undefined' && typeof FRAME_REGISTRY.usesUniversesBeyondHoloStamp === 'function' && FRAME_REGISTRY.usesUniversesBeyondHoloStamp(selectedProfile);
+	const wantsMatteStamp = ['C', 'U'].includes(String(rarity || '').toUpperCase()) && usesUniversesBeyondStamp;
+	const neutralFallbackNames = ['colorless', 'vehicle'].includes(desiredName)
+		? ['artifactholostamp', 'whiteholostamp']
+		: [];
+	const matteNames = /triangle/i.test(preferredName || '')
+		? ['greytrianglestamp', 'graytrianglestamp', 'grayholostamp', 'graystamp', 'greyholostamp', 'greystamp']
+		: ['grayholostamp', 'graystamp', 'greyholostamp', 'greystamp', 'greytrianglestamp', 'graytrianglestamp'];
+	const matchingStamp = wantsMatteStamp
+		? matteNames.map(name => availableStamps.find(item => normalizedName(item) === name)).find(Boolean)
+		: availableStamps.find(item => normalizedName(item) === desiredName.replace(/\s+/g, '') + 'holostamp') ||
+			neutralFallbackNames.map(name => availableStamps.find(item => normalizedName(item) === name)).find(Boolean) ||
+			(preferredName ? availableStamps.find(item => normalizedName(item) === normalizedName({name:preferredName})) : null) ||
+			availableStamps.find(item => normalizedName(item) === 'holostamp') ||
+			availableStamps.find(item => normalizedName(item) === 'goldholostamp');
+	const registryStamp = typeof FRAME_REGISTRY == 'undefined' ? null : FRAME_REGISTRY.stampFor(selectedProfile, desiredColor, rarity);
 	const selectedStamp = matchingStamp || registryStamp;
 	if (!selectedStamp) return null;
 	const stamp = JSON.parse(JSON.stringify(selectedStamp));
 	stamp.masks = stamp.masks || [];
 	return stamp;
+}
+
+function selectAutomaticHoloStampLayers(frameOptions, selectedProfile, desiredColor, rarity = 'R') {
+	const primaryStamp = selectAutomaticHoloStamp(frameOptions, selectedProfile, desiredColor, rarity);
+	if (!primaryStamp) return [];
+	const companionName = typeof FRAME_REGISTRY == 'undefined' || typeof FRAME_REGISTRY.automaticStampCompanion !== 'function'
+		? null
+		: FRAME_REGISTRY.automaticStampCompanion(selectedProfile, rarity);
+	if (!companionName) return [primaryStamp];
+	const companion = (frameOptions || []).find(frame => frame.name === companionName);
+	if (!companion || companion.src === primaryStamp.src) return [primaryStamp];
+	const companionStamp = JSON.parse(JSON.stringify(companion));
+	companionStamp.masks = companionStamp.masks || [];
+	// Frames are stored top-to-bottom. The decorative cutout assets include an
+	// opaque footer fill, so the foil oval must sit above them rather than being
+	// hidden behind that fill.
+	return [companionStamp, primaryStamp];
 }
 
 async function autoFramePrototypeFromAvailableFrames(typeLine, frameOptions = availableFrames, requestId = autoFrameRequestId) {

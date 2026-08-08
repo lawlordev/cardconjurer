@@ -23,5 +23,8 @@
 		return slots.slice(0, 4).reverse().concat(slots.slice(4, 8).reverse());
 	}
 	function source(card) { return card && card.printSource || ''; }
-	return {PAPERS: PAPERS, quantity: quantity, expand: expand, pages: pages, backSlots: backSlots, source: source};
+	function backSource(card, standardSource) {
+		return card && card.backFace && card.backFace.printSource || standardSource || '';
+	}
+	return {PAPERS: PAPERS, quantity: quantity, expand: expand, pages: pages, backSlots: backSlots, source: source, backSource: backSource};
 });

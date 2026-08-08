@@ -53,9 +53,11 @@
 	function envelope(format, payload) {
 		var assets = {};
 		var cards = payload.cards || (payload.card ? [payload.card] : []);
-		var requiredPacks = Array.from(new Set(cards.map(function(card) {
-			var pack = card.uiState && (card.uiState.activeFrameCustomizationPack || card.uiState.activeFramePack);
-			return pack && typeof window !== 'undefined' && window.FRAME_REGISTRY ? window.FRAME_REGISTRY.category(pack) : null;
+		var requiredPacks = Array.from(new Set(cards.flatMap(function(card) {
+			return [card.uiState, card.backFace && card.backFace.uiState].map(function(uiState) {
+				var pack = uiState && (uiState.activeFrameCustomizationPack || uiState.activeFramePack);
+				return pack && typeof window !== 'undefined' && window.FRAME_REGISTRY ? window.FRAME_REGISTRY.category(pack) : null;
+			});
 		}).filter(Boolean))).map(function(id) { return {id:id, version:'1.0.0'}; });
 		return {
 			format: format,

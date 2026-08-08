@@ -22,6 +22,7 @@
 	var pendingTransferMode = null;
 	var pendingSetImport = null;
 	var scryfallSearchResults = [];
+	var suppressAutomaticFacePairing = false;
 	var WORKSPACE_LAYOUT_KEY = 'card-conjurer-workspace-layout-v1';
 	var workspaceLayout = {leftWidth: null, rightWidth: null, collapsed: false};
 	var DEFAULT_SET_SYMBOL_BOUNDS = {x: 0.9213, y: 0.5910, width: 0.12, height: 0.0410, vertical: 'center', horizontal: 'right'};
@@ -72,12 +73,52 @@
 		var set = activeSet();
 		return set ? state.cards.find(function(card) { return card.id === set.activeCardId; }) || cardsFor(set.id)[0] : null;
 	}
+	function activeFaceName(record) {
+		return record && record.backFace && record.activeFace === 'back' ? 'back' : 'front';
+	}
+	function activeFaceRecord(record) {
+		return activeFaceName(record) === 'back' ? record.backFace : record;
+	}
+	function faceUiForProfile(uiState, profile) {
+		var next = clone(uiState || {});
+		var definition = typeof FRAME_REGISTRY === 'undefined' ? null : FRAME_REGISTRY.definition(profile);
+		var customizationRoot = typeof FRAME_REGISTRY === 'undefined' || typeof FRAME_REGISTRY.customizationRoot !== 'function' ? profile : FRAME_REGISTRY.customizationRoot(profile);
+		next.activeFramePack = customizationRoot;
+		next.activeFrameCustomizationPack = customizationRoot === profile ? null : profile;
+		next.activeFrameComponentOptions = {};
+		next.automaticVariantPack = null;
+		next.autoFrameValue = definition && definition.engine || profile;
+		next.selectedFrameProfile = profile;
+		return next;
+	}
+	function normalizedDirectionalFaceUi(uiState) {
+		var next = clone(uiState || {});
+		if (typeof FRAME_REGISTRY === 'undefined' || typeof FRAME_REGISTRY.faceDefinition !== 'function' || typeof FRAME_REGISTRY.customizationRoot !== 'function') return next;
+		var profile = next.activeFrameCustomizationPack || next.selectedFrameProfile || next.activeFramePack;
+		if (!profile || !FRAME_REGISTRY.faceDefinition(profile)) return next;
+		var customizationRoot = FRAME_REGISTRY.customizationRoot(profile);
+		next.activeFramePack = customizationRoot;
+		next.activeFrameCustomizationPack = customizationRoot === profile ? null : profile;
+		return next;
+	}
 
 	function updateCardEditorActions() {
 		var button = document.querySelector('#card-editor-add-variant');
 		var duplicateButton = document.querySelector('#card-editor-duplicate');
+		var singleDelete = document.querySelector('#card-editor-delete-single');
+		var faceDelete = document.querySelector('#card-editor-delete-faces');
+		var flipButton = document.querySelector('#card-editor-flip');
 		var record = activeCardRecord();
 		if (!record) return;
+		var hasBackFace = Boolean(record.backFace);
+		if (singleDelete) singleDelete.hidden = hasBackFace;
+		if (faceDelete) { faceDelete.hidden = !hasBackFace; if (!hasBackFace) faceDelete.removeAttribute('open'); }
+		if (flipButton) {
+			flipButton.hidden = !hasBackFace;
+			var label = flipButton.querySelector('[data-flip-label]');
+			if (label) label.textContent = activeFaceName(record) === 'front' ? 'Flip to Back' : 'Flip to Front';
+			flipButton.setAttribute('aria-label', label ? label.textContent : 'Flip card');
+		}
 		var collectorMatch = String(record.collectorNumber || '').match(/^(\d+)([a-z]*)/i);
 		var match = collectorMatch && collectorMatch[1] ? collectorMatch : null;
 		var base = String(Number(match ? match[1] : 1)).padStart(4, '0');
@@ -107,8 +148,8 @@
 		return set.symbolSources[common ? 'common' : cardRecord.rarity] || '';
 	}
 
-	function hydratedCardData(record, set) {
-		var data = clone(record.cardData || {});
+	function hydratedCardData(record, set, faceRecord) {
+		var data = clone((faceRecord || record).cardData || {});
 		data.infoNumber = record.collectorNumber;
 		data.infoRarity = ({common: 'C', uncommon: 'U', rare: 'R', mythic: 'M'})[record.rarity] || 'C';
 		data.infoSet = set.code;
@@ -577,23 +618,42 @@
 		if (!set || !record || typeof loadCardData !== 'function') return;
 		loadingCard = true;
 		try {
+			var faceRecord = activeFaceRecord(record);
+			var pendingFrameApplied = false;
+			var normalizedUiState = normalizedDirectionalFaceUi(faceRecord.uiState);
+			var faceUiRepaired = JSON.stringify(normalizedUiState) !== JSON.stringify(faceRecord.uiState || {});
+			if (faceUiRepaired) faceRecord.uiState = normalizedUiState;
 			var styleInput = document.querySelector('#enableNewCollectorStyle');
 			if (styleInput) styleInput.checked = set.collectorStyle === 'post-one';
-			var hydrated = hydratedCardData(record, set);
+			var hydrated = hydratedCardData(record, set, faceRecord);
 			var repairedSymbolPlacement = Boolean(hydrated.setSymbolSource && symbolPlacementMissing(hydrated, hydrated.setSymbolSource));
 			if (repairedSymbolPlacement && !hydrated.setSymbolBounds) hydrated.setSymbolBounds = clone(DEFAULT_SET_SYMBOL_BOUNDS);
-			await loadCardData(hydrated, record.uiState || {});
+			await loadCardData(hydrated, faceRecord.uiState || {});
 			if (typeof waitForLoadedCardAssets === 'function') await waitForLoadedCardAssets();
+			if (faceRecord.pendingFrameProfile && typeof applyFrameCustomization === 'function') {
+				var pendingProfile = faceRecord.pendingFrameProfile;
+				suppressAutomaticFacePairing = true;
+				try {
+					await applyFrameCustomization(pendingProfile);
+					if (typeof waitForLoadedCardAssets === 'function') await waitForLoadedCardAssets();
+					faceRecord.cardData = stripSetOwned(cardStorageSnapshot());
+					faceRecord.uiState = liveDraftUiSnapshot();
+					delete faceRecord.pendingFrameProfile;
+					faceRecord.thumbnailDirty = true;
+					pendingFrameApplied = true;
+				} finally { suppressAutomaticFacePairing = false; }
+			}
 			if (repairedSymbolPlacement && typeof resetSetSymbol === 'function') {
 				resetSetSymbol();
 				card.setSymbolPlacementKey = symbolSourceKey(hydrated.setSymbolSource);
-				record.cardData = stripSetOwned(cardStorageSnapshot());
+				faceRecord.cardData = stripSetOwned(cardStorageSnapshot());
 				record.updatedAt = new Date().toISOString();
 			}
 			if (typeof setBottomInfoStyle === 'function') { await setBottomInfoStyle(); await bottomInfoEdited(); }
 			if (!zipRendering) renderCardDetailsSummary();
 			var thumbnailChanged = zipRendering ? false : await updateThumbnail(record.id);
-			if (repairedSymbolPlacement || thumbnailChanged) await persist();
+			if (repairedSymbolPlacement || thumbnailChanged || pendingFrameApplied || faceUiRepaired) await persist();
+			updateCardEditorActions();
 		} finally { loadingCard = false; editorDirty = false; }
 	}
 
@@ -628,21 +688,22 @@
 		var canvas = document.querySelector('#previewCanvas');
 		if (!record || !canvas || !canvas.width) return false;
 		try {
+			var faceRecord = activeFaceRecord(record);
 			var thumb = document.createElement('canvas'); thumb.width = 72; thumb.height = 101;
 			thumb.getContext('2d').drawImage(canvas, 0, 0, thumb.width, thumb.height);
 			var nextThumbnail = thumb.toDataURL('image/webp', 0.72);
-			var changed = record.thumbnail !== nextThumbnail || record.thumbnailDirty;
-			record.thumbnail = nextThumbnail; record.thumbnailDirty = false;
-			refreshThumbnailElements(record);
+			var changed = faceRecord.thumbnail !== nextThumbnail || faceRecord.thumbnailDirty;
+			faceRecord.thumbnail = nextThumbnail; faceRecord.thumbnailDirty = false;
+			if (activeFaceName(record) === 'front') refreshThumbnailElements(record);
 			return changed;
-		} catch (error) { record.thumbnailDirty = true; return false; }
+		} catch (error) { activeFaceRecord(record).thumbnailDirty = true; return false; }
 	}
 
 	function queueRenderedThumbnailRefresh() {
 		if (!initialized || loadingCard) return;
 		var record = activeCardRecord();
 		if (!record) return;
-		record.thumbnailDirty = true;
+		activeFaceRecord(record).thumbnailDirty = true;
 		thumbnailRefreshCardId = record.id;
 		clearTimeout(thumbnailRefreshTimer);
 		thumbnailRefreshTimer = setTimeout(async function() {
@@ -658,22 +719,23 @@
 		if (!initialized || loadingCard || !editorDirty || typeof cardStorageSnapshot !== 'function') return;
 		var record = activeCardRecord(); var set = activeSet(); if (!record || !set) return;
 		editorDirty = false;
+		var faceName = activeFaceName(record); var faceRecord = activeFaceRecord(record);
 		var currentData = stripSetOwned(cardStorageSnapshot());
 		if (Storage.ingestAssets) currentData = await Storage.ingestAssets(currentData);
-		if (JSON.stringify(currentData) === JSON.stringify(record.cardData) && JSON.stringify(liveDraftUiSnapshot()) === JSON.stringify(record.uiState)) return;
+		if (JSON.stringify(currentData) === JSON.stringify(faceRecord.cardData) && JSON.stringify(liveDraftUiSnapshot()) === JSON.stringify(faceRecord.uiState)) return;
 		var beforeRecord = clone(record); var beforeSet = clone(set); var beforeFingerprint = Model.gameplayFingerprint(record);
 		var beforeGroup = [record.printingCategory, record.frameGroupKey, record.variantKind, record.logicalCardId].join('|');
-		var oldUi = record.uiState || {};
-		record.cardData = currentData; record.uiState = liveDraftUiSnapshot(); record.updatedAt = new Date().toISOString(); record.thumbnailDirty = true;
-		if (record.variantKind === 'art' && oldUi.activeFramePack && record.uiState.activeFramePack && oldUi.activeFramePack !== record.uiState.activeFramePack) {
+		var oldUi = faceRecord.uiState || {};
+		faceRecord.cardData = currentData; faceRecord.uiState = liveDraftUiSnapshot(); record.updatedAt = new Date().toISOString(); faceRecord.thumbnailDirty = true;
+		if (faceName === 'front' && record.variantKind === 'art' && oldUi.activeFramePack && record.uiState.activeFramePack && oldUi.activeFramePack !== record.uiState.activeFramePack) {
 			record.variantKind = null; record.logicalCardId = record.id; record.variantOrder = 0;
 		}
-		inferFrameClassification(record);
+		if (faceName === 'front') inferFrameClassification(record);
 		var afterFingerprint = Model.gameplayFingerprint(record);
 		var afterGroup = [record.printingCategory, record.frameGroupKey, record.variantKind, record.logicalCardId].join('|');
-		var listOrderChanged = beforeFingerprint !== afterFingerprint || beforeGroup !== afterGroup;
+		var listOrderChanged = faceName === 'front' && (beforeFingerprint !== afterFingerprint || beforeGroup !== afterGroup);
 		if (listOrderChanged) renumberSet(set.id);
-		else {
+		else if (faceName === 'front') {
 			var derived = Model.deriveCard(record);
 			record.derived = derived.derived; record.gameplayFingerprint = afterFingerprint;
 		}
@@ -889,6 +951,76 @@
 		}, [set.id], {immediate: true}); await loadActiveCard();
 	}
 
+	async function frameProfileSelected(pack) {
+		if (!initialized || loadingCard || suppressAutomaticFacePairing || typeof FRAME_REGISTRY === 'undefined') return;
+		var pair = typeof FRAME_REGISTRY.faceDefinition === 'function' ? FRAME_REGISTRY.faceDefinition(pack) : null;
+		var record = activeCardRecord(); var set = activeSet();
+		if (!pair || !record || !set || record.backFace || typeof cardStorageSnapshot !== 'function') return;
+		clearTimeout(captureTimer); editorDirty = false;
+		var before = snapshot();
+		var currentData = stripSetOwned(cardStorageSnapshot());
+		if (Storage.ingestAssets) currentData = await Storage.ingestAssets(currentData);
+		var currentUi = liveDraftUiSnapshot();
+		var reverseFace = {
+			cardData: clone(currentData), uiState: faceUiForProfile(currentUi, pair.counterpart),
+			pendingFrameProfile: pair.counterpart, thumbnail: '', thumbnailDirty: true
+		};
+		if (pair.side === 'back') {
+			record.cardData = reverseFace.cardData;
+			record.uiState = reverseFace.uiState;
+			record.pendingFrameProfile = reverseFace.pendingFrameProfile;
+			record.thumbnailDirty = true;
+			record.backFace = {cardData: currentData, uiState: currentUi, thumbnail: '', thumbnailDirty: true};
+			record.activeFace = 'back';
+		} else {
+			record.cardData = currentData;
+			record.uiState = currentUi;
+			record.thumbnailDirty = true;
+			record.backFace = reverseFace;
+			record.activeFace = 'front';
+		}
+		record.updatedAt = new Date().toISOString();
+		var derived = Model.deriveCard(record); record.derived = derived.derived; record.gameplayFingerprint = Model.gameplayFingerprint(record);
+		await updateThumbnail(record.id);
+		var after = snapshot();
+		recordHistory([set.id], 'Add reverse side', '', before, after);
+		await persist(true); updateUndoButtons(); updateCardEditorActions(); refreshCardListRow(record.id);
+	}
+
+	async function flipCard() {
+		var record = activeCardRecord();
+		if (!record || !record.backFace) return;
+		return runCardPreviewTransition(async function() {
+			await captureActiveCard();
+			record.activeFace = activeFaceName(record) === 'front' ? 'back' : 'front';
+			record.updatedAt = new Date().toISOString();
+			await persist(true); updateCardEditorActions(); await loadActiveCard();
+		});
+	}
+
+	async function deleteSide() {
+		var record = activeCardRecord(); var set = activeSet();
+		if (!record || !record.backFace || !set) return;
+		return runCardPreviewTransition(async function() {
+			await captureActiveCard();
+			var before = snapshot();
+			if (activeFaceName(record) === 'front') {
+				var promoted = clone(record.backFace);
+				record.cardData = promoted.cardData || {};
+				record.uiState = promoted.uiState || {};
+				record.thumbnail = promoted.thumbnail || '';
+				record.thumbnailDirty = promoted.thumbnailDirty !== false;
+				if (promoted.pendingFrameProfile) record.pendingFrameProfile = promoted.pendingFrameProfile;
+				else delete record.pendingFrameProfile;
+			}
+			record.backFace = null; record.activeFace = 'front'; record.updatedAt = new Date().toISOString();
+			var derived = Model.deriveCard(record); record.derived = derived.derived; record.gameplayFingerprint = Model.gameplayFingerprint(record);
+			inferFrameClassification(record); renumberSet(set.id);
+			var after = snapshot(); recordHistory([set.id], 'Delete card side', '', before, after);
+			await persist(true); renderWorkspace(); await loadActiveCard();
+		});
+	}
+
 	async function deleteCardAction() {
 		return runCardPreviewTransition(async function() {
 			await captureActiveCard(); var set = activeSet(); var source = activeCardRecord(); if (!set || !source) return;
@@ -998,7 +1130,7 @@
 		else if (typeof setSymbolEdited === 'function') setSymbolEdited();
 		else if (typeof drawCard === 'function') drawCard();
 		if (repairedSymbolPlacement && typeof cardStorageSnapshot === 'function') {
-			record.cardData = stripSetOwned(cardStorageSnapshot());
+			activeFaceRecord(record).cardData = stripSetOwned(cardStorageSnapshot());
 			record.updatedAt = new Date().toISOString();
 		}
 		await updateThumbnail(record.id);
@@ -1085,6 +1217,7 @@
 			var before = snapshot();
 			loadingCard = true;
 			try {
+				var faceRecord = activeFaceRecord(record);
 				record.rarity = value;
 				var rarityCode = ({common:'C',uncommon:'U',rare:'R',mythic:'M'})[value] || 'C';
 				card.infoRarity = rarityCode;
@@ -1097,11 +1230,11 @@
 				}
 				if (typeof bottomInfoEdited === 'function') await bottomInfoEdited();
 				if (typeof autoFrame === 'function') await autoFrame();
-				record.cardData = stripSetOwned(cardStorageSnapshot());
-				record.uiState = liveDraftUiSnapshot();
+				faceRecord.cardData = stripSetOwned(cardStorageSnapshot());
+				faceRecord.uiState = liveDraftUiSnapshot();
 				record.updatedAt = new Date().toISOString();
-				record.thumbnailDirty = true;
-				inferFrameClassification(record);
+				faceRecord.thumbnailDirty = true;
+				if (activeFaceName(record) === 'front') inferFrameClassification(record);
 				renumberSet(set.id);
 				await syncActiveCollectorNumber(state.cards.find(function(item) { return item.id === record.id; }) || record);
 			} finally { loadingCard = false; editorDirty = false; }
@@ -1454,20 +1587,31 @@
 		if (!set) return {};
 		var originalCardId = set.activeCardId;
 		var ids = Array.from(new Set(cardIds || [])).filter(function(id) { return state.cards.some(function(record) { return record.id === id && record.setId === set.id; }); });
+		var originalFaces = new Map(ids.map(function(id) { var record = state.cards.find(function(item) { return item.id === id; }); return [id, record && record.activeFace || 'front']; }));
 		var images = {};
 		try {
 			for (var index = 0; index < ids.length; index++) {
 				var record = state.cards.find(function(item) { return item.id === ids[index]; });
 				set.activeCardId = record.id;
 				if (typeof onProgress === 'function') onProgress({index: index, total: ids.length, card: clone(record)});
+				record.activeFace = 'front';
 				await loadActiveCard();
 				await new Promise(function(resolve) { requestAnimationFrame(function() { requestAnimationFrame(resolve); }); });
 				var blob = await canvasBlob('png');
 				if (!blob) throw new Error('The high-resolution print image for ' + (record.derived.title || 'Untitled Card') + ' could not be rendered.');
 				images[record.id] = blob;
+				if (record.backFace) {
+					record.activeFace = 'back';
+					await loadActiveCard();
+					await new Promise(function(resolve) { requestAnimationFrame(function() { requestAnimationFrame(resolve); }); });
+					var backBlob = await canvasBlob('png');
+					if (!backBlob) throw new Error('The high-resolution reverse image for ' + (record.derived.title || 'Untitled Card') + ' could not be rendered.');
+					images[record.id + ':back'] = backBlob;
+				}
 			}
 			return images;
 		} finally {
+			ids.forEach(function(id) { var record = state.cards.find(function(item) { return item.id === id; }); if (record) record.activeFace = originalFaces.get(id) || 'front'; });
 			set.activeCardId = originalCardId;
 			renderWorkspace();
 			await loadActiveCard();
@@ -1621,7 +1765,8 @@
 		initialize: initialize, captureActiveCard: captureActiveCard, queueCapture: queueCapture, resetActiveCard: resetActiveCard,
 		automaticFrameSettled: automaticFrameSettled,
 		selectSet: selectSet, selectTab: selectTab, selectCard: selectCard, newSet: newSet, duplicateSet: duplicateSet, newCard: newCard, duplicateCard: duplicateCard, addVariant: addVariant,
-		deleteCard: deleteCardAction, deleteSet: deleteSetAction, undo: undo, redo: redo, updateListState: updateListState,
+		deleteCard: deleteCardAction, deleteSide: deleteSide, flipCard: flipCard, frameProfileSelected: frameProfileSelected,
+		deleteSet: deleteSetAction, undo: undo, redo: redo, updateListState: updateListState,
 		previewSetField: previewSetField, commitSetField: commitSetField, updateSetText: updateSetText, updateCopyrightNoteStyle: updateCopyrightNoteStyle, previewStory: previewStory,
 		updateSymbol: updateSymbol, uploadSymbol: uploadSymbol, loadSymbolsByCode: loadSymbolsByCode, clearSymbols: clearSymbols, updateCollectorStyle: updateCollectorStyle, moveGroup: moveGroup, updateCardDetail: updateCardDetail,
 		moveOrCopy: moveOrCopy, confirmMoveOrCopy: confirmMoveOrCopy, exportCard: exportCardAction, exportCardImage: exportCardImage, exportSet: exportSetAction, updatePrintQuantity: updatePrintQuantity, importCardFile: importCardFile, importSetFile: importSetFile, importText: importText, resolveSetImport: resolveSetImport, cancelSetImport: cancelSetImport,

@@ -39,6 +39,7 @@
 | Edit per-card collector details | Dedicated Rarity, Note, Serialized Card, and Footer Mark sections; serialized placement uses the shared compact layout-drawer pattern | `creator/index.html`, `js/creator-23.js`, `js/setWorkspace.js` |
 | Configure set collector output | Set-owned code, language, copyright, style, and first-copyright-line Note styling in the Collector tab | `js/setWorkspace.js`, `js/setModel.js` |
 | Switch between rendered cards | Frozen `.creator-canvas-transition` snapshot fully covers a hidden live canvas until pending assets settle and the next card receives a final render | `creator/index.html`, `js/creator-23.js`, `js/setWorkspace.js`, `css/style-9.css` |
+| Edit a double-faced card | Directional front/back frame profiles create one paired card record, the card action row reuses the existing secondary-action dropdown for side-aware deletion, and Flip reuses the frozen blurred preview transition while preserving independently editable face layouts | `creator/index.html`, `js/frameRegistry.js`, `js/setWorkspace.js`, `css/style-9.css` |
 | Keep card thumbnails current | Final canvas renders patch the active card thumbnail in place and persist it for reloads | `js/creator-23.js`, `js/setWorkspace.js` |
 | Resize workspace panels | `.workspace-resizer` draggable separators with persisted widths | `creator/index.html`, `js/setWorkspace.js` |
 | Hydrate the saved workspace | Full-screen `.creator-loading-screen` until preferences, set data, and the active card finish rendering | `creator/index.html`, `js/setWorkspace.js` |

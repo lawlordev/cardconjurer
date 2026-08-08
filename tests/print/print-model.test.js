@@ -26,3 +26,8 @@ test('uses dedicated full-resolution print sources instead of list thumbnails', 
 	assert.equal(Print.source({printSource:'blob:sharp-card', thumbnail:'data:image/webp;base64,tiny'}), 'blob:sharp-card');
 	assert.equal(Print.source({thumbnail:'data:image/webp;base64,tiny'}), '');
 });
+
+test('uses a custom reverse render before falling back to the standard card back', () => {
+	assert.equal(Print.backSource({backFace:{printSource:'blob:reverse'}}, '/core/standard-card-back.png'), 'blob:reverse');
+	assert.equal(Print.backSource({}, '/core/standard-card-back.png'), '/core/standard-card-back.png');
+});
