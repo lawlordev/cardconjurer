@@ -86,6 +86,67 @@ registerCardSpecificTextTools({
 
 if (!planeswalkerVersionFirstLoad) resetPlaneswalkerImages(fixPlaneswalkerInputs(planeswalkerEdited));
 
+function updatePlaneswalkerAbilityTextBounds(cardData, index, hasCost) {
+	const ability = cardData.text['ability' + index];
+	if (!ability) return;
+	const planeswalker = cardData.planeswalker;
+	planeswalker.noCostTextBounds = planeswalker.noCostTextBounds || {};
+	let originalBounds = planeswalker.noCostTextBounds[index];
+	const expansion = 0.044;
+	const approximatelyEqual = (left, right) => Math.abs(Number(left) - Number(right)) < 0.00001;
+	const costedSiblingBounds = (planeswalker.abilities || []).map((cost, siblingIndex) => {
+		if (siblingIndex === index || !String(cost || '').trim()) return null;
+		const sibling = cardData.text['ability' + siblingIndex];
+		return sibling ? {x:Number(sibling.x), width:Number(sibling.width)} : null;
+	}).find(Boolean);
+
+	if (!hasCost) {
+		if (!originalBounds) {
+			const legacyX = Number(planeswalker.orig_ability_textbox_x);
+			const legacyWidth = Number(planeswalker.orig_ability_textbox_width);
+			const matchesLegacyExpansion = Number.isFinite(legacyX) && Number.isFinite(legacyWidth) &&
+				approximatelyEqual(ability.x, legacyX - expansion) &&
+				approximatelyEqual(ability.width, legacyWidth + expansion);
+			const matchesSiblingBase = costedSiblingBounds &&
+				approximatelyEqual(ability.x, costedSiblingBounds.x) &&
+				approximatelyEqual(ability.width, costedSiblingBounds.width);
+			const matchesSiblingExpansion = costedSiblingBounds &&
+				approximatelyEqual(ability.x, costedSiblingBounds.x - expansion) &&
+				approximatelyEqual(ability.width, costedSiblingBounds.width + expansion);
+			originalBounds = matchesLegacyExpansion
+				? {x:legacyX, width:legacyWidth}
+				: (matchesSiblingBase || matchesSiblingExpansion)
+					? costedSiblingBounds
+					: {x:Number(ability.x), width:Number(ability.width)};
+			planeswalker.noCostTextBounds[index] = originalBounds;
+		} else {
+			const matchesCorruptedReset = costedSiblingBounds &&
+				approximatelyEqual(originalBounds.x, costedSiblingBounds.x + expansion) &&
+				approximatelyEqual(originalBounds.width, costedSiblingBounds.width - expansion) &&
+				approximatelyEqual(ability.x, costedSiblingBounds.x) &&
+				approximatelyEqual(ability.width, costedSiblingBounds.width);
+			if (matchesCorruptedReset) {
+				originalBounds = costedSiblingBounds;
+				planeswalker.noCostTextBounds[index] = originalBounds;
+			}
+			const expectedX = originalBounds.x - expansion;
+			const expectedWidth = originalBounds.width + expansion;
+			const matchesUnexpandedBase = approximatelyEqual(ability.x, originalBounds.x) &&
+				approximatelyEqual(ability.width, originalBounds.width);
+			if ((!approximatelyEqual(ability.x, expectedX) || !approximatelyEqual(ability.width, expectedWidth)) && !matchesUnexpandedBase) {
+				originalBounds = {x:Number(ability.x) + expansion, width:Number(ability.width) - expansion};
+				planeswalker.noCostTextBounds[index] = originalBounds;
+			}
+		}
+		ability.x = originalBounds.x - expansion;
+		ability.width = originalBounds.width + expansion;
+	} else if (originalBounds) {
+		ability.x = originalBounds.x;
+		ability.width = originalBounds.width;
+		delete planeswalker.noCostTextBounds[index];
+	}
+}
+
 function planeswalkerEdited() {
 	// manage text masks
 	var planeswalkerTall = 0;
@@ -127,20 +188,12 @@ function planeswalkerEdited() {
 	 	if (height > 0) {
 	 		card.planeswalker.count ++;
 	 	}
-	 	if (document.querySelector('#planeswalker-cost-' + i).value == "") {
-	 		if (!card.planeswalker.orig_ability_textbox_x) {
-		 		card.planeswalker.orig_ability_textbox_x = card.text['ability' + i].x;
-		 		card.planeswalker.orig_ability_textbox_width = card.text['ability' + i].width;
-	 		}
-	 		card.text['ability' + i].x = card.planeswalker.orig_ability_textbox_x - 0.044;
-	 		card.text['ability' + i].width = card.planeswalker.orig_ability_textbox_width + 0.044;
-	 	} else if (card.planeswalker.orig_ability_textbox_x) {
-	 		card.text['ability' + i].x = card.planeswalker.orig_ability_textbox_x;
-	 		card.text['ability' + i].width = card.planeswalker.orig_ability_textbox_width;
-	 	}
+		updatePlaneswalkerAbilityTextBounds(card, i, document.querySelector('#planeswalker-cost-' + i).value != "");
 	 	card.text['ability' + i].height = height;
 	 	lastY += height;
 	}
+	delete card.planeswalker.orig_ability_textbox_x;
+	delete card.planeswalker.orig_ability_textbox_width;
 	fixPlaneswalkerInputs();
 	var transitionHeight = scaleHeight(0.0048);
 	planeswalkerPreFrameContext.clearRect(0, 0, planeswalkerPreFrameCanvas.width, planeswalkerPreFrameCanvas.height);

@@ -1310,6 +1310,19 @@ function automaticHoloStampAllowed() {
 	return !FRAME_REGISTRY.components?.[borderSelection.pack]?.suppressHoloStamp;
 }
 
+function automaticHoloStampColors(properties, typeLine) {
+	const colors = properties.pinlineRight ? [properties.pinlineRight, properties.pinline] : [properties.pinline];
+	if (!String(typeLine || '').toLowerCase().includes('land')) return colors;
+	return colors.map(color => String(color || '').replace(/L/gi, '') || 'L');
+}
+
+function automaticHoloStampColorForFrame(desiredColor, selectedVariant, typeLine) {
+	if (!String(typeLine || '').toLowerCase().includes('land')) return desiredColor;
+	const frameName = String(selectedVariant?.item?.name || selectedVariant?.name || '');
+	return ['White', 'Blue', 'Black', 'Red', 'Green', 'Multicolored', 'Artifact', 'Colorless']
+		.find(color => new RegExp('\\b' + color + '\\b', 'i').test(frameName)) || desiredColor;
+}
+
 function automaticFrameLayerAllowed(layer) {
 	if (typeof activeFrameComponentOptions === 'undefined' || typeof FRAME_REGISTRY === 'undefined') return true;
 	return !Object.values(activeFrameComponentOptions).some(selection =>
@@ -1487,10 +1500,9 @@ function buildAutoFrames(frameType, colors, mana_cost, type_line, power, mana2Te
 			frames.push(config.makeFrameFunction(properties.pinline, "Stamp", false, style));
 		} else {
 			// Standard stamp handling for all other frame types
-			if (properties.pinlineRight) {
-				frames.push(config.makeFrameFunction(properties.pinlineRight, 'Stamp', true, style));
-			}
-			frames.push(config.makeFrameFunction(properties.pinline, "Stamp", false, style));
+			automaticHoloStampColors(properties, type_line).forEach((color, index, stampColors) => {
+				frames.push(config.makeFrameFunction(color, 'Stamp', stampColors.length > 1 && index === 0, style));
+			});
 		}
 	}
 
@@ -2024,12 +2036,8 @@ async function autoFrameFromAvailableFrames(colors, typeLine, selectedProfile, f
 	const rarity = (card.infoRarity || document.querySelector('#info-rarity')?.value || '').trim().toUpperCase();
 	let profileStamp = null;
 	if (['R', 'M', 'S'].includes(rarity) && automaticHoloStampAllowed()) {
-		const availableStamps = frameOptions.filter(item => (item.name || '').toLowerCase().includes('holo stamp'));
-		const matchingStamp = availableStamps.find(item => item.name.toLowerCase() === desiredName + ' holo stamp') ||
-			availableStamps.find(item => item.name.toLowerCase() === 'holo stamp') || availableStamps[0];
-		const registryStamp = typeof FRAME_REGISTRY == 'undefined' ? null : FRAME_REGISTRY.stampFor(selectedProfile, desiredColor);
-		profileStamp = JSON.parse(JSON.stringify(matchingStamp || registryStamp));
-		if (profileStamp) profileStamp.masks = profileStamp.masks || [];
+		const stampColor = automaticHoloStampColorForFrame(desiredColor, selectedVariant, typeLine);
+		profileStamp = selectAutomaticHoloStamp(frameOptions, selectedProfile, stampColor);
 	}
 
 	const family = typeof FRAME_REGISTRY == 'undefined' ? selectedProfile : FRAME_REGISTRY.family(selectedProfile);
@@ -2115,6 +2123,19 @@ async function autoFrameFromAvailableFrames(colors, typeLine, selectedProfile, f
 		await addFrame([], frame);
 	}
 	card.frames.reverse();
+}
+
+function selectAutomaticHoloStamp(frameOptions, selectedProfile, desiredColor) {
+	const desiredName = String(desiredColor || '').toLowerCase();
+	const availableStamps = (frameOptions || []).filter(item => (item.name || '').toLowerCase().includes('holo stamp'));
+	const matchingStamp = availableStamps.find(item => item.name.toLowerCase() === desiredName + ' holo stamp') ||
+		availableStamps.find(item => item.name.toLowerCase() === 'holo stamp');
+	const registryStamp = typeof FRAME_REGISTRY == 'undefined' ? null : FRAME_REGISTRY.stampFor(selectedProfile, desiredColor);
+	const selectedStamp = matchingStamp || registryStamp;
+	if (!selectedStamp) return null;
+	const stamp = JSON.parse(JSON.stringify(selectedStamp));
+	stamp.masks = stamp.masks || [];
+	return stamp;
 }
 
 async function autoFramePrototypeFromAvailableFrames(typeLine, frameOptions = availableFrames, requestId = autoFrameRequestId) {
