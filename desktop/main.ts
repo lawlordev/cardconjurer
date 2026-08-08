@@ -6,6 +6,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, watch, writeFileSync, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { appIconBaseName, resolveAppBuildChannel } from './app-branding.js';
 import {
   archiveBeginSchema, channelSchema, externalUrlSchema, IPC, packIdSchema, printRequestSchema, saveStateSchema, workspaceMutationSchema
 } from './ipc/contracts.js';
@@ -16,6 +17,7 @@ import { UpdateCoordinator } from './services/update-coordinator.js';
 import { UpdateService as AppUpdateService } from './services/update-service.js';
 
 const WINDOWS_APP_USER_MODEL_ID = 'com.squirrel.set_conjurer.set-conjurer';
+const APP_BUILD_CHANNEL = resolveAppBuildChannel(app.isPackaged, app.getVersion());
 
 function handleSquirrelLifecycle(): boolean {
   if (process.platform !== 'win32') return false;
@@ -196,8 +198,10 @@ async function dispatchAssociatedFiles(): Promise<void> {
 }
 
 function createWindow(appRoot: string): BrowserWindow {
+  const iconPath = path.join(appRoot, 'resources', 'icons', `${appIconBaseName(APP_BUILD_CHANNEL)}.png`);
   const window = new BrowserWindow({
     title: 'Set Conjurer',
+    icon: iconPath,
     ...(process.platform === 'darwin' ? {
       titleBarStyle: 'customButtonsOnHover' as const,
       trafficLightPosition: {x: 14, y: 22}
@@ -257,7 +261,7 @@ function registerIPC(): void {
   const trusted = <T extends unknown[], R>(handler: (event: Electron.IpcMainInvokeEvent, ...args: T) => R | Promise<R>) =>
     async (event: Electron.IpcMainInvokeEvent, ...args: T): Promise<R> => { validateSender(event); return handler(event, ...args); };
 
-  ipcMain.handle(IPC.appInfo, trusted(() => ({name: 'Set Conjurer', version: app.getVersion(), platform: process.platform, arch: process.arch, channel: updates?.channel() || 'stable'})));
+  ipcMain.handle(IPC.appInfo, trusted(() => ({name: 'Set Conjurer', version: app.getVersion(), platform: process.platform, arch: process.arch, channel: APP_BUILD_CHANNEL})));
   ipcMain.handle(IPC.onboardingStatus, trusted(() => readOnboardingComplete()));
   ipcMain.handle(IPC.onboardingComplete, trusted(() => { if (!packs?.hasRequiredPacks()) throw new Error('Install Set Symbols, Keywords, and Standard before continuing.'); writeOnboardingComplete(); }));
   ipcMain.handle(IPC.storageLoad, trusted(() => storage!.load()));
@@ -353,6 +357,8 @@ if (!squirrelLifecycleEvent) app.whenReady().then(async () => {
   const userDataPath = app.getPath('userData');
   mkdirSync(userDataPath, {recursive: true});
   const appRoot = app.getAppPath();
+  const iconPath = path.join(appRoot, 'resources', 'icons', `${appIconBaseName(APP_BUILD_CHANNEL)}.png`);
+  if (process.platform === 'darwin' && app.dock && existsSync(iconPath)) app.dock.setIcon(iconPath);
   storage = new StorageService(userDataPath);
   packs = new PackService({userDataPath, appRoot, resourcesPath: process.resourcesPath, packaged: app.isPackaged, currentVersion: app.getVersion()});
   const appUpdates = new AppUpdateService({userDataPath, currentVersion: app.getVersion()});

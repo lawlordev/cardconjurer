@@ -79,6 +79,18 @@ test('development mode reloads renderer changes without weakening packaged build
 	assert.match(main, /reloadIgnoringCache/);
 });
 
+test('desktop build channel is visible in the editor and uses its matching icon', () => {
+	const main = fs.readFileSync(path.join(__dirname, '../../desktop/main.ts'), 'utf8');
+	const bridge = fs.readFileSync(path.join(__dirname, '../../js/desktopBridge.js'), 'utf8');
+	const styles = fs.readFileSync(path.join(__dirname, '../../css/style-9.css'), 'utf8');
+	assert.match(main, /resolveAppBuildChannel\(app\.isPackaged, app\.getVersion\(\)\)/);
+	assert.match(main, /app\.dock\.setIcon\(iconPath\)/);
+	assert.match(bridge, /desktop-build-channel/);
+	assert.match(bridge, /desktop-boot-mark,\.desktop-onboarding-mark/);
+	assert.match(bridge, /if \(existing\.textContent !== label\) existing\.textContent = label/);
+	assert.match(styles, /\.desktop-channel-badge\[data-channel='dev'\]/);
+});
+
 test('desktop boot hides the legacy page until the Sets workspace is ready', () => {
 	const boot = fs.readFileSync(path.join(__dirname, '../../js/desktopBoot.js'), 'utf8');
 	const index = fs.readFileSync(path.join(__dirname, '../../index.html'), 'utf8');

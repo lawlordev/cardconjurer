@@ -518,12 +518,20 @@ try {
   }
   const updateButton = page.locator('#desktop-update');
   if (await updateButton.isVisible()) throw new Error('Update action is visible before an update is available.');
-  const updatePlacement = await updateButton.evaluate((button) => ({
-    insideSaveStatus: Boolean(button.closest('.creator-app-context')),
-    statusArea: button.parentElement?.parentElement?.classList.contains('creator-app-status-area'),
-    saveStatusFollows: button.parentElement?.nextElementSibling?.classList.contains('creator-app-context')
-  }));
-  if (updatePlacement.insideSaveStatus || !updatePlacement.statusArea || !updatePlacement.saveStatusFollows) throw new Error(`update action is not a separate sibling of save status: ${JSON.stringify(updatePlacement)}`);
+  const updatePlacement = await updateButton.evaluate((button) => {
+    const statusArea = button.parentElement?.parentElement;
+    const badge = statusArea?.querySelector('#desktop-build-channel');
+    const saveStatus = statusArea?.querySelector('.creator-app-context');
+    return {
+      insideSaveStatus: Boolean(button.closest('.creator-app-context')),
+      statusArea: statusArea?.classList.contains('creator-app-status-area'),
+      saveStatusSibling: saveStatus?.parentElement === statusArea,
+      buildBadge: badge?.textContent === 'Dev' && badge?.dataset.channel === 'dev',
+      buildBadgeBeforeSave: badge?.nextElementSibling === saveStatus,
+      documentChannel: document.documentElement.dataset.appChannel
+    };
+  });
+  if (updatePlacement.insideSaveStatus || !updatePlacement.statusArea || !updatePlacement.saveStatusSibling || !updatePlacement.buildBadge || !updatePlacement.buildBadgeBeforeSave || updatePlacement.documentChannel !== 'dev') throw new Error(`update action, build channel, and save status are not separate ordered siblings: ${JSON.stringify(updatePlacement)}`);
   await page.mouse.move(600, 400);
   await updateButton.evaluate((button) => { button.hidden = false; button.className = 'creator-app-action desktop-update-action phase-available'; button.textContent = 'Update Now'; });
   const [newSetStyle, saveStatusHeight, updateStyle] = await Promise.all([
