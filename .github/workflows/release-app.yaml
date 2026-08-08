@@ -17,8 +17,8 @@ on:
       windows_signing:
         description: Sign when configured, require signing, or force an unsigned preview
         type: choice
-        options: [auto, required, disabled]
-        default: auto
+        options: [required, auto, disabled]
+        default: required
 
 permissions:
   contents: write
@@ -59,6 +59,11 @@ jobs:
         with: {node-version: 24}
       - name: Validate immutable release request
         run: node scripts/validate-release-request.mjs "${{ inputs.tag }}" "${{ inputs.channel }}"
+      - name: Require signed Windows artifacts for publication
+        if: inputs.publish
+        env:
+          WINDOWS_SIGNING: ${{ inputs.windows_signing }}
+        run: test "$WINDOWS_SIGNING" = required
       - name: Validate pinned frame-pack compatibility metadata
         run: node scripts/validate-app-pack-compatibility.mjs "${{ inputs.channel }}"
       - name: Require Apple signing and notarization secrets
@@ -341,19 +346,29 @@ jobs:
     needs: [mac, windows]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: '${{ inputs.tag }}'
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /docs/releases/
       - uses: actions/download-artifact@v4
         with: {path: release-assets, pattern: 'release-*', merge-multiple: true}
       - name: Create checksums and release notes
         env:
           WINDOWS_SIGNED: ${{ needs.windows.outputs.signed }}
         run: |
-          find release-assets -type f -print0 | sort -z | xargs -0 sha256sum > release-assets/SHA256SUMS
+          find release-assets -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > release-assets/SHA256SUMS
           if [ "$WINDOWS_SIGNED" = 'true' ]; then
             windows_note='The Windows x64 installer is signed with Azure Artifact Signing.'
           else
             windows_note='The Windows x64 installer is an unsigned preview. Windows Defender SmartScreen warnings are expected.'
           fi
-          printf '%s\n\n%s\n' 'Set Conjurer desktop release.' "$windows_note" > release-notes.md
+          release_note="docs/releases/${{ inputs.tag }}.md"
+          test -f "$release_note"
+          cp "$release_note" release-notes.md
+          printf '\n\n%s\n' "$windows_note" >> release-notes.md
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag }}

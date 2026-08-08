@@ -10,7 +10,7 @@ Public release is intentionally manual. Before publishing:
 
 1. Confirm the inherited GNU GPL v3.0 license and contributor credits remain present in the packaged release.
 2. Configure Apple Developer ID Application credentials and App Store Connect API notarization credentials.
-3. Configure Azure Artifact Signing when public-trust identity validation is available. Until then, Windows artifacts are explicitly labeled unsigned previews.
+3. Keep Azure Artifact Signing configured with the repository's OIDC identity, Public Trust certificate profile, and profile-scoped signer role. Public releases must use the fail-closed `required` signing mode; unsigned artifacts are preview-only.
 4. Publish an immutable `packs-vX.Y.Z` asset-pack release containing all catalog entries before publishing the application that consumes it. Archives target 256 MiB source parts, every payload file has one owner, and the catalog records measured compressed and installed sizes.
 5. Validate macOS arm64, best-effort macOS x64, and Windows x64 artifacts on real systems.
 
@@ -36,16 +36,16 @@ The Windows job uses the `release` environment so its Azure federated identity c
 
 In Azure, give the federated application only the Artifact Signing Certificate Profile Signer role on the certificate profile used by this repository. The workflow uses GitHub OIDC, so there is no Azure client secret or exportable Windows certificate in GitHub.
 
-`AZURE_ARTIFACT_SIGNING_PROFILE` may remain unset while Microsoft's identity validation is pending. With Windows signing set to `auto`, the workflow still builds and verifies a Windows x64 preview, publishes `WINDOWS-SIGNING.txt`, and states clearly in the release notes that SmartScreen warnings are expected. `required` is the fail-closed production option; `disabled` deliberately produces an unsigned preview even when a profile exists. Once the profile and scoped signer role are configured, `auto` signs automatically. Publish the signed build under a new immutable beta or stable tag instead of silently replacing an unsigned release.
+`required` is the fail-closed production option and the workflow default. `auto` remains available for a non-publishing rehearsal that signs when the profile is configured, while `disabled` deliberately produces an unsigned preview. The publish preflight rejects any mode except `required`. If signing fails or configuration is removed, supersede the candidate with a new immutable beta or stable tag instead of publishing or replacing an unsigned release.
 
 The release workflow never runs on a branch push. Create and push a reviewed `vX.Y.Z` or `vX.Y.Z-beta.N` tag that exactly matches `package.json`, then dispatch **Release Set Conjurer** from `master` with that existing tag and channel. Leave **Publish** off for a signing-validation run; turn it on to attach the exact build outputs to a GitHub Release. The workflow builds separate macOS arm64/x64 and Windows x64 artifacts, signs and notarizes macOS apps and final DMGs, creates checksums, and uploads release assets. When Azure signing is active, the Windows job signs the packaged app binaries and Squirrel updater before creating the NuGet package, then signs and verifies the final installer.
 
-For the current unsigned Windows preview lane, use `windows_signing: auto`. After Azure identity validation completes:
+The production Azure lane requires all of the following:
 
-1. Create the Public Trust certificate profile.
-2. Assign the Entra application the Artifact Signing Certificate Profile Signer role scoped to that profile.
-3. Set `AZURE_ARTIFACT_SIGNING_PROFILE` in the GitHub `release` environment.
-4. Bump the application prerelease version, merge it, create the matching tag, and run with `windows_signing: required`.
+1. Maintain the Public Trust certificate profile.
+2. Keep the Entra application assigned the Artifact Signing Certificate Profile Signer role scoped to that profile.
+3. Keep `AZURE_ARTIFACT_SIGNING_ENDPOINT`, `AZURE_ARTIFACT_SIGNING_ACCOUNT`, and `AZURE_ARTIFACT_SIGNING_PROFILE` in the GitHub `release` environment.
+4. Bump the application version, merge it, create the matching tag, and run with `windows_signing: required`.
 
 Content packs use the separate **Release Content Packs** workflow and `packs-vX.Y.Z` namespace. This includes frame packs, Set Symbols, and the required Keywords catalog. They are prereleases and never become the repository's latest application release. Pack archives are immutable; new versions receive new URLs and SHA-256 values. The legacy `frame-packs.json` and `frame-pack-catalog-v3.json` asset names remain unchanged for compatibility.
 

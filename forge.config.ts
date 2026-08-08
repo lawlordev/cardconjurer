@@ -89,7 +89,7 @@ const config: ForgeConfig = {
       /^\/js\/mseKeywordCatalog\.js$/,
       /^\/build(?:\/|$)/,
       /^\/out(?:\/|$)/,
-      /^\/launcher(?:-linux|-macos|\.exe|\.sh|\.bat)?$/,
+      /^\/launcher[^/]*(?:\/|$)/,
       /^\/node_modules\/\.cache(?:\/|$)/,
       /^\/(?:dev_server\.py|start-dev-server\.ps1|docker-compose\.ya?ml|Dockerfile|Makefile)$/
     ]
