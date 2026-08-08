@@ -2,6 +2,8 @@
 	'use strict';
 	var api = root.setConjurerDesktop;
 	if (!api) return;
+	var appInfo = null;
+	var appInfoPromise = api.app.info().then(function(info) { appInfo = info; applyAppBranding(); return info; });
 	var drawerReturnFocus = null;
 	var settingsRequestId = 0;
 	var activePackActionId = null;
@@ -52,11 +54,36 @@
 		document.querySelector('#desktop-print-loading').addEventListener('cancel', function(event) { event.preventDefault(); });
 		document.addEventListener('keydown', function(event) { if (event.key === 'Escape') { closeDrawer(); closePrint(); } });
 	}
+	function applyAppBranding() {
+		if (!appInfo) return;
+		var channel = ['dev','beta','stable'].includes(appInfo.channel) ? appInfo.channel : 'stable';
+		document.documentElement.dataset.appChannel = channel;
+		var iconName = channel === 'stable' ? 'set-conjurer' : 'set-conjurer-' + channel;
+		document.querySelectorAll('.desktop-boot-mark,.desktop-onboarding-mark').forEach(function(image) { image.src = '/resources/icons/' + iconName + '.png'; });
+		var host = document.querySelector('.creator-app-status-area');
+		var existing = document.querySelector('#desktop-build-channel');
+		if (channel === 'stable') { if (existing) existing.remove(); return; }
+		if (!host) return;
+		var label = channel === 'dev' ? 'Dev' : 'Beta';
+		if (!existing) {
+			existing = document.createElement('span');
+			existing.id = 'desktop-build-channel';
+			existing.className = 'desktop-channel-badge';
+			var context = host.querySelector('.creator-app-context');
+			if (context) host.insertBefore(existing, context); else host.appendChild(existing);
+		}
+		if (existing.dataset.channel !== channel) existing.dataset.channel = channel;
+		if (existing.textContent !== label) existing.textContent = label;
+		if (existing.getAttribute('aria-label') !== label + ' build') existing.setAttribute('aria-label', label + ' build');
+	}
 	function toolbar() {
 		var host = document.querySelector('.creator-app-status-area');
-		if (!host || document.querySelector('#desktop-toolbar-actions')) return;
-		host.insertAdjacentHTML('afterbegin', '<span id="desktop-toolbar-actions" class="desktop-toolbar-actions"><button type="button" class="creator-app-action desktop-update-action" id="desktop-update" hidden>Update Now</button></span>');
-		document.querySelector('#desktop-update').addEventListener('click', updateAction);
+		if (!host) return;
+		if (!document.querySelector('#desktop-toolbar-actions')) {
+			host.insertAdjacentHTML('afterbegin', '<span id="desktop-toolbar-actions" class="desktop-toolbar-actions"><button type="button" class="creator-app-action desktop-update-action" id="desktop-update" hidden>Update Now</button></span>');
+			document.querySelector('#desktop-update').addEventListener('click', updateAction);
+		}
+		applyAppBranding();
 	}
 	function openDrawer(title, content, trigger) {
 		drawerReturnFocus = trigger || document.activeElement;
@@ -145,7 +172,7 @@
 		openDrawer('Settings', '<div id="desktop-settings-content" class="desktop-settings-loading"><span class="creator-loading-spinner" aria-hidden="true"></span><p class="desktop-inline-status desktop-settings-loading-copy" role="status">Loading settings…</p></div>', trigger);
 		var refreshPromise = api.packs.refresh().catch(function() { return null; });
 		var values;
-		try { values = await Promise.all([api.app.info(), api.updates.channel(), api.updates.state(), api.packs.list()]); }
+		try { values = await Promise.all([appInfoPromise, api.updates.channel(), api.updates.state(), api.packs.list()]); }
 		catch (error) {
 			var loadingView = requestId === settingsRequestId && activeSettingsDrawer();
 			if (loadingView) { loadingView.classList.remove('desktop-settings-loading'); loadingView.innerHTML = '<p class="desktop-inline-status" role="alert">Could not load settings: ' + escapeHtml(error && error.message ? error.message : error) + '</p>'; }
@@ -312,7 +339,7 @@
 	}
 	root.SetConjurerDesktop = {ready: editorReady, openPacks: openPacks, openSettings: openSettings, openPrint: openPrint, ensureRequiredPacks: ensureRequiredPacks};
 
-	shell();
+	shell(); applyAppBranding();
 	document.body.addEventListener('htmx:afterSwap', function() { toolbar(); });
 	var observer = new MutationObserver(toolbar); observer.observe(document.querySelector('#content'), {childList:true, subtree:true});
 	api.packs.onProgress(function(progress) {

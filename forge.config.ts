@@ -8,9 +8,13 @@ import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {readFileSync, readdirSync, writeFileSync} from 'node:fs';
 import {NtExecutable, NtExecutableResource, Resource} from 'resedit';
+import {appIconBaseName, resolveAppBuildChannel} from './desktop/app-branding.js';
 
 const includeDevelopmentPacks = process.env.SET_CONJURER_INCLUDE_DEV_PACKS === '1';
 const signingIdentity = process.env.APPLE_SIGN_IDENTITY || '-';
+const packageMetadata = JSON.parse(readFileSync(path.resolve('package.json'), 'utf8')) as {version: string};
+const packagedChannel = resolveAppBuildChannel(true, packageMetadata.version);
+const packagedIcon = path.resolve('resources/icons', appIconBaseName(packagedChannel));
 const packConfig = JSON.parse(readFileSync(path.resolve('packs/config.json'), 'utf8')) as {baseRuntimeAssets: string[]};
 const baseRuntimeNames = packConfig.baseRuntimeAssets.map((asset) => path.basename(asset).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 const excludedFramePayload = new RegExp(`^\\/img\\/frames\\/(?!(?:${baseRuntimeNames.join('|')})$)`);
@@ -38,7 +42,7 @@ const config: ForgeConfig = {
     appCategoryType: 'public.app-category.graphics-design',
     asar: true,
     ...(process.env.SET_CONJURER_ELECTRON_ZIP_DIR ? {electronZipDir: process.env.SET_CONJURER_ELECTRON_ZIP_DIR} : {}),
-    icon: path.resolve('resources/icons/set-conjurer'),
+    icon: packagedIcon,
     osxSign: {
       identity: signingIdentity
     },
@@ -99,7 +103,7 @@ const config: ForgeConfig = {
       overwrite: true,
       format: 'ULFO',
       background: path.resolve('resources/dmg/set-conjurer-background.png'),
-      icon: path.resolve('resources/icons/set-conjurer.icns'),
+      icon: `${packagedIcon}.icns`,
       iconSize: 112,
       contents: (options) => [
         {x: 476, y: 326, type: 'link', path: '/Applications'},
@@ -119,6 +123,7 @@ const config: ForgeConfig = {
       authors: 'Jake Lawlor',
       description: 'A local-first desktop fork of Card Conjurer for creating custom card sets.',
       setupExe: 'Set-Conjurer-Windows-x64-Setup.exe',
+      setupIcon: `${packagedIcon}.ico`,
       noMsi: true,
       // The release workflow signs Squirrel.exe before packaging. Rewriting its
       // icon here would invalidate that Authenticode signature.

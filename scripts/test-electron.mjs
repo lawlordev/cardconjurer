@@ -7,6 +7,7 @@ import {fileURLToPath} from 'node:url';
 import { _electron as electron, chromium } from 'playwright';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const packageMetadata = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
 const packIds = JSON.parse(await readFile(path.join(root, 'packs', 'config.json'), 'utf8')).packIds;
 const userData = await mkdtemp(path.join(os.tmpdir(), 'set-conjurer-e2e-'));
 const packFixture = await mkdtemp(path.join(os.tmpdir(), 'set-conjurer-pack-fixture-'));
@@ -15,6 +16,9 @@ await mkdir(evidence, {recursive: true});
 const errors = [];
 let application;
 const packagedExecutable = process.env.SET_CONJURER_TEST_EXECUTABLE || '';
+const expectedBuildChannel = packagedExecutable
+  ? (packageMetadata.version.includes('-') ? 'beta' : 'stable')
+  : 'dev';
 let packagedProcess;
 
 async function buildMinimalPackFixture() {
@@ -518,12 +522,25 @@ try {
   }
   const updateButton = page.locator('#desktop-update');
   if (await updateButton.isVisible()) throw new Error('Update action is visible before an update is available.');
-  const updatePlacement = await updateButton.evaluate((button) => ({
-    insideSaveStatus: Boolean(button.closest('.creator-app-context')),
-    statusArea: button.parentElement?.parentElement?.classList.contains('creator-app-status-area'),
-    saveStatusFollows: button.parentElement?.nextElementSibling?.classList.contains('creator-app-context')
-  }));
-  if (updatePlacement.insideSaveStatus || !updatePlacement.statusArea || !updatePlacement.saveStatusFollows) throw new Error(`update action is not a separate sibling of save status: ${JSON.stringify(updatePlacement)}`);
+  const updatePlacement = await updateButton.evaluate((button, expectedChannel) => {
+    const statusArea = button.parentElement?.parentElement;
+    const badge = statusArea?.querySelector('#desktop-build-channel');
+    const saveStatus = statusArea?.querySelector('.creator-app-context');
+    const expectedLabel = expectedChannel === 'dev' ? 'Dev' : 'Beta';
+    return {
+      insideSaveStatus: Boolean(button.closest('.creator-app-context')),
+      statusArea: statusArea?.classList.contains('creator-app-status-area'),
+      saveStatusSibling: saveStatus?.parentElement === statusArea,
+      buildBadge: expectedChannel === 'stable'
+        ? !badge
+        : badge?.textContent === expectedLabel && badge?.dataset.channel === expectedChannel,
+      buildBadgeBeforeSave: expectedChannel === 'stable'
+        ? !badge && button.parentElement?.nextElementSibling === saveStatus
+        : badge?.nextElementSibling === saveStatus,
+      documentChannel: document.documentElement.dataset.appChannel
+    };
+  }, expectedBuildChannel);
+  if (updatePlacement.insideSaveStatus || !updatePlacement.statusArea || !updatePlacement.saveStatusSibling || !updatePlacement.buildBadge || !updatePlacement.buildBadgeBeforeSave || updatePlacement.documentChannel !== expectedBuildChannel) throw new Error(`update action, build channel, and save status are not separate ordered siblings: ${JSON.stringify({expectedBuildChannel, ...updatePlacement})}`);
   await page.mouse.move(600, 400);
   await updateButton.evaluate((button) => { button.hidden = false; button.className = 'creator-app-action desktop-update-action phase-available'; button.textContent = 'Update Now'; });
   const [newSetStyle, saveStatusHeight, updateStyle] = await Promise.all([

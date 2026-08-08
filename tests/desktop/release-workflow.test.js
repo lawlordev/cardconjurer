@@ -25,6 +25,34 @@ test('release request validation locks the tag and channel to package metadata',
   assert.match(mismatched.stderr, /does not match package version/);
 });
 
+test('packaged release branding follows the validated package prerelease channel', () => {
+  const branding = require('../../dist/desktop/app-branding.js');
+  assert.equal(branding.resolveAppBuildChannel(false, packageVersion), 'dev');
+  assert.equal(branding.resolveAppBuildChannel(true, '1.2.3-beta.4'), 'beta');
+  assert.equal(branding.resolveAppBuildChannel(true, '1.2.3'), 'stable');
+  assert.equal(branding.appIconBaseName('dev'), 'set-conjurer-dev');
+  assert.equal(branding.appIconBaseName('beta'), 'set-conjurer-beta');
+  assert.equal(branding.appIconBaseName('stable'), 'set-conjurer');
+
+  const forge = fs.readFileSync(path.join(__dirname, '../../forge.config.ts'), 'utf8');
+  assert.match(forge, /resolveAppBuildChannel\(true, packageMetadata\.version\)/);
+  assert.match(forge, /icon: packagedIcon/);
+  assert.match(forge, /setupIcon: `\$\{packagedIcon\}\.ico`/);
+});
+
+test('channel icon sources use transparent PNGs with native macOS and Windows variants', () => {
+  for (const name of ['set-conjurer', 'set-conjurer-beta', 'set-conjurer-dev']) {
+    const base = path.join(__dirname, '../../resources/icons', name);
+    const png = fs.readFileSync(`${base}.png`);
+    assert.equal(png.readUInt32BE(16), 1024, `${name}.png width`);
+    assert.equal(png.readUInt32BE(20), 1024, `${name}.png height`);
+    assert.equal(png[25], 6, `${name}.png must use RGBA pixels`);
+    assert.equal(fs.readFileSync(`${base}.icns`).subarray(0, 4).toString('ascii'), 'icns');
+    assert.equal(fs.readFileSync(`${base}.ico`).readUInt16LE(0), 0);
+    assert.equal(fs.readFileSync(`${base}.ico`).readUInt16LE(2), 1);
+  }
+});
+
 test('stable application releases require an immutable frame-pack catalog pin', () => {
   const validator = path.join(__dirname, '../../scripts/validate-app-pack-compatibility.mjs');
   const beta = spawnSync(process.execPath, [validator, 'beta'], {encoding: 'utf8'});

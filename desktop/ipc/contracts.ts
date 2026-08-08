@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const PACK_IDS = ['set-symbols', 'keywords', 'standard', 'booster-fun', 'tokens', 'basics', 'legacy', 'custom'] as const;
 export type PackId = typeof PACK_IDS[number];
 export type ReleaseChannel = 'stable' | 'beta';
+export type AppBuildChannel = 'dev' | ReleaseChannel;
 
 export const saveStateSchema = z.object({
   sets: z.array(z.unknown()),
@@ -107,7 +108,7 @@ export interface UpdateState {
 export interface DesktopAPI {
   version: 1;
   app: {
-    info(): Promise<{name: string; version: string; platform: string; arch: string; channel: ReleaseChannel}>;
+    info(): Promise<{name: string; version: string; platform: string; arch: string; channel: AppBuildChannel}>;
     onboardingComplete(): Promise<boolean>;
     completeOnboarding(): Promise<void>;
     restart(): Promise<void>;

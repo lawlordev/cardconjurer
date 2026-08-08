@@ -2357,6 +2357,27 @@ body.workspace-panel-resizing,body.workspace-panel-resizing * { cursor: col-resi
 
 .creator-app-status-area .creator-app-context { margin-left: 0; }
 
+.desktop-channel-badge {
+	display: flex;
+	box-sizing: border-box;
+	height: 2.35rem;
+	padding: 0 .72rem;
+	align-items: center;
+	border: 1px solid #526071;
+	border-radius: var(--workspace-radius,.55rem);
+	color: #c8d0da;
+	background: color-mix(in srgb, #94a3b8 9%, var(--workspace-panel));
+	font-size: .68rem;
+	font-weight: 800;
+	line-height: 1;
+}
+
+.desktop-channel-badge[data-channel='dev'] {
+	border-color: color-mix(in srgb, #58a6ff 58%, var(--workspace-border));
+	color: #76b7ff;
+	background: color-mix(in srgb, #2288ff 11%, var(--workspace-panel));
+}
+
 .creator-app-context[data-kind='error'] {
 	border-color: color-mix(in srgb, #fb7185 48%, var(--workspace-border));
 	color: #fb7185;
