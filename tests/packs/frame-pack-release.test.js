@@ -12,7 +12,8 @@ test('frame-pack releases build from the requested immutable tag', () => {
   assert.doesNotMatch(materializer, /--no-cone/);
   assert.match(workflow, /validate-frame-packs\.mjs[\s\S]*?--assets/);
   assert.match(workflow, /test -n "\$PREVIOUS_V2"/);
-  assert.match(workflow, /test -n "\$PREVIOUS_V3"/);
+  assert.match(workflow, /test -n "\$PREVIOUS_V3" \|\| test "\$BOOTSTRAP_V3" = true/);
+  assert.match(workflow, /--bootstrap-v3-from-v2/);
   assert.match(workflow, /default: false/);
   assert.match(workflow, /set-symbols,keywords,standard/);
 });
@@ -27,6 +28,8 @@ test('frame-pack release archives are split and checked below GitHub limits', ()
   assert.match(builder, /ids\.length > 1/);
   assert.match(builder, /schemaVersion: 2, packs: \[\]/);
   assert.match(builder, /schemaVersion: 3/);
+  assert.match(builder, /bootstrapCatalogV3FromV2/);
+  assert.match(builder, /does not carry every schema-2 pack history/);
   assert.match(builder, /selectedPackIds/);
   assert.match(builder, /fileMetadata/);
   assert.match(builder, /archives\.push/);
@@ -34,4 +37,32 @@ test('frame-pack release archives are split and checked below GitHub limits', ()
   assert.match(service, /interface CatalogPack .*archives: CatalogArchive\[\]/);
   assert.match(service, /MAX_ARCHIVE_BYTES = 2 \* 1024 \* 1024 \* 1024/);
   assert.match(service, /archive\.archiveBytes > MAX_ARCHIVE_BYTES/);
+});
+
+test('legacy schema-2 catalogs bootstrap a complete, explicitly marked schema-3 history', async () => {
+  const {bootstrapCatalogV3FromV2, minimumAppVersionForPack} = await import('../../scripts/lib/pack-catalog.mjs');
+  const archive = {url: 'https://example.test/packs/part-01.zip', sha256: 'a'.repeat(64), archiveBytes: 123};
+  const legacy = {schemaVersion: 2, packs: [{id: 'standard', version: '0.1.0', archives: [archive], archiveBytes: 123, installedBytes: 456}]};
+  const result = bootstrapCatalogV3FromV2(legacy, '2026-08-08T00:00:00.000Z');
+
+  assert.deepEqual(result, {
+    schemaVersion: 3,
+    generatedAt: '2026-08-08T00:00:00.000Z',
+    rendererApiVersion: 1,
+    packs: [{id: 'standard', versions: [{
+      version: '0.1.0', packSchema: 3, rendererApiVersion: 1, minimumAppVersion: '0.1.0-beta.1', revoked: false,
+      archives: [archive], archiveBytes: 123, installedBytes: 456,
+      legacySource: {catalogSchemaVersion: 2, manifestDigestAvailable: false}
+    }]}]
+  });
+  assert.notStrictEqual(result.packs[0].versions[0].archives[0], archive);
+  assert.equal(minimumAppVersionForPack('keywords'), '0.1.0-beta.5');
+  assert.equal(minimumAppVersionForPack('standard'), '0.1.0-beta.1');
+});
+
+test('schema-3 bootstrap rejects duplicate or incomplete legacy pack records', async () => {
+  const {bootstrapCatalogV3FromV2} = await import('../../scripts/lib/pack-catalog.mjs');
+  const pack = {id: 'standard', version: '0.1.0', archives: [{}], archiveBytes: 1, installedBytes: 1};
+  assert.throws(() => bootstrapCatalogV3FromV2({schemaVersion: 2, packs: [pack, pack]}), /cannot be bootstrapped safely/);
+  assert.throws(() => bootstrapCatalogV3FromV2({schemaVersion: 2, packs: [{...pack, archives: []}]}), /cannot be bootstrapped safely/);
 });

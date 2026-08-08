@@ -14,8 +14,12 @@ on:
         description: Required prior schema-2 catalog URL for a selective release
         required: false
       previous_catalog_v3_url:
-        description: Required prior schema-3 catalog URL for a selective release
+        description: Prior schema-3 catalog URL; required after the one-time bootstrap
         required: false
+      bootstrap_v3_from_v2:
+        description: One-time migration when no prior schema-3 catalog exists
+        type: boolean
+        default: false
       publish:
         description: Publish immutable assets after validation
         type: boolean
@@ -64,12 +68,13 @@ jobs:
           REQUESTED_PACKS: ${{ inputs.packs }}
           PREVIOUS_V2: ${{ inputs.previous_catalog_url }}
           PREVIOUS_V3: ${{ inputs.previous_catalog_v3_url }}
+          BOOTSTRAP_V3: ${{ inputs.bootstrap_v3_from_v2 }}
         run: |
           if [ "$REQUESTED_PACKS" = all ]; then
             echo 'packs=set-symbols,keywords,standard,booster-fun,tokens,basics,legacy,custom' >> "$GITHUB_OUTPUT"
           else
             test -n "$PREVIOUS_V2"
-            test -n "$PREVIOUS_V3"
+            test -n "$PREVIOUS_V3" || test "$BOOTSTRAP_V3" = true
             echo "packs=$REQUESTED_PACKS" >> "$GITHUB_OUTPUT"
           fi
       - run: node scripts/materialize-ci-pack-assets.mjs "${{ steps.selection.outputs.packs }}"
@@ -87,6 +92,7 @@ jobs:
           args=("${{ inputs.tag }}" --packs "${{ steps.selection.outputs.packs }}")
           if [ -f build/previous-frame-packs.json ]; then args+=(--previous-catalog build/previous-frame-packs.json); fi
           if [ -f build/previous-frame-pack-catalog-v3.json ]; then args+=(--previous-catalog-v3 build/previous-frame-pack-catalog-v3.json); fi
+          if [ "${{ inputs.bootstrap_v3_from_v2 }}" = true ]; then args+=(--bootstrap-v3-from-v2); fi
           node scripts/build-frame-pack-release.mjs "${args[@]}"
       - uses: actions/upload-artifact@v4
         with:
