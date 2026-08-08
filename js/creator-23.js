@@ -1850,6 +1850,36 @@ function autoFrameBuffer(delay=500) {
 	clearTimeout(autoFrameTimer);
 	autoFrameTimer = setTimeout(autoFrame, delay);
 }
+function sharedTextSizeGroup(key, textObject) {
+	if (!textObject || textObject.oneLine || textObject.autoSize === false || Number(textObject.height) <= 0 || !String(textObject.text || '').trim()) return null;
+	var version = String(card.version || '').toLowerCase();
+	if (version.includes('planeswalker') && /^ability[0-3]$/.test(key)) return 'planeswalker-abilities';
+	if (version.includes('saga') && /^ability[0-3]$/.test(key)) return 'saga-abilities';
+	if (version.includes('class') && /^level[0-3]c$/.test(key)) return 'class-levels';
+	if (version.includes('station') && /^ability[0-2]$/.test(key)) return 'station-abilities';
+	if (version === 'dungeon' && /^dungeonRoom\d+$/.test(key)) return 'dungeon-rooms';
+	if (version === 'leveler' && /^rules[23]$/.test(key)) return 'leveler-abilities';
+	return null;
+}
+function measureSharedTextSizeLimits(textEntries) {
+	var groupedEntries = {};
+	textEntries.forEach(entry => {
+		var group = sharedTextSizeGroup(entry[0], entry[1]);
+		if (group) (groupedEntries[group] ||= []).push(entry);
+	});
+	var limits = {};
+	Object.entries(groupedEntries).forEach(groupEntry => {
+		var smallestSize = Infinity;
+		groupEntry[1].forEach(textEntry => {
+			var measuredObject = collisionAwareTextObject(textEntry[0], textEntry[1], {});
+			measuredObject = Object.assign({}, measuredObject, {measureOnly:true});
+			var measuredBounds = writeText(measuredObject, textContext);
+			if (Number.isFinite(measuredBounds?.fittedTextSize)) smallestSize = Math.min(smallestSize, measuredBounds.fittedTextSize);
+		});
+		if (Number.isFinite(smallestSize)) limits[groupEntry[0]] = smallestSize;
+	});
+	return limits;
+}
 async function drawText(requestId) {
 	if (requestId == null) requestId = ++textRenderRequestId;
 	var previewCommitId = beginPreviewRenderCommit();
@@ -1867,8 +1897,13 @@ async function drawText(requestId) {
 	var renderedTextBounds = {};
 	var textEntries = Object.entries(card.text || {});
 	var orderedTextEntries = textEntries.filter(entry => entry[1]?.manaCost).concat(textEntries.filter(entry => !entry[1]?.manaCost));
+	var sharedTextSizeLimits = measureSharedTextSizeLimits(orderedTextEntries);
 	for (var textObject of orderedTextEntries) {
 		var fittedTextObject = collisionAwareTextObject(textObject[0], textObject[1], renderedTextBounds);
+		var sharedGroup = sharedTextSizeGroup(textObject[0], textObject[1]);
+		if (sharedGroup && Number.isFinite(sharedTextSizeLimits[sharedGroup])) {
+			fittedTextObject = Object.assign({}, fittedTextObject, {sharedTextSizeLimit:sharedTextSizeLimits[sharedGroup]});
+		}
 		renderedTextBounds[textObject[0]] = writeText(fittedTextObject, textContext);
 		continue;
 	}
@@ -1899,9 +1934,68 @@ function setSymbolVisualLeft() {
 	return scaleX(Number(card.setSymbolX || 0)) + width / 2 - visualWidth / 2;
 }
 
+function isRulesOrAbilityText(key, textObject) {
+	return !textObject.oneLine && /rules|ability/i.test(String(key || '') + ' ' + String(textObject.name || ''));
+}
+
+function textCollisionObstacles() {
+	var obstacles = (card.frames || []).filter(frame => {
+		return frame.bounds && Number(frame.opacity) !== 0 && /holo\s*stamp|power\s*\/\s*toughness|loyalty|defense|\bother\b/i.test(frame.name || '');
+	}).map(frame => Object.assign({}, frame.bounds));
+	Object.values(card.text || {}).forEach(textObject => {
+		var obstacleName = String(textObject.name || '');
+		var isBattleDefense = /^defense$/i.test(obstacleName) && String(card.version || '').toLowerCase().includes('battle');
+		if (!/^(power\s*\/\s*toughness|loyalty|defense|other)$/i.test(obstacleName)
+			|| (!isBattleDefense && !String(textObject.text || '').trim())) return;
+		obstacles.push({
+			x:Number(textObject.x || 0) - 0.035,
+			y:Number(textObject.y || 0) - 0.025,
+			width:Number(textObject.width || 0) + 0.07,
+			height:Number(textObject.height || 0) + 0.05
+		});
+	});
+	return obstacles;
+}
+
+function renderedLinesCollideWithObstacles(lines, placement, obstacles) {
+	return lines.some(line => {
+		var lineLeft = placement.x + line.x;
+		var lineTop = placement.y + line.y;
+		var lineRight = lineLeft + line.width;
+		var lineBottom = lineTop + line.height;
+		return obstacles.some(obstacle => {
+			var obstacleLeft = scaleX(Number(obstacle.x || 0));
+			var obstacleTop = scaleY(Number(obstacle.y || 0));
+			var obstacleRight = obstacleLeft + scaleWidth(Number(obstacle.width || 0));
+			var obstacleBottom = obstacleTop + scaleHeight(Number(obstacle.height || 0));
+			return lineLeft < obstacleRight && lineRight > obstacleLeft && lineTop < obstacleBottom && lineBottom > obstacleTop;
+		});
+	});
+}
+
+function drawTextCollisionGuidelines(context) {
+	context.save();
+	context.globalAlpha = 0.25;
+	context.fillStyle = 'red';
+	textCollisionObstacles().forEach(obstacle => {
+		context.fillRect(
+			scaleX(Number(obstacle.x || 0)),
+			scaleY(Number(obstacle.y || 0)),
+			scaleWidth(Number(obstacle.width || 0)),
+			scaleHeight(Number(obstacle.height || 0))
+		);
+	});
+	context.restore();
+}
+
 function collisionAwareTextObject(key, textObject, renderedTextBounds) {
-	if (!['title', 'type'].includes(key) || textObject.autoSize === false || !textObject.oneLine) return textObject;
+	if (textObject.autoSize === false) return textObject;
 	var fitted = Object.assign({}, textObject);
+	if (isRulesOrAbilityText(key, textObject)) {
+		fitted.avoidTextObstacles = textCollisionObstacles();
+		return fitted;
+	}
+	if (!['title', 'type'].includes(key) || !textObject.oneLine) return textObject;
 	fitted.autoSizeVerticalCenter = true;
 	var textLeft = scaleX(Number(textObject.x || 0));
 	var configuredRight = textLeft + scaleWidth(Number(textObject.width || 1));
@@ -2131,6 +2225,10 @@ function writeText(textObject, targetContext) {
 	var textWidth = scaleWidth(textObject.width) || scaleWidth(1);
 	var textHeight = scaleHeight(textObject.height) || scaleHeight(1);
 	var startingTextSize = scaleHeight(textObject.size) || scaleHeight(0.038);
+	var fontSizeAdjustment = parseInt(textObject.fontSize || '0') || 0;
+	if (Number.isFinite(textObject.sharedTextSizeLimit)) {
+		startingTextSize = Math.min(startingTextSize, Math.max(1, textObject.sharedTextSizeLimit - fontSizeAdjustment));
+	}
 	var textFontHeightRatio = 0.7;
 	var textBounded = textObject.bounded || true;
 	var textOneLine = textObject.oneLine || false;
@@ -2333,6 +2431,7 @@ function writeText(textObject, targetContext) {
 		var savedRollColor = 'black';
 		var drawToPrePTCanvas = false;
 		var widestLineWidth = 0;
+		var renderedLineBounds = [];
 		var oneLineInkTop = Infinity;
 		var oneLineInkBottom = -Infinity;
 		//variables that track various... things?
@@ -2348,7 +2447,7 @@ function writeText(textObject, targetContext) {
 		// if (textFont == 'goudymedieval') {
 		// 	lineCanvas.style.letterSpacing = '3.5px';
 		// }
-		textSize += parseInt(textObject.fontSize || '0');
+		textSize += fontSizeAdjustment;
 		lineContext.font = textFontStyle + textSize + 'px ' + textFont + textFontExtension;
 		lineContext.fillStyle = textColor;
 		lineContext.shadowColor = textShadowColor;
@@ -2951,6 +3050,9 @@ function writeText(textObject, targetContext) {
 				if (manaSymbolsToRender.length > 0) {
 					renderManaSymbols();
 				}
+				if (currentX > 0) {
+					renderedLineBounds.push({x:horizontalAdjust, y:currentY, width:currentX, height:textSize});
+				}
 				paragraphContext.drawImage(lineCanvas, horizontalAdjust, currentY);
 				lineY = 0;
 				lineContext.clearRect(0, 0, lineCanvas.width, lineCanvas.height);
@@ -3061,26 +3163,39 @@ function writeText(textObject, targetContext) {
 						finalHorizontalAdjust = - horizontalAdjustUnit;
 					}
 				}
-				var trueTargetContext = targetContext;
-				if (drawToPrePTCanvas) {
-					trueTargetContext = prePTContext;
+				var textPlacement = {
+					x:textX + ptShift[0] + permaShift[0] + finalHorizontalAdjust,
+					y:textY + verticalAdjust + ptShift[1] + permaShift[1]
+				};
+				if (textObject.avoidTextObstacles?.length && !textRotation && textArcRadius == 0
+					&& renderedLinesCollideWithObstacles(renderedLineBounds, textPlacement, textObject.avoidTextObstacles)
+					&& startingTextSize > 1) {
+					startingTextSize -= 1;
+					continue outerloop;
 				}
-				if (textRotation) {
-					trueTargetContext.save();
-					trueTargetContext
-					const shapeX = textX + ptShift[0];
-					const shapeY = textY + ptShift[1];
-					trueTargetContext.translate(shapeX, shapeY);
-					trueTargetContext.rotate(Math.PI * textRotation / 180);
-					trueTargetContext.drawImage(paragraphCanvas, permaShift[0] - canvasMargin + finalHorizontalAdjust, verticalAdjust - canvasMargin + permaShift[1]);
-					trueTargetContext.restore();
-				} else {
-					trueTargetContext.drawImage(paragraphCanvas, textX - canvasMargin + ptShift[0] + permaShift[0] + finalHorizontalAdjust, textY - canvasMargin + verticalAdjust + ptShift[1] + permaShift[1]);
+				var paragraphDrawX = textPlacement.x - canvasMargin;
+				var paragraphDrawY = textPlacement.y - canvasMargin;
+				if (!textObject.measureOnly) {
+					var trueTargetContext = targetContext;
+					if (drawToPrePTCanvas) {
+						trueTargetContext = prePTContext;
+					}
+					if (textRotation) {
+						trueTargetContext.save();
+						const shapeX = textX + ptShift[0];
+						const shapeY = textY + ptShift[1];
+						trueTargetContext.translate(shapeX, shapeY);
+						trueTargetContext.rotate(Math.PI * textRotation / 180);
+						trueTargetContext.drawImage(paragraphCanvas, permaShift[0] - canvasMargin + finalHorizontalAdjust, verticalAdjust - canvasMargin + permaShift[1]);
+						trueTargetContext.restore();
+					} else {
+						trueTargetContext.drawImage(paragraphCanvas, paragraphDrawX, paragraphDrawY);
+					}
 				}
 				var renderedLeft = textX + ptShift[0] + permaShift[0] + finalHorizontalAdjust;
 				if (textAlign === 'right') renderedLeft += textWidth - widestLineWidth;
 				else if (textAlign === 'center') renderedLeft += (textWidth - widestLineWidth) / 2;
-				finalRenderedBounds = {left: renderedLeft, right: renderedLeft + widestLineWidth, width: widestLineWidth, top: textY, height: textHeight};
+				finalRenderedBounds = {left: renderedLeft, right: renderedLeft + widestLineWidth, width: widestLineWidth, top: textY, height: textHeight, fittedTextSize:startingTextSize + fontSizeAdjustment};
 				drawingText = false;
 			}
 		}
@@ -4503,6 +4618,7 @@ function drawCard() {
 	// guidelines
 	if (document.querySelector('#show-guidelines').checked) {
 		cardContext.drawImage(guidelinesCanvas, scaleX(card.marginX) / 2, scaleY(card.marginY) / 2, cardCanvas.width, cardCanvas.height);
+		drawTextCollisionGuidelines(cardContext);
 	}
 	// watermark
 	cardContext.drawImage(watermarkCanvas, 0, 0, cardCanvas.width, cardCanvas.height);
