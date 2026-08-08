@@ -30,6 +30,7 @@ test('frame-pack release archives are split and checked below GitHub limits', ()
   assert.match(builder, /schemaVersion: 3/);
   assert.match(builder, /bootstrapCatalogV3FromV2/);
   assert.match(builder, /does not carry every schema-2 pack history/);
+  assert.match(builder, /walkSafe\(path\.join\(root, 'img', 'setSymbols'\)\)/);
   assert.match(builder, /selectedPackIds/);
   assert.match(builder, /fileMetadata/);
   assert.match(builder, /archives\.push/);

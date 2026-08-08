@@ -50,6 +50,7 @@ function walk(directory) {
   }
   return result;
 }
+function walkSafe(directory) { try { return walk(directory); } catch { return []; } }
 function partition(files) {
   const parts = []; let current = []; let currentBytes = 0;
   for (const file of files) {
@@ -81,10 +82,10 @@ let archiveCount = 0;
 const packFiles = new Map();
 for (const [id, directories] of groups) {
   const files = id === 'set-symbols'
-    ? walk(path.join(root, 'img', 'setSymbols'))
+    ? walkSafe(path.join(root, 'img', 'setSymbols'))
     : id === 'keywords'
       ? ['js/mseKeywordCatalog.js']
-      : [...directories].flatMap((directory) => { const target = path.join(root, 'img', 'frames', directory); return statSafe(target) ? [path.relative(root, target)] : (() => { try { return walk(target); } catch { return []; } })(); });
+      : [...directories].flatMap((directory) => { const target = path.join(root, 'img', 'frames', directory); return statSafe(target) ? [path.relative(root, target)] : walkSafe(target); });
   packFiles.set(id, new Set(files.filter((file) => !BASE_RUNTIME_ASSETS.has(file.replace(/\\/g, '/')))));
 }
 
