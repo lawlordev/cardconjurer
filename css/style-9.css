@@ -615,9 +615,10 @@ textarea.input {
 .sets-card-toolbar .sets-primary { grid-column: 1 / -1; background: #71e0d2; border-color: #71e0d2; color: #0b151d; font-weight: 800; }
 .creator-card-actions { margin-bottom: 1rem; }
 .creator-card-action-buttons { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .45rem; }
+.creator-card-action-buttons > [hidden] { display: none !important; }
 .creator-card-action-buttons button,
 .creator-card-action-buttons > .creator-card-action-dropdown > summary { display: inline-flex; align-items: center; justify-content: center; gap: .35rem; border: 1px solid rgba(148,163,184,.2); border-radius: var(--workspace-radius,.55rem); padding: .42rem .58rem; background: rgba(30,41,59,.7); color: #cbd5e1; cursor: pointer; font: inherit; font-size: .7rem; }
-.creator-card-action-buttons button > span,
+.creator-card-action-buttons button > span[aria-hidden='true'],
 .creator-card-action-buttons > .creator-card-action-dropdown > summary > span:first-child { font-size: .9rem; line-height: .7; }
 .creator-card-action-dropdown { min-width: 0; }
 .creator-card-action-dropdown > summary {

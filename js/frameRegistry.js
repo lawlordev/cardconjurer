@@ -186,6 +186,37 @@ window.FRAME_REGISTRY = (() => {
 		StoneCutterDeluxePlaneswalkerExtended: {parent:'StoneCutterDeluxePlaneswalker', mode:'select', control:'Art Coverage', value:'Extended'}
 	};
 
+	// Directional frame profiles create one logical double-faced card. The
+	// counterpart is only a starting point: once the second face exists, each
+	// face keeps its own independently editable frame profile and components.
+	const facePairs = Object.freeze({
+		PlaneswalkerMDFC: {side:'front', counterpart:'PlaneswalkerMDFCBack'},
+		PlaneswalkerMDFCBack: {side:'back', counterpart:'PlaneswalkerMDFC'},
+		PlaneswalkerTransformFront: {side:'front', counterpart:'PlaneswalkerTransformBack'},
+		PlaneswalkerTransformBack: {side:'back', counterpart:'PlaneswalkerTransformFront'},
+		PlaneswalkerTransformFrontDBL: {side:'front', counterpart:'PlaneswalkerTransformBackDBL'},
+		PlaneswalkerTransformBackDBL: {side:'back', counterpart:'PlaneswalkerTransformFrontDBL'},
+		M15TransformFront: {side:'front', counterpart:'M15TransformBackNew'},
+		M15TransformBack: {side:'back', counterpart:'M15TransformFront'},
+		M15TransformBackNew: {side:'back', counterpart:'M15TransformFront'},
+		'8thTransformFront': {side:'front', counterpart:'8thTransformBack'},
+		'8thTransformBack': {side:'back', counterpart:'8thTransformFront'},
+		TransformBorderlessFront: {side:'front', counterpart:'TransformBorderlessBack'},
+		TransformBorderlessBack: {side:'back', counterpart:'TransformBorderlessFront'},
+		TransformBorderlessAltFront: {side:'front', counterpart:'TransformBorderlessAltBack'},
+		TransformBorderlessAltBack: {side:'back', counterpart:'TransformBorderlessAltFront'},
+		TransformExtendedFront: {side:'front', counterpart:'TransformExtendedBack'},
+		TransformExtendedBack: {side:'back', counterpart:'TransformExtendedFront'},
+		NeonInkTransformFront: {side:'front', counterpart:'NeonInkTransformBack'},
+		NeonInkTransformBack: {side:'back', counterpart:'NeonInkTransformFront'},
+		NeonInkTransformFrontTextless: {side:'front', counterpart:'NeonInkTransformBackTextless'},
+		NeonInkTransformBackTextless: {side:'back', counterpart:'NeonInkTransformFrontTextless'},
+		EquinoxFront: {side:'front', counterpart:'EquinoxBack'},
+		EquinoxBack: {side:'back', counterpart:'EquinoxFront'},
+		ModalRegular: {side:'front', counterpart:'ModalRegularBack'},
+		ModalRegularBack: {side:'back', counterpart:'ModalRegular'}
+	});
+
 	const categories = {
 		'booster-fun': new Set([
 			'ShowcasePanel','PixelTMT','SewerTMT','MysticalArchiveSOA','FableECL','NeonInk','Elemental','BorderlessStellarSights','PosterStellarSights','FCA','Draconic','Ghostfire','JapanShowcase','JapanShowcaseNicknames','Paranormal','BloomburrowBorderless','Woodland','MemoryCorridor','BreakingNews','Vault','Wanted','ShowcaseMagnified','Dossier','IxalanLegends1','IxalanLegends2','IxalanLegends3','Scroll','Pipboy','EnchantingTales','TARDIS','Ring','IxalanCoin','Crystal','Ravnica','Tarkir','OilSlick','DMUStainedGlass','SNCGilded','SNCArtDeco','SNCSkyscraper','NeoNinja','NeoSamurai','NeoNeon','DoubleFeature','Fang','Equinox','EternalNight','DNDSourcebook','DNDModule','MH2','MysticalArchive','MysticalArchiveJP','Praetors','Kaldheim-2','KaldheimNonleg','CommanderLegends','ZendikarRising','M21','M15NyxShowcase','Storybook','StorybookWOE','StorybookMUL','ExpeditionZNR-1','SignatureSpellbook','Ixalan','Invocation','InvocationMUL','Invention','ExpeditionBFZ-1','SDCC15','SagaLTR','GenericShowcase','MagicFest','AKHInvocationExtended','TextlessInvention','SeventhTextless','NeonInkTextless','BurningRevelation','NEONeonShort','SNCGildedColored','SNCGildedTextless','EquinoxTextless','MysticalArchiveJPEN'
@@ -214,7 +245,28 @@ window.FRAME_REGISTRY = (() => {
 		['JapanShowcase','JapanShowcase'], ['Vault','Vault'], ['Adventure','Adventure'], ['Omen','Omen'], ['Prepare','Prepare']
 	]);
 
+	const standardHoloStampStyle = Object.freeze({
+		coloredPath:'/img/frames/m15/holoStamps/m15HoloStamp{colorUpper}.png',
+		colorCodes:{Colorless:['c','C']},
+		// Colored stamp assets include the frame-colored arch around the foil.
+		// Their footprint is intentionally larger than the bare stamp.png asset.
+		bounds:{x:0.436, y:0.9034, width:0.128, height:0.0458}
+	});
+	const bareHoloStampStyle = Object.freeze({
+		// Booster Fun frames without a dedicated stamp asset already provide
+		// their own footer treatment. Add only the foil oval so a foreign M15
+		// frame-colored arch is not painted over that artwork.
+		name:'Holo Stamp',
+		src:'/img/frames/m15/holoStamps/stamp.png',
+		bounds:{x:0.4554, y:0.9172, width:0.0894, height:0.032}
+	});
+	const universesBeyondHoloStampStyle = Object.freeze({
+		coloredPath:'/img/frames/m15/ub/regular/stamp/{color}.png',
+		graySrc:'/img/frames/m15/ub/regular/stamp/gray.png',
+		bounds:{x:0.4254, y:0.9005, width:0.1494, height:0.0486}
+	});
 	const stampStyles = {
+		'M15Regular-1': standardHoloStampStyle,
 		Class: {
 			name:'Holo Stamp',
 			src:'/img/frames/saga/stamp.png',
@@ -225,12 +277,44 @@ window.FRAME_REGISTRY = (() => {
 			src:'/img/frames/saga/stamp.png',
 			bounds:{x:0.438, y:0.912, width:0.124, height:0.0372}
 		},
+		Equinox: {
+			coloredPath:'/img/frames/m15/equinox/stamps/{color}.png',
+			bounds:{x:576/1500, y:1897/2100, width:348/1500, height:203/2100}
+		},
 		PlaneswalkerRegular: {coloredPath:'/img/frames/planeswalker/holo/{color}.png', bounds:{x:0.4394, y:0.9015, width:0.1214, height:0.051}},
 		PlaneswalkerBorderless: {coloredPath:'/img/frames/planeswalker/holo/{color}.png', bounds:{x:0.4394, y:0.9015, width:0.1214, height:0.051}},
 		PlaneswalkerTall: {coloredPath:'/img/frames/planeswalker/holo/{color}.png', bounds:{x:0.4394, y:0.9015, width:0.1214, height:0.051}},
 		PlaneswalkerTallBorderless: {coloredPath:'/img/frames/planeswalker/holo/{color}.png', bounds:{x:0.4394, y:0.9015, width:0.1214, height:0.051}},
 		PlaneswalkerSeventh: {coloredPath:'/img/frames/planeswalker/holo/{color}.png', bounds:{x:0.4394, y:0.9015, width:0.1214, height:0.051}}
 	};
+	const noDefaultHoloStampProfiles = new Set([
+		// These official layouts predate the M15 rare/mythic holo-stamp rule even
+		// though they live in the Standard catalog for mechanical discoverability.
+		'Conspiracy','Flip','Leveler','Split','Fuse','Colorshifted','Playtest'
+	]);
+	const automaticStampPreferences = Object.freeze({
+		// These packs intentionally expose both Eternal (round) and Universes
+		// Beyond (triangle) treatments. Pick the treatment used by the catalog
+		// profile while preserving both choices for manual frame editing.
+		Elemental:'Round Holo Stamp',
+		FCA:'Triangle Holo Stamp'
+	});
+	const universesBeyondHoloStampProfiles = new Set([
+		// Pre-Standard Universes Beyond cards use the triangular security mark
+		// at every rarity: matte gray at common/uncommon and holo at higher rarity.
+		// Standard-legal UB releases such as TMT intentionally use the normal
+		// Magic policy instead (no C/U stamp and an oval R/M stamp).
+		'UB','UBNew','UBFull','UBExtendedArt','UBExtendedArtNew',
+		'ClassUB','CaseUB','SpreeUB','ModalUB','RoomUB','SagaUB','SagaCreatureUB',
+		'SagaCreatureUBFront','SagaCreatureUBBack','M15TransformUBFront',
+		'M15TransformUBBack','M15TransformUBBackNew','TARDIS','Pipboy',
+		'MemoryCorridor','SagaLTR','Ring','FCA','TextlessBasics2022UB'
+	]);
+	const compositeHoloStampProfiles = new Set([
+		// These Booster Fun assets draw only the frame-colored arch/cutout.
+		// The actual oval foil is a separate Plain Holo Stamp layer.
+		'FableECL','SewerTMT','ShowcasePanel','Vault'
+	]);
 
 	const frameColoredCrowns = new Set(['Class', 'Case', 'SagaRegular', 'ClassUB', 'CaseUB', 'SagaUB']);
 
@@ -241,7 +325,7 @@ window.FRAME_REGISTRY = (() => {
 	const review = [
 		'Choose precedence for Snow + Enchantment + Land combinations.',
 		'Decide whether Extended Art and Borderless become one Art Coverage option.',
-		'Complete family-specific holo-stamp defaults.',
+		'Confirm custom-frame holo-stamp policies as custom packs opt in.',
 		'Confirm embedded legend-crown providers for Booster Fun profiles.',
 		'Confirm that Shattered Glass should be a crown variant rather than a complete profile.'
 	];
@@ -275,6 +359,11 @@ window.FRAME_REGISTRY = (() => {
 			engine: engines.get(pack) || null,
 			details: components[pack] || variants[pack] || profiles[pack] || null
 		};
+	}
+
+	function customizationRoot(pack) {
+		const details = variants[pack];
+		return details ? (details.groupParent || details.parent || pack) : pack;
 	}
 
 	function collectorDefinition(pack) {
@@ -338,16 +427,87 @@ window.FRAME_REGISTRY = (() => {
 		return pack;
 	}
 
-	function stampFor(pack, colorName) {
-		const style = stampStyles[pack];
+	function defaultHoloStampAllowed(pack) {
+		let profile = pack;
+		const visited = new Set();
+		while (profile && !visited.has(profile)) {
+			visited.add(profile);
+			if (noDefaultHoloStampProfiles.has(profile)) return false;
+			if (['tokens','basics','legacy','custom'].includes(category(profile))) return false;
+			profile = variants[profile]?.parent || null;
+		}
+		return true;
+	}
+
+	function usesUniversesBeyondHoloStamp(pack) {
+		let profile = pack;
+		const visited = new Set();
+		while (profile && !visited.has(profile)) {
+			visited.add(profile);
+			if (universesBeyondHoloStampProfiles.has(profile)) return true;
+			profile = variants[profile]?.parent || null;
+		}
+		return false;
+	}
+
+	function stampFor(pack, colorName, rarity = 'R') {
+		let profile = pack;
+		let style = null;
+		const visited = new Set();
+		while (profile && !visited.has(profile)) {
+			visited.add(profile);
+			if (stampStyles[profile]) { style = stampStyles[profile]; break; }
+			profile = variants[profile]?.parent || null;
+		}
+		if (!style && usesUniversesBeyondHoloStamp(pack)) style = universesBeyondHoloStampStyle;
+		if (!style && defaultHoloStampAllowed(pack)) {
+			let fallbackProfile = pack;
+			const fallbackVisited = new Set();
+			let usesBoosterFunFooter = false;
+			while (fallbackProfile && !fallbackVisited.has(fallbackProfile)) {
+				fallbackVisited.add(fallbackProfile);
+				if (category(fallbackProfile) === 'booster-fun') { usesBoosterFunFooter = true; break; }
+				fallbackProfile = variants[fallbackProfile]?.parent || null;
+			}
+			style = usesBoosterFunFooter ? bareHoloStampStyle : standardHoloStampStyle;
+		}
 		if (!style) return null;
+		if (['C','U'].includes(String(rarity || '').toUpperCase()) && style.graySrc) {
+			return {
+				name:'Gray Holo Stamp',
+				src:style.graySrc,
+				bounds:{...style.bounds}
+			};
+		}
 		if (!style.coloredPath) return JSON.parse(JSON.stringify(style));
-		const color = ({White:'w', Blue:'u', Black:'b', Red:'r', Green:'g', Multicolored:'m', Artifact:'a', Land:'l', Vehicle:'a', Colorless:'l'})[colorName] || 'w';
+		const colors = style.colorCodes?.[colorName] || ({White:['w','W'], Blue:['u','U'], Black:['b','B'], Red:['r','R'], Green:['g','G'], Multicolored:['m','M'], Artifact:['a','A'], Land:['l','L'], Vehicle:['a','A'], Colorless:['l','L']})[colorName] || ['w','W'];
 		return {
 			name: colorName + ' Holo Stamp',
-			src: style.coloredPath.replace('{color}', color),
+			src: style.coloredPath.replace('{colorUpper}', colors[1]).replace('{color}', colors[0]),
 			bounds: {...style.bounds}
 		};
+	}
+
+	function automaticHoloStampAllowedForRarity(pack, rarity) {
+		const normalizedRarity = String(rarity || '').toUpperCase();
+		if (['R','M','S'].includes(normalizedRarity)) return defaultHoloStampAllowed(pack);
+		return ['C','U'].includes(normalizedRarity) && usesUniversesBeyondHoloStamp(pack);
+	}
+
+	function automaticStampCompanion(pack, rarity) {
+		if (!['R','M','S'].includes(String(rarity || '').toUpperCase())) return null;
+		return compositeHoloStampProfiles.has(pack) ? 'Plain Holo Stamp' : null;
+	}
+
+	function automaticStampPreference(pack) {
+		let profile = pack;
+		const visited = new Set();
+		while (profile && !visited.has(profile)) {
+			visited.add(profile);
+			if (automaticStampPreferences[profile]) return automaticStampPreferences[profile];
+			profile = variants[profile]?.parent || null;
+		}
+		return null;
 	}
 
 	function nicknameFor(colorCode, maskToRightHalf = false) {
@@ -469,6 +629,7 @@ window.FRAME_REGISTRY = (() => {
 		components,
 		profiles,
 		variants,
+		facePairs,
 		families,
 		categories,
 		engines,
@@ -477,10 +638,17 @@ window.FRAME_REGISTRY = (() => {
 		categoryLabels,
 		review,
 		definition,
+		faceDefinition: pack => facePairs[pack] || null,
+		customizationRoot,
 		collectorDefinition,
 		automaticVariant,
 		profileForType,
 		stampFor,
+		automaticStampPreference,
+		automaticHoloStampAllowedForRarity,
+		automaticStampCompanion,
+		usesUniversesBeyondHoloStamp,
+		defaultHoloStampAllowed,
 		nicknameFor,
 		semanticComponentColors,
 		canonicalColors,
