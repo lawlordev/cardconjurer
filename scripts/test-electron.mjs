@@ -630,22 +630,8 @@ try {
   await newSetTrigger.click();
   if (await newSetDropdown.evaluate((element) => element.open)) throw new Error('New Set did not close when its trigger was clicked again.');
   await page.locator('.creator-grid').evaluate((grid) => grid.style.removeProperty('--sets-panel-width'));
-  await page.locator('.creator-card-actions').scrollIntoViewIfNeeded();
   await newSetTrigger.click();
-  // Pick a corner of the card actions that the open menu does not cover; on macOS the
-  // traffic-light inset shifts the menu right, over the top-left corner.
-  const outsideNewSetPoint = await page.evaluate(() => {
-    const target = document.querySelector('.creator-card-actions').getBoundingClientRect();
-    const dropdown = document.querySelector('.creator-new-set-dropdown');
-    const corners = [[target.left + 2, target.top + 2], [target.right - 2, target.top + 2], [target.left + 2, target.bottom - 2], [target.right - 2, target.bottom - 2]];
-    const free = corners.find(([x, y]) => {
-      const hit = document.elementFromPoint(x, y);
-      return hit && !dropdown.contains(hit);
-    });
-    return free ? {x: free[0], y: free[1]} : null;
-  });
-  if (!outsideNewSetPoint) throw new Error('No point on the card actions lies outside the open New Set menu.');
-  await page.mouse.click(outsideNewSetPoint.x, outsideNewSetPoint.y);
+  await page.locator('.creator-card-actions').click({position: {x: 2, y: 2}});
   if (await newSetDropdown.evaluate((element) => element.open)) throw new Error('New Set did not close after an outside click.');
   await newSetTrigger.click();
   await page.keyboard.press('Escape');
