@@ -66,7 +66,7 @@ jobs:
   verify:
     needs: classify
     if: needs.classify.outputs.app == 'true' || needs.classify.outputs.pack_contract == 'true' || needs.classify.outputs.packs != ''
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v5
         with:
@@ -111,7 +111,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-14
+          - os: macos-15
             arch: arm64
           - os: macos-15-intel
             arch: x64
