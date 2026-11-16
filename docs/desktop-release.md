@@ -68,12 +68,3 @@ Before release, install the Windows Setup and run the installed-artifact check. 
 For beta.4 and later, copy a beta.3 profile with multiple large uploaded artworks into a disposable profile before upgrade testing. Confirm that the first launch migrates to normalized workspace tables, all artwork resolves through `set-conjurer://user-asset`, edit/undo/restart succeeds, and portable card/set exports contain usable embedded artwork. Also open the deterministic 1,000-card fixture and exercise selection near the start, middle, and end of the list. Rollback must preserve the legacy `app_state` recovery document and original content-addressed asset files; do not garbage-collect user assets during this release line.
 
 No workflow releases automatically, and no website or S3 bucket is touched.
-
-## Releasing through Loom
-
-`loom.json` defines two release units that drive the manual workflows above. Both run `node scripts/loom-release.mjs <unit>` on a device where `gh` is logged in with permission to push tags and dispatch workflows. Signing credentials stay in GitHub.
-
-- **app** creates `v<package.json version>` at the release commit and dispatches **Release Set Conjurer** with `publish=true` and `windows_signing=required`. Plan mode fails if that tag already exists on another commit or `docs/releases/<tag>.md` is missing, so bump the version and add notes in a pull request first.
-- **packs** bumps the patch number of the latest `packs-vX.Y.Z` release and selects changed packs with `scripts/classify-ci-changes.mjs`, falling back to `all` when it cannot tell. It then dispatches **Release Content Packs** with `publish=true` and the previous catalogs.
-
-Run mode exits 75 after it dispatches the workflow, and Loom polls check mode until the workflow finishes. A retry reuses the tag and the recorded run, so it never publishes twice.
